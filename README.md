@@ -2,7 +2,7 @@
 SynQ 웹 프론트엔드
 
 
-# 🚀 SynQ 웹 프론트엔드 (SynQ Web Front-End)
+# SynQ 웹 프론트엔드 (SynQ Web Front-End)
 
 ## 1. 프로젝트 소개
 -> 여기 채워야됨
