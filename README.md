@@ -22,19 +22,23 @@ SynQ 웹 프론트엔드
 ## 📂 4. 폴더 구조 (Folder Structure)
  ```bash
 src/
- ├── apis/
- ├── assets/
- ├── components/
- │    ├── common/
- │    └── layout/
- ├── hooks/
- ├── pages/
- ├── styles/
- ├── types/
- ├── utils/
- ├── App.tsx
- └── main.tsx
- ```
+ ├── app/             # 애플리케이션의 엔트리 포인트 (전역 스타일, 라우터, Provider 설정)
+ │
+ ├── pages/           # 라우팅 단위의 페이지 컴포넌트 (비즈니스 로직 없이 레이아웃 중심 조립)
+ │
+ ├── widgets/         # 독립적으로 완성된 대형 UI 블록 (ex: Header, Sidebar, ProductGrid 등)
+ │
+ ├── features/        # 사용자의 액션/기능 중심 슬라이스 (ex: LoginByForm, SearchProducts 등)
+ │
+ ├── entities/        # 비즈니스 도메인 단위 모델 및 데이터 (ex: User, Product, Order 등)
+ │
+ ├── shared/          # 프로젝트 전역에서 재사용되는 인프라성 코드 (안정적인 최하위 레이어)
+ │    ├── api/        # Axios 인프라 및 공통 공공/외부 API 설정
+ │    ├── ui/         # Button, Input, Modal 등 순수 공통 UI 컴포넌트
+ │    └── lib/        # 공통 유틸리티 함수, 커스텀 훅 등
+ │
+ ├── App.tsx          # app 레이어로 연결되는 최상위 컴포넌트
+ └── main.tsx         # 애플리케이션 진입점
 
 
 ## 🌳 5. 브랜치 및 커밋 컨벤션
