@@ -3,52 +3,26 @@ description: 설정, 문서, 패키지, 레포 관리 작업
 title: "[Chore] "
 labels: ["chore"]
 body:
-  - type: dropdown
-    id: category
-    attributes:
-      label: 작업 유형
-      options:
-        - 설정
-        - 문서
-        - 패키지
-        - 레포 관리
-        - 기타
-    validations:
-      required: true
-
   - type: textarea
-    id: summary
+    id: details
     attributes:
-      label: 작업 개요
-      description: 작업 내용을 간단히 작성해주세요.
-      placeholder: 예) GitHub 이슈 및 PR 템플릿 추가
-    validations:
-      required: true
-
-  - type: textarea
-    id: tasks
-    attributes:
-      label: 작업 내용
-      description: 필요한 작업을 체크리스트로 작성해주세요.
+      label: 내용
+      description: 작업을 간단히 설명하고, 필요한 내용을 아래 구역에 작성해주세요.
       value: |
-        - [ ] 
-        - [ ] 
-        - [ ] 
+        ## 간단 설명
+
+        -
+
+        ---
+
+        ## 작업 내용
+
+        -
+
+        ---
+
+        ## 완료 조건
+
+        - [ ]
     validations:
       required: true
-
-  - type: textarea
-    id: acceptance
-    attributes:
-      label: 완료 조건
-      value: |
-        - [ ] 작업 내용이 반영됨
-        - [ ] 기존 작업 흐름에 영향이 없는지 확인함
-    validations:
-      required: true
-
-  - type: textarea
-    id: references
-    attributes:
-      label: 참고 자료
-      description: 관련 문서나 이슈가 있다면 첨부해주세요.
