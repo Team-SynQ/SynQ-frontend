@@ -4,53 +4,31 @@ title: "[Fix] "
 labels: ["fix", "bug"]
 body:
   - type: textarea
-    id: summary
+    id: details
     attributes:
-      label: 버그 설명
-      description: 어떤 문제가 발생했는지 작성해주세요.
-      placeholder: 예) 회의 발화 목록에서 스크롤 위치가 초기화됩니다.
-    validations:
-      required: true
-
-  - type: textarea
-    id: steps
-    attributes:
-      label: 재현 방법
-      description: 버그를 재현하는 순서를 작성해주세요.
+      label: 내용
+      description: 버그를 간단히 설명하고, 필요한 내용을 아래 구역에 작성해주세요.
       value: |
-        1. 
-        2. 
-        3. 
+        ## 간단 설명
+
+        -
+
+        ---
+
+        ## 재현 방법
+
+        -
+
+        ---
+
+        ## 기대 결과
+
+        -
+
+        ---
+
+        ## 실제 결과
+
+        -
     validations:
       required: true
-
-  - type: textarea
-    id: expected
-    attributes:
-      label: 기대 결과
-      description: 원래 기대했던 동작을 작성해주세요.
-    validations:
-      required: true
-
-  - type: textarea
-    id: actual
-    attributes:
-      label: 실제 결과
-      description: 실제로 발생한 동작을 작성해주세요.
-    validations:
-      required: true
-
-  - type: textarea
-    id: environment
-    attributes:
-      label: 환경
-      value: |
-        - OS:
-        - Browser:
-        - Device:
-
-  - type: textarea
-    id: references
-    attributes:
-      label: 참고 자료
-      description: 스크린샷, 에러 로그, 관련 링크를 첨부해주세요.

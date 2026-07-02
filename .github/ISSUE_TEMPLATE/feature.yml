@@ -4,50 +4,25 @@ title: "[Feat] "
 labels: ["feat"]
 body:
   - type: textarea
-    id: summary
+    id: details
     attributes:
-      label: 작업 개요
-      description: 구현할 기능이나 화면을 간단히 작성해주세요.
-      placeholder: 예) 실시간 회의 화면의 발화 블록 UI 구현
-    validations:
-      required: true
-
-  - type: textarea
-    id: background
-    attributes:
-      label: 작업 배경
-      description: 이 작업이 필요한 이유를 작성해주세요.
-      placeholder: 예) 회의 중 발화 흐름을 빠르게 파악할 수 있어야 합니다.
-
-  - type: textarea
-    id: tasks
-    attributes:
-      label: 작업 내용
-      description: 필요한 작업을 체크리스트로 작성해주세요.
+      label: 내용
+      description: 작업을 간단히 설명하고, 필요한 내용을 아래 구역에 작성해주세요.
       value: |
-        - [ ] 
-        - [ ] 
-        - [ ] 
+        ## 간단 설명
+
+        -
+
+        ---
+
+        ## 작업 내용
+
+        -
+
+        ---
+
+        ## 완료 조건
+
+        - [ ]
     validations:
       required: true
-
-  - type: textarea
-    id: acceptance
-    attributes:
-      label: 완료 조건
-      value: |
-        - [ ] 기능이 정상 동작함
-        - [ ] 화면이 주요 해상도에서 깨지지 않음
-        - [ ] 필요한 경우 mock/API 데이터가 반영됨
-    validations:
-      required: true
-
-  - type: textarea
-    id: references
-    attributes:
-      label: 참고 자료
-      description: 디자인, 기획 문서, 관련 이슈 등을 첨부해주세요.
-      placeholder: |
-        - Figma:
-        - 기획 문서:
-        - 관련 이슈:
