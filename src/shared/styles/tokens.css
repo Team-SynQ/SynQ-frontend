@@ -1,0 +1,157 @@
+@theme {
+  --color-primary-100: #f3fffa;
+  --color-primary-200: #d0ffeb;
+  --color-primary-300: #9cffd6;
+  --color-primary-400: #69ffc0;
+  --color-primary-500: #3aeca2;
+  --color-primary-600: #11d684;
+  --color-primary-700: #13b16f;
+  --color-primary-800: #04854f;
+
+  --color-gray-100: #fcfcfc;
+  --color-gray-200: #f6f6fa;
+  --color-gray-300: #dbdbdd;
+  --color-gray-400: #c2c2c2;
+  --color-gray-500: #9e9e9e;
+  --color-gray-600: #767676;
+  --color-gray-700: #424242;
+  --color-gray-800: #242424;
+  --color-gray-900: #1a1a1a;
+
+  --color-semantic-error: #d82d2d;
+  --color-semantic-success: #2dd852;
+
+  --color-overlay-dark-02: rgb(26 26 26 / 0.02);
+  --color-overlay-dark-08: rgb(26 26 26 / 0.08);
+  --color-overlay-dark-60: rgb(26 26 26 / 0.6);
+
+  --color-fg-primary: var(--color-gray-900);
+  --color-fg-secondary: var(--color-gray-600);
+  --color-fg-inverse: #ffffff;
+  --color-surface-default: var(--color-gray-100);
+  --color-surface-muted: var(--color-gray-200);
+  --color-surface-elevated: #ffffff;
+  --color-line-default: var(--color-gray-300);
+  --color-line-strong: var(--color-gray-400);
+  --color-brand-primary: var(--color-primary-500);
+  --color-brand-primary-hover: var(--color-primary-600);
+  --color-brand-primary-active: var(--color-primary-700);
+
+  --font-sans: 'Pretendard', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-pretendard: 'Pretendard', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  --spacing-xs: 8px;
+  --spacing-s: 16px;
+  --spacing-m: 24px;
+  --spacing-l: 32px;
+  --spacing-xl: 60px;
+}
+
+:root {
+  --stroke-md: 1px;
+  --stroke-lg: 2px;
+
+  --typography-heading-font-size: 28px;
+  --typography-heading-font-weight: 700;
+  --typography-heading-line-height: 1.4;
+
+  --typography-title-01-font-size: 24px;
+  --typography-title-01-font-weight: 600;
+  --typography-title-01-line-height: 1.4;
+
+  --typography-title-02-font-size: 20px;
+  --typography-title-02-font-weight: 600;
+  --typography-title-02-line-height: 1.4;
+
+  --typography-body-01-font-size: 16px;
+  --typography-body-01-font-weight: 500;
+  --typography-body-01-line-height: 1.5;
+
+  --typography-body-02-font-size: 14px;
+  --typography-body-02-font-weight: 500;
+  --typography-body-02-line-height: 1.5;
+
+  --typography-caption-font-size: 13px;
+  --typography-caption-font-weight: 500;
+  --typography-caption-line-height: 1.5;
+
+  --typography-transcription-body-01-font-size: 16px;
+  --typography-transcription-body-01-font-weight: 400;
+  --typography-transcription-body-01-line-height: 1.6;
+
+  --typography-transcription-body-02-font-size: 14px;
+  --typography-transcription-body-02-font-weight: 400;
+  --typography-transcription-body-02-line-height: 1.6;
+}
+
+@utility border-stroke-md {
+  border-width: var(--stroke-md);
+}
+
+@utility border-stroke-lg {
+  border-width: var(--stroke-lg);
+}
+
+@utility typo-heading {
+  font-family: var(--font-pretendard);
+  font-size: var(--typography-heading-font-size);
+  font-weight: var(--typography-heading-font-weight);
+  line-height: var(--typography-heading-line-height);
+  letter-spacing: 0;
+}
+
+@utility typo-title-01 {
+  font-family: var(--font-pretendard);
+  font-size: var(--typography-title-01-font-size);
+  font-weight: var(--typography-title-01-font-weight);
+  line-height: var(--typography-title-01-line-height);
+  letter-spacing: 0;
+}
+
+@utility typo-title-02 {
+  font-family: var(--font-pretendard);
+  font-size: var(--typography-title-02-font-size);
+  font-weight: var(--typography-title-02-font-weight);
+  line-height: var(--typography-title-02-line-height);
+  letter-spacing: 0;
+}
+
+@utility typo-body-01 {
+  font-family: var(--font-pretendard);
+  font-size: var(--typography-body-01-font-size);
+  font-weight: var(--typography-body-01-font-weight);
+  line-height: var(--typography-body-01-line-height);
+  letter-spacing: 0;
+}
+
+@utility typo-body-02 {
+  font-family: var(--font-pretendard);
+  font-size: var(--typography-body-02-font-size);
+  font-weight: var(--typography-body-02-font-weight);
+  line-height: var(--typography-body-02-line-height);
+  letter-spacing: 0;
+}
+
+@utility typo-caption {
+  font-family: var(--font-pretendard);
+  font-size: var(--typography-caption-font-size);
+  font-weight: var(--typography-caption-font-weight);
+  line-height: var(--typography-caption-line-height);
+  letter-spacing: 0;
+}
+
+@utility typo-transcription-body-01 {
+  font-family: var(--font-pretendard);
+  font-size: var(--typography-transcription-body-01-font-size);
+  font-weight: var(--typography-transcription-body-01-font-weight);
+  line-height: var(--typography-transcription-body-01-line-height);
+  letter-spacing: 0;
+}
+
+@utility typo-transcription-body-02 {
+  font-family: var(--font-pretendard);
+  font-size: var(--typography-transcription-body-02-font-size);
+  font-weight: var(--typography-transcription-body-02-font-weight);
+  line-height: var(--typography-transcription-body-02-line-height);
+  letter-spacing: 0;
+}
