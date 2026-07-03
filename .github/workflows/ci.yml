@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+  push:
+    branches:
+      - main
+      - develop
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend-check:
+    name: Frontend Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check package manifest
+        id: package
+        shell: bash
+        run: |
+          if [ -f package.json ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "package.json not found. Skipping frontend checks until the app scaffold is added."
+          fi
+
+      - name: Setup Node.js
+        if: steps.package.outputs.exists == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        if: steps.package.outputs.exists == 'true'
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        if: steps.package.outputs.exists == 'true'
+        shell: bash
+        run: |
+          if [ -f pnpm-lock.yaml ]; then
+            pnpm install --frozen-lockfile
+          else
+            pnpm install
+          fi
+
+      - name: Lint
+        if: steps.package.outputs.exists == 'true'
+        shell: bash
+        run: |
+          if node -e "const scripts=require('./package.json').scripts||{}; process.exit(scripts.lint ? 0 : 1)"; then
+            pnpm run lint
+          else
+            echo "No lint script found. Skipping lint."
+          fi
+
+      - name: Typecheck
+        if: steps.package.outputs.exists == 'true'
+        shell: bash
+        run: |
+          if node -e "const scripts=require('./package.json').scripts||{}; process.exit(scripts.typecheck ? 0 : 1)"; then
+            pnpm run typecheck
+          else
+            echo "No typecheck script found. Skipping typecheck."
+          fi
+
+      - name: Build
+        if: steps.package.outputs.exists == 'true'
+        shell: bash
+        run: |
+          if node -e "const scripts=require('./package.json').scripts||{}; process.exit(scripts.build ? 0 : 1)"; then
+            pnpm run build
+          else
+            echo "No build script found. Skipping build."
+          fi
