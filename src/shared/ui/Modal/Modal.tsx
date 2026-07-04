@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useId, type ReactNode } from 'react'
 
 import { cn } from '../../lib/cn'
 import { Button } from '../Button'
@@ -28,9 +28,11 @@ export function Modal({
   onCancel,
   className,
 }: ModalProps) {
+  const titleId = useId()
+
   return (
     <section
-      aria-labelledby="synq-modal-title"
+      aria-labelledby={titleId}
       aria-modal="true"
       className={cn(
         'flex w-full max-w-[440px] flex-col gap-l rounded-l border-stroke-md border-line-default bg-surface-default p-l shadow-floating',
@@ -39,7 +41,7 @@ export function Modal({
       role="dialog"
     >
       <div className="flex flex-col gap-s">
-        <h2 className="typo-title-02 text-fg-primary" id="synq-modal-title">
+        <h2 className="typo-title-02 text-fg-primary" id={titleId}>
           {title}
         </h2>
         {description ? <p className="typo-body-02 text-fg-secondary">{description}</p> : null}
