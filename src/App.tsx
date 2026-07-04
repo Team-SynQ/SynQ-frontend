@@ -3,13 +3,15 @@ function App() {
     <main className="min-h-screen bg-surface-muted px-m py-l text-fg-primary">
       <section className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-5xl flex-col justify-center gap-l">
         <div className="space-y-s">
-          <p className="typo-caption uppercase text-brand-primary">SynQ Frontend</p>
+          <p className="typo-caption uppercase text-brand-primary">
+            SynQ Frontend
+          </p>
           <h1 className="max-w-3xl typo-heading">
             회의 중 이해와 협업을 돕는 실시간 AI 워크스페이스
           </h1>
           <p className="max-w-2xl typo-body-01 text-fg-secondary">
-            프로젝트 자료와 지난 회의 맥락을 바탕으로 발화의 의미, 내 역할 기준의 영향,
-            팀과 맞춰야 할 질문을 연결합니다.
+            프로젝트 자료와 지난 회의 맥락을 바탕으로 발화의 의미, 내 역할에
+            대한 영향, 팀과 맞춰야 할 질문을 연결합니다.
           </p>
         </div>
 
@@ -35,7 +37,7 @@ function App() {
         </div>
       </section>
     </main>
-  )
+  );
 }
 
-export default App
+export default App;
