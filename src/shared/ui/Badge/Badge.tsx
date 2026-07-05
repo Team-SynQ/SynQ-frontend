@@ -10,7 +10,7 @@ type BadgeProps = HTMLAttributes<HTMLSpanElement> & {
 
 const sizeClasses: Record<BadgeSize, string> = {
   small: 'h-[32px] px-xs typo-body-02',
-  extraSmall: 'h-[24px] px-xs typo-caption',
+  extraSmall: 'h-[24px] px-xs typo-body-02',
 }
 
 export function Badge({ size = 'small', className, children, ...props }: BadgeProps) {

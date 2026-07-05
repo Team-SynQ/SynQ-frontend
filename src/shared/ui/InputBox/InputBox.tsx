@@ -16,18 +16,18 @@ type InputBoxProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> & {
 }
 
 const sizeClasses: Record<InputBoxSize, string> = {
-  large: 'h-[52px]',
-  medium: 'h-[42px]',
-  default: 'h-[42px]',
+  large: 'h-[52px] typo-body-01',
+  medium: 'h-[42px] typo-body-02',
+  default: 'h-[42px] typo-body-02',
 }
 
 const stateClasses: Record<InputBoxState, string> = {
-  default: 'border-line-strong bg-surface-elevated',
-  hover: 'border-line-default bg-gray-100',
-  active: 'border-brand-primary bg-primary-100',
-  error: 'border-semantic-error bg-surface-elevated',
-  disabled: 'border-line-default bg-line-default text-fg-secondary',
-  filled: 'border-line-strong bg-surface-elevated',
+  default: 'border-line-default bg-surface-default text-fg-secondary',
+  hover: 'border-line-default bg-surface-default text-fg-secondary',
+  active: 'border-brand-primary bg-surface-default text-fg-primary',
+  error: 'border-semantic-error bg-surface-default text-fg-primary',
+  disabled: 'border-line-default bg-line-default text-fg-inverse',
+  filled: 'border-line-default bg-surface-default text-fg-primary',
 }
 
 export function InputBox({
@@ -49,14 +49,14 @@ export function InputBox({
       {label ? <span className="typo-body-02 text-fg-primary">{label}</span> : null}
       <span
         className={cn(
-          'flex items-center gap-xs rounded-m border-stroke-md px-s transition-colors focus-within:border-brand-primary focus-within:bg-primary-100',
+          'flex items-center gap-xs rounded-m border-stroke-md px-s transition-colors focus-within:border-brand-primary focus-within:bg-surface-default',
           sizeClasses[size],
           stateClasses[state],
         )}
       >
         {leftSlot}
         <input
-          className="min-w-0 flex-1 bg-transparent typo-body-02 text-fg-primary outline-none placeholder:text-fg-secondary disabled:cursor-not-allowed"
+          className="min-w-0 flex-1 bg-transparent text-current outline-none placeholder:text-fg-secondary disabled:cursor-not-allowed disabled:placeholder:text-fg-inverse"
           disabled={disabled}
           {...props}
         />

@@ -3,7 +3,7 @@ import { useId, type ReactNode } from 'react'
 import { cn } from '../../lib/cn'
 import { Button } from '../Button'
 
-export type ModalType = 'confirm' | 'form'
+export type ModalType = 'confirm' | 'form' | 'info'
 
 type ModalProps = {
   type?: ModalType
@@ -29,6 +29,7 @@ export function Modal({
   className,
 }: ModalProps) {
   const titleId = useId()
+  const isInfo = type === 'info'
 
   return (
     <section
@@ -44,15 +45,28 @@ export function Modal({
         <h2 className="typo-title-02 text-fg-primary" id={titleId}>
           {title}
         </h2>
-        {description ? <p className="typo-body-02 text-fg-secondary">{description}</p> : null}
-        {type === 'form' && children ? <div className="pt-xs">{children}</div> : children}
+        {description ? <p className="typo-body-01 text-fg-secondary">{description}</p> : null}
+        {children ? (
+          <div className={cn(type === 'form' && 'pt-xs', isInfo && 'rounded-m bg-surface-muted p-s typo-transcription-body-01 text-fg-secondary')}>
+            {children}
+          </div>
+        ) : null}
       </div>
-      <div className="grid grid-cols-2 gap-s">
-        <Button variant="fillGray100" onClick={onCancel}>
+
+      {isInfo ? (
+        <Button fullWidth onClick={onCancel} size="large" variant="fillGray100">
           {cancelLabel}
         </Button>
-        <Button onClick={onConfirm}>{confirmLabel}</Button>
-      </div>
+      ) : (
+        <div className="flex w-full gap-s">
+          <Button className="w-[112px]" onClick={onCancel} size="large" variant="fillGray100">
+            {cancelLabel}
+          </Button>
+          <Button className="flex-1" onClick={onConfirm} size="large">
+            {confirmLabel}
+          </Button>
+        </div>
+      )}
     </section>
   )
 }

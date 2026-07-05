@@ -4,9 +4,11 @@ import { cn } from '../../lib/cn'
 
 export type ToastType = 'success' | 'error'
 export type ToastPosition = 'topRight' | 'bottomRight' | 'topCenter' | 'bottomCenter'
+export type ToastSize = 'default' | 'compact'
 
 type ToastProps = {
   type?: ToastType
+  size?: ToastSize
   title: string
   description?: string
   autoClose?: boolean
@@ -32,8 +34,19 @@ const positionClasses: Record<ToastPosition, string> = {
   bottomCenter: 'items-center justify-end',
 }
 
+const sizeClasses: Record<ToastSize, string> = {
+  default: 'min-h-[118px] w-full max-w-[460px] gap-m p-m',
+  compact: 'min-h-[100px] w-full max-w-[380px] gap-m p-m',
+}
+
+const iconSizeClasses: Record<ToastSize, string> = {
+  default: 'size-[70px]',
+  compact: 'size-[48px]',
+}
+
 export function Toast({
   type = 'success',
+  size = 'default',
   title,
   description,
   autoClose = true,
@@ -46,8 +59,9 @@ export function Toast({
       <section
         aria-live={type === 'error' ? 'assertive' : 'polite'}
         className={cn(
-          'flex w-full max-w-[460px] items-center gap-m rounded-l border-stroke-md bg-surface-elevated p-m shadow-toast',
+          'flex items-center rounded-l border-stroke-md bg-surface-default shadow-toast',
           typeClasses[type],
+          sizeClasses[size],
         )}
         data-auto-close={autoClose}
         role="status"
@@ -55,17 +69,35 @@ export function Toast({
         <span
           aria-hidden="true"
           className={cn(
-            'flex size-[40px] shrink-0 items-center justify-center rounded-full text-fg-inverse',
+            'flex shrink-0 items-center justify-center rounded-full text-fg-inverse',
             iconClasses[type],
+            iconSizeClasses[size],
           )}
         >
-          {icon ?? (type === 'success' ? '✓' : '!')}
+          {icon ?? <ToastIcon type={type} />}
         </span>
-        <span className="flex min-w-0 flex-col gap-[2px]">
-          <strong className="typo-body-01 text-fg-primary">{title}</strong>
-          {description ? <span className="typo-body-02 text-fg-secondary">{description}</span> : null}
+        <span className="flex min-w-0 flex-col gap-xs">
+          <strong className={cn('text-fg-primary', size === 'compact' ? 'typo-title-02' : 'typo-title-01')}>{title}</strong>
+          {description ? <span className={cn('text-fg-secondary', size === 'compact' ? 'typo-body-02' : 'typo-body-01')}>{description}</span> : null}
         </span>
       </section>
     </div>
+  )
+}
+
+function ToastIcon({ type }: { type: ToastType }) {
+  if (type === 'error') {
+    return (
+      <svg className="size-[24px]" fill="none" viewBox="0 0 24 24">
+        <path d="M12 7v6" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+        <path d="M12 17h.01" stroke="currentColor" strokeLinecap="round" strokeWidth="3" />
+      </svg>
+    )
+  }
+
+  return (
+    <svg className="size-[28px]" fill="none" viewBox="0 0 28 28">
+      <path d="m7 14 5 5 9-10" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.4" />
+    </svg>
   )
 }

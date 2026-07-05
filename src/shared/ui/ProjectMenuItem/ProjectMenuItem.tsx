@@ -10,9 +10,9 @@ type ProjectMenuItemProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 }
 
 const stateClasses: Record<ProjectMenuItemState, string> = {
-  default: 'bg-surface-elevated',
-  hover: 'bg-surface-muted',
-  active: 'bg-surface-muted text-brand-primary',
+  default: 'bg-surface-default text-fg-secondary',
+  hover: 'bg-surface-muted text-fg-secondary',
+  active: 'bg-surface-muted text-fg-primary',
 }
 
 export function ProjectMenuItem({
@@ -26,7 +26,7 @@ export function ProjectMenuItem({
   return (
     <button
       className={cn(
-        'flex h-[42px] w-full items-center gap-s rounded-m px-s typo-body-02 text-fg-primary transition-colors hover:bg-surface-muted active:bg-surface-muted',
+        'flex h-[42px] w-full items-center gap-s rounded-m px-s typo-body-01 transition-colors hover:bg-surface-muted active:bg-surface-muted',
         stateClasses[visualState],
         className,
       )}

@@ -16,7 +16,7 @@ type SegmentProps = {
 const itemStateClasses: Record<SegmentItemState, string> = {
   default: 'bg-transparent',
   hover: 'bg-overlay-dark-08',
-  active: 'border-stroke-md border-line-default bg-surface-elevated',
+  active: 'border-stroke-md border-line-default bg-surface-default',
 }
 
 export function Segment({ children, className }: SegmentProps) {
@@ -33,7 +33,7 @@ export function SegmentItem({
   return (
     <button
       className={cn(
-        'flex h-[34px] min-w-[122px] items-center justify-center rounded-[10px] px-s typo-body-02 text-fg-primary transition-colors hover:bg-overlay-dark-08',
+        'flex h-[34px] min-w-[122px] items-center justify-center rounded-[10px] px-s typo-body-01 text-gray-700 transition-colors hover:bg-overlay-dark-08',
         itemStateClasses[visualState],
         className,
       )}
