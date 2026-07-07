@@ -28,10 +28,10 @@ const iconClasses: Record<ToastType, string> = {
 }
 
 const positionClasses: Record<ToastPosition, string> = {
-  topRight: 'items-end justify-start',
-  bottomRight: 'items-end justify-end',
-  topCenter: 'items-center justify-start',
-  bottomCenter: 'items-center justify-end',
+  topRight: 'right-m top-m',
+  bottomRight: 'bottom-m right-m',
+  topCenter: 'left-1/2 top-m -translate-x-1/2',
+  bottomCenter: 'bottom-m left-1/2 -translate-x-1/2',
 }
 
 const sizeClasses: Record<ToastSize, string> = {
@@ -55,7 +55,7 @@ export function Toast({
   className,
 }: ToastProps) {
   return (
-    <div className={cn('flex min-h-[120px]', positionClasses[position], className)}>
+    <div className={cn('fixed z-50 flex w-[calc(100%-32px)] max-w-[460px]', positionClasses[position], className)}>
       <section
         aria-live={type === 'error' ? 'assertive' : 'polite'}
         className={cn(
