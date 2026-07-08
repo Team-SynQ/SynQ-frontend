@@ -1,17 +1,18 @@
 const primary = {
-  100: '#f3fffa',
-  200: '#d0ffeb',
-  300: '#9cffd6',
-  400: '#69ffc0',
-  500: '#3aeca2',
-  600: '#11d684',
-  700: '#13b16f',
-  800: '#04854f',
+  100: '#ebf6ff',
+  200: '#cae8ff',
+  300: '#9ed5ff',
+  400: '#57b6ff',
+  500: '#0090ff',
+  600: '#1975de',
+  700: '#1458b7',
+  800: '#003a7d',
+  900: '#103167',
 }
 
 const gray = {
   100: '#fcfcfc',
-  200: '#f6f6fa',
+  200: '#f6f6f8',
   300: '#dbdbdd',
   400: '#c2c2c2',
   500: '#9e9e9e',
@@ -77,6 +78,18 @@ export default {
       borderWidth: {
         'stroke-md': '1px',
         'stroke-lg': '2px',
+      },
+      borderRadius: {
+        xs: '4px',
+        s: '8px',
+        m: '12px',
+        l: '20px',
+        full: '9999px',
+      },
+      boxShadow: {
+        panel: '12px 0 16px rgb(0 0 0 / 0.02)',
+        floating: '0 4px 24px rgb(0 0 0 / 0.08)',
+        toast: '8px 8px 24px rgb(0 0 0 / 0.08)',
       },
       fontFamily: {
         sans: fontFamily,

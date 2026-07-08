@@ -1,15 +1,16 @@
 @theme {
-  --color-primary-100: #f3fffa;
-  --color-primary-200: #d0ffeb;
-  --color-primary-300: #9cffd6;
-  --color-primary-400: #69ffc0;
-  --color-primary-500: #3aeca2;
-  --color-primary-600: #11d684;
-  --color-primary-700: #13b16f;
-  --color-primary-800: #04854f;
+  --color-primary-100: #ebf6ff;
+  --color-primary-200: #cae8ff;
+  --color-primary-300: #9ed5ff;
+  --color-primary-400: #57b6ff;
+  --color-primary-500: #0090ff;
+  --color-primary-600: #1975de;
+  --color-primary-700: #1458b7;
+  --color-primary-800: #003a7d;
+  --color-primary-900: #103167;
 
   --color-gray-100: #fcfcfc;
-  --color-gray-200: #f6f6fa;
+  --color-gray-200: #f6f6f8;
   --color-gray-300: #dbdbdd;
   --color-gray-400: #c2c2c2;
   --color-gray-500: #9e9e9e;
@@ -45,6 +46,16 @@
   --spacing-m: 24px;
   --spacing-l: 32px;
   --spacing-xl: 60px;
+
+  --radius-xs: 4px;
+  --radius-s: 8px;
+  --radius-m: 12px;
+  --radius-l: 20px;
+  --radius-full: 9999px;
+
+  --shadow-panel: 12px 0 16px rgb(0 0 0 / 0.02);
+  --shadow-floating: 0 4px 24px rgb(0 0 0 / 0.08);
+  --shadow-toast: 8px 8px 24px rgb(0 0 0 / 0.08);
 }
 
 :root {
@@ -90,6 +101,18 @@
 
 @utility border-stroke-lg {
   border-width: var(--stroke-lg);
+}
+
+@utility shadow-panel {
+  box-shadow: var(--shadow-panel);
+}
+
+@utility shadow-floating {
+  box-shadow: var(--shadow-floating);
+}
+
+@utility shadow-toast {
+  box-shadow: var(--shadow-toast);
 }
 
 @utility typo-heading {
