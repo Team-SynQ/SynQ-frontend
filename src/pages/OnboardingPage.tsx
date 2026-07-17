@@ -20,7 +20,11 @@ const ONBOARDING_STEPS = [
   }
 ];
 
-const OnboardingPage: React.FC = () => {
+interface OnboardingPageProps {
+  onOnboardingEnd: () => void;
+}
+
+const OnboardingPage: React.FC<OnboardingPageProps> = ({ onOnboardingEnd }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const totalSteps = ONBOARDING_STEPS.length;
   const currentData = ONBOARDING_STEPS[currentStep];
@@ -29,26 +33,24 @@ const OnboardingPage: React.FC = () => {
     if (currentStep < totalSteps - 1) {
       setCurrentStep(prev => prev + 1);
     } else {
-      console.log("온보딩 완료! 다음 페이지로 이동");
+      onOnboardingEnd(); // 마지막 단계 완료 시 콜백 호출
     }
   };
 
   const handleSkip = () => {
-    setCurrentStep(totalSteps - 1);
+    onOnboardingEnd(); // 건너뛰기 클릭 시 바로 종료 콜백 호출
   };
 
   return (
     <div className="flex flex-col w-screen h-screen bg-white select-none">
       <header className="flex justify-between items-center px-10 py-6">
         <Logo variant="wordmark" />
-        {currentStep < totalSteps - 1 && (
-          <button 
-            onClick={handleSkip}
-            className="text-gray-400 hover:text-gray-600 text-sm font-medium transition-colors"
-          >
-            건너뛰기
-          </button>
-        )}
+        <button 
+          onClick={handleSkip}
+          className="text-gray-400 hover:text-gray-600 text-sm font-medium transition-colors"
+        >
+          건너뛰기
+        </button>
       </header>
 
       <main className="flex-1 flex flex-col items-center justify-center text-center px-4">
@@ -62,7 +64,8 @@ const OnboardingPage: React.FC = () => {
         <div className="w-full max-w-[700px] h-auto aspect-[1.4/1] overflow-hidden flex items-center justify-center mb-8">
           <img 
             src={currentData.imageSrc} 
-            alt={`Step ${currentStep + 1} Mockup`} 
+            // 💡 3번 요구사항인 한국어 대체 텍스트(alt) 반영
+            alt={`${currentData.title} 안내 화면`} 
             className="w-full h-full object-contain"
           />
         </div>
