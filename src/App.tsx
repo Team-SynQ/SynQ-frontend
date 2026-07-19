@@ -16,14 +16,13 @@ function App() {
         <OnboardingPage onOnboardingEnd={() => setCurrentScreen('auth')} />
       )}
       {currentScreen === 'auth' && (
-        <LoginPage onLoginSuccess={() => console.log('로그인 성공!')} />
+        <LoginPage />
       )}
     </>
   );
 }
 
 export default App;
-
 
 
 

@@ -1,23 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { Toast } from '../shared/ui/Toast';
 
-interface LoginPageProps {
-  onLoginSuccess?: () => void;
-}
-
-const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
+const LoginPage: React.FC = () => {
   const [showToast, setShowToast] = useState(false);
   const [toastOpacity, setToastOpacity] = useState(0);
+  const [toastCycle, setToastCycle] = useState(0);
 
   const handleSocialLogin = () => {
+    setToastOpacity(0);
     setShowToast(true);
-    setTimeout(() => {
-      setToastOpacity(1);
-    }, 50);
+    setToastCycle(value => value + 1);
   };
 
   useEffect(() => {
     if (showToast) {
+      const fadeInTimer = setTimeout(() => {
+        setToastOpacity(1);
+      }, 50);
+
       const fadeOutTimer = setTimeout(() => {
         setToastOpacity(0);
       }, 3000);
@@ -27,11 +27,12 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
       }, 3300);
 
       return () => {
+        clearTimeout(fadeInTimer);
         clearTimeout(fadeOutTimer);
         clearTimeout(removeTimer);
       };
     }
-  }, [showToast]);
+  }, [showToast, toastCycle]);
 
   return (
     <div className="flex w-screen h-screen justify-center items-center bg-[#F4F6F9] select-none relative">
@@ -41,7 +42,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             opacity: toastOpacity,
             transition: 'opacity 300ms ease-in-out',
           }}
-          // 💡 right-6 대신 right-10으로 배치하고, max-w-[400px] 정도로 자연스럽게 너비를 맞췄습니다.
           className="fixed z-50 right-10 top-10 w-[calc(100%-80px)] md:w-[400px]"
         >
           <Toast
@@ -50,7 +50,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             position="topRight"
             title="소셜 인증 실패"
             description="로그인을 완료하지 못했습니다. 다시 시도해 주세요."
-            // 공통 컴포넌트 내부의 absolute 위치 스타일을 무력화하기 위한 static 설정
             className="!static !w-full"
           />
         </div>
@@ -109,7 +108,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               alt="" 
               className="w-6 h-6 absolute left-6 object-contain" 
             />
-            구글로 계속하기
+            gu글로 계속하기
           </button>
         </div>
 
