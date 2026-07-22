@@ -26,6 +26,15 @@ type MeasuredRect = {
   viewBox: { x: number; y: number; width: number; height: number; radius: number }
 }
 
+const FOCUSABLE_SELECTOR = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',')
+
 function getViewportScale() {
   if (typeof window === 'undefined') return 1
   return Math.min(window.innerWidth / VIEWBOX_WIDTH, window.innerHeight / VIEWBOX_HEIGHT)
@@ -46,6 +55,7 @@ export function MeetingTutorialOverlay({
   const [viewportScale, setViewportScale] = useState(getViewportScale)
   const [measuredRects, setMeasuredRects] = useState<MeasuredRect[]>([])
   const sectionRef = useRef<HTMLElement>(null)
+  const previousFocusRef = useRef<HTMLElement | null>(null)
   const renderScale = contained ? 1 : viewportScale
 
   useEffect(() => {
@@ -55,9 +65,64 @@ export function MeetingTutorialOverlay({
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
+  useEffect(() => {
+    if (!open) return
+
+    const section = sectionRef.current
+    if (!section) return
+
+    previousFocusRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null
+
+    const getFocusableElements = () => Array.from(
+      section.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+    ).filter((element) => element.getAttribute('aria-hidden') !== 'true')
+
+    const focusableElements = getFocusableElements()
+    ;(focusableElements[0] ?? section).focus()
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab') return
+
+      const currentFocusableElements = getFocusableElements()
+      if (currentFocusableElements.length === 0) {
+        event.preventDefault()
+        section.focus()
+        return
+      }
+
+      const firstElement = currentFocusableElements[0]
+      const lastElement = currentFocusableElements[currentFocusableElements.length - 1]
+
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault()
+        lastElement.focus()
+      } else if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault()
+        firstElement.focus()
+      }
+    }
+
+    section.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      section.removeEventListener('keydown', handleKeyDown)
+      previousFocusRef.current?.focus()
+      previousFocusRef.current = null
+    }
+  }, [open])
+
   useLayoutEffect(() => {
     const section = sectionRef.current
     if (!section) return
+
+    const lastTargetId = content.targetIds.at(-1)
+    const lastTarget = lastTargetId
+      ? document.querySelector<HTMLElement>(`[data-tutorial-target="${lastTargetId}"]`)
+      : null
+
+    lastTarget?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
 
     const measure = () => {
       const sectionRect = section.getBoundingClientRect()
@@ -156,6 +221,7 @@ export function MeetingTutorialOverlay({
       data-meeting-tutorial-step={step}
       ref={sectionRef}
       role="dialog"
+      tabIndex={-1}
     >
       <svg
         aria-hidden="true"

@@ -1,6 +1,5 @@
 import type { FormEvent, InputHTMLAttributes } from 'react'
 
-import sendIcon from '../../assets/icons/send.svg'
 import { cn } from '../../lib/cn'
 
 type ChatInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> & {
@@ -52,5 +51,11 @@ export function ChatInput({
 }
 
 function SendIcon() {
-  return <img alt="" aria-hidden="true" className="size-[24px]" src={sendIcon} />
+  return (
+    <svg aria-hidden="true" className="size-[24px]" fill="none" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" fill="#FDFDFD" r="10.5417" stroke="#DBDBDD" strokeWidth="0.916667" />
+      <path d="M8 10L12 6L16 10" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12 6L12 18" stroke="currentColor" strokeLinecap="round" />
+    </svg>
+  )
 }

@@ -131,7 +131,7 @@ function SelectedUtterance() {
 function SynqHint() {
   return (
     <article
-      className="min-h-[216px] shrink-0 rounded-m bg-surface-muted p-s"
+      className="min-h-[216px] shrink-0 scroll-mb-px rounded-m bg-surface-muted p-s"
       data-tutorial-target="synq-hint"
     >
       <div className="mb-s flex items-center justify-between typo-body-01 text-gray-800">
