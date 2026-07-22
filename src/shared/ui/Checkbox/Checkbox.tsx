@@ -4,11 +4,19 @@ import { cn } from '../../lib/cn'
 
 type CheckboxProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> & {
   label?: string
+  scale?: number
 }
 
-export function Checkbox({ label, className, disabled, ...props }: CheckboxProps) {
+export function Checkbox({ label, className, disabled, scale = 1, ...props }: CheckboxProps) {
   return (
-    <label className={cn('inline-flex items-center gap-xs typo-body-02 text-fg-primary', disabled && 'text-fg-secondary', className)}>
+    <label
+      className={cn('inline-flex items-center typo-body-02 text-fg-primary', disabled && 'text-fg-secondary', className)}
+      style={{
+        fontSize: 14 * scale,
+        gap: 8 * scale,
+        letterSpacing: -0.35 * scale,
+      }}
+    >
       <input className="peer sr-only" disabled={disabled} type="checkbox" {...props} />
       <span
         aria-hidden="true"
@@ -17,8 +25,9 @@ export function Checkbox({ label, className, disabled, ...props }: CheckboxProps
           'peer-checked:border-brand-primary peer-checked:bg-brand-primary peer-checked:[&>svg]:block',
           'peer-disabled:border-line-default peer-disabled:bg-line-default',
         )}
+        style={{ borderRadius: 2 * scale, height: 18 * scale, width: 18 * scale }}
       >
-        <svg className="hidden size-[12px]" fill="none" viewBox="0 0 12 12">
+        <svg className="hidden" fill="none" style={{ height: 12 * scale, width: 12 * scale }} viewBox="0 0 12 12">
           <path d="M2.5 6.2 5 8.5 9.5 3.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
         </svg>
       </span>
