@@ -1,36 +1,41 @@
+import { useState } from 'react'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
-import { useState } from 'react';
-import LandingPage from './pages/LandingPage';
-import OnboardingPage from './pages/OnboardingPage';
-import LoginPage from './pages/LoginPage';
+import LandingPage from './pages/LandingPage'
+import LoginPage from './pages/LoginPage'
+import { MeetingPage } from './pages/MeetingPage'
+import { MeetingStartPage } from './pages/MeetingStartPage'
+import { MeetingTutorialPage } from './pages/MeetingTutorialPage'
+import OnboardingPage from './pages/OnboardingPage'
 
-function App() {
-  const [currentScreen, setCurrentScreen] = useState<'landing' | 'onboarding' | 'auth'>('landing');
+function EntryFlow() {
+  const [currentScreen, setCurrentScreen] = useState<'landing' | 'onboarding' | 'auth'>('landing')
 
   return (
     <>
-      {currentScreen === 'landing' && (
+      {currentScreen === 'landing' ? (
         <LandingPage onLandingEnd={() => setCurrentScreen('onboarding')} />
-      )}
-      {currentScreen === 'onboarding' && (
+      ) : null}
+      {currentScreen === 'onboarding' ? (
         <OnboardingPage onOnboardingEnd={() => setCurrentScreen('auth')} />
-      )}
-      {currentScreen === 'auth' && (
-        <LoginPage />
-      )}
+      ) : null}
+      {currentScreen === 'auth' ? <LoginPage /> : null}
     </>
-  );
+  )
 }
 
-export default App;
-
-
-
-/* import { SharedUiHubPage } from './pages/SharedUiHub'
-
 function App() {
-  return <SharedUiHubPage />
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route element={<EntryFlow />} path="/" />
+        <Route element={<MeetingStartPage />} path="/meetings/:meetingId/start" />
+        <Route element={<MeetingTutorialPage />} path="/meetings/:meetingId/tutorial" />
+        <Route element={<MeetingPage />} path="/meetings/:meetingId/live" />
+        <Route element={<Navigate replace to="/" />} path="*" />
+      </Routes>
+    </BrowserRouter>
+  )
 }
 
 export default App
- */
