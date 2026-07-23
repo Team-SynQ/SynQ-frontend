@@ -59,7 +59,8 @@ export function Toast({
       <section
         aria-live={type === 'error' ? 'assertive' : 'polite'}
         className={cn(
-          'flex items-center rounded-l border-stroke-md bg-surface-default shadow-toast',
+          /* 💡 rounded-l ➔ rounded-xl 변경 (전체 모서리가 둥글게 적용됨) */
+          'flex items-center rounded-xl border-stroke-md bg-surface-default shadow-toast',
           typeClasses[type],
           sizeClasses[size],
         )}
