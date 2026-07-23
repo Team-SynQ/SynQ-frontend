@@ -6,9 +6,9 @@ import { MeetingExitDialog } from './MeetingExitDialog'
 
 describe('MeetingExitDialog', () => {
   it.each([
-    ['leave' as const, '회의를 나가시겠어요?'],
-    ['end' as const, '회의를 종료할까요?'],
-  ])('renders the %s mode copy', (mode, title) => {
+    ['leave' as const, '회의를 나가시겠어요?', '나가기'],
+    ['end' as const, '회의를 종료할까요?', '종료하기'],
+  ])('renders the %s mode copy', (mode, title, confirmLabel) => {
     render(
       <MeetingExitDialog
         mode={mode}
@@ -19,6 +19,7 @@ describe('MeetingExitDialog', () => {
     )
 
     expect(screen.getByRole('heading', { name: title })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: confirmLabel })).toBeInTheDocument()
     expect(screen.getByText('회의 내용은 프로젝트에 저장됩니다.')).toBeInTheDocument()
     expect(screen.getByText('상세 회의 정리 기능은 추후 제공될 예정입니다.')).toBeInTheDocument()
   })

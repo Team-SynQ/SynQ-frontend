@@ -20,14 +20,37 @@ describe('MeetingPage controls', () => {
     const user = userEvent.setup()
     renderMeetingPage()
 
-    await user.click(screen.getByRole('button', { name: '참여자 4명 확인' }))
     const trigger = screen.getByRole('button', { name: '참여자 4명 확인' })
+    expect(trigger).toHaveAttribute('aria-expanded', 'false')
+
+    await user.click(trigger)
     const participantList = screen.getByRole('list', { name: '회의 참여자' })
     expect(trigger).toHaveAttribute('aria-controls', participantList.id)
+    expect(trigger).toHaveAttribute('aria-expanded', 'true')
     expect(screen.getByText('윤금서/Design (you)')).toBeInTheDocument()
 
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('list', { name: '회의 참여자' })).not.toBeInTheDocument()
+    expect(trigger).toHaveAttribute('aria-expanded', 'false')
+    expect(trigger).toHaveFocus()
+  })
+
+  it('closes each popover when its trigger is pressed again', async () => {
+    const user = userEvent.setup()
+    renderMeetingPage()
+
+    const participantsTrigger = screen.getByRole('button', { name: '참여자 4명 확인' })
+    await user.click(participantsTrigger)
+    await user.click(participantsTrigger)
+    expect(screen.queryByRole('list', { name: '회의 참여자' })).not.toBeInTheDocument()
+
+    const moreMenuTrigger = screen.getByRole('button', { name: '회의 메뉴 더보기' })
+    expect(moreMenuTrigger).toHaveAttribute('aria-expanded', 'false')
+    await user.click(moreMenuTrigger)
+    expect(moreMenuTrigger).toHaveAttribute('aria-expanded', 'true')
+    await user.click(moreMenuTrigger)
+    expect(screen.queryByRole('menu', { name: '회의 메뉴' })).not.toBeInTheDocument()
+    expect(moreMenuTrigger).toHaveAttribute('aria-expanded', 'false')
   })
 
   it('edits the meeting title from the more menu', async () => {

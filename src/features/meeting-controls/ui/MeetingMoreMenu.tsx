@@ -24,7 +24,7 @@ export function MeetingMoreMenu({
   const menuRef = useDismissableLayer<HTMLDivElement>({
     open,
     onDismiss: onClose,
-    restoreFocusRef: triggerRef,
+    triggerRef,
   })
 
   if (!open) return null

@@ -3,13 +3,13 @@ import { useEffect, useRef, type RefObject } from 'react'
 type UseDismissableLayerOptions = {
   open: boolean
   onDismiss: () => void
-  restoreFocusRef?: RefObject<HTMLElement | null>
+  triggerRef?: RefObject<HTMLElement | null>
 }
 
 export function useDismissableLayer<T extends HTMLElement>({
   open,
   onDismiss,
-  restoreFocusRef,
+  triggerRef,
 }: UseDismissableLayerOptions) {
   const layerRef = useRef<T>(null)
 
@@ -18,16 +18,15 @@ export function useDismissableLayer<T extends HTMLElement>({
 
     const dismiss = () => {
       onDismiss()
-      restoreFocusRef?.current?.focus()
+      window.setTimeout(() => triggerRef?.current?.focus(), 0)
     }
 
     const handlePointerDown = (event: PointerEvent) => {
-      if (
-        event.target instanceof Node
-        && !layerRef.current?.contains(event.target)
-      ) {
-        dismiss()
-      }
+      if (!(event.target instanceof Node)) return
+      if (layerRef.current?.contains(event.target)) return
+      if (triggerRef?.current?.contains(event.target)) return
+
+      dismiss()
     }
 
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
@@ -43,7 +42,7 @@ export function useDismissableLayer<T extends HTMLElement>({
       document.removeEventListener('pointerdown', handlePointerDown)
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [onDismiss, open, restoreFocusRef])
+  }, [onDismiss, open, triggerRef])
 
   return layerRef
 }

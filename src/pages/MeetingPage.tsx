@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import type { MeetingHeaderViewModel } from '../entities/meeting'
@@ -70,6 +70,10 @@ const participants: MeetingParticipant[] = [
   },
 ]
 
+const currentUserIsHost = participants.some(
+  (participant) => participant.isCurrentUser && participant.isHost,
+)
+
 type ActiveMeetingControl =
   | 'idle'
   | 'participants'
@@ -88,6 +92,8 @@ export function MeetingPage() {
   const [lastAction, setLastAction] = useState('회의 진행 화면 준비 완료')
   const [meetingTitle, setMeetingTitle] = useState('2차 대면회의')
   const [activeControl, setActiveControl] = useState<ActiveMeetingControl>('idle')
+  const participantsTriggerRef = useRef<HTMLButtonElement>(null)
+  const moreMenuTriggerRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     const timerId = window.setInterval(() => {
@@ -144,6 +150,7 @@ export function MeetingPage() {
           },
           model: {
             elapsedSeconds,
+            isHost: currentUserIsHost,
             liveStatus: 'live',
             meetingId,
             meetingTitle,
@@ -151,20 +158,26 @@ export function MeetingPage() {
             projectTitle: '서비스디자인',
             recordingState,
           },
+          moreMenuOpen: activeControl === 'more',
           moreMenuPopover: (
             <MeetingMoreMenu
               onClose={() => setActiveControl('idle')}
               onEditTitle={() => setActiveControl('edit-title')}
               open={activeControl === 'more'}
+              triggerRef={moreMenuTriggerRef}
             />
           ),
+          moreMenuTriggerRef,
+          participantsOpen: activeControl === 'participants',
           participantsPopover: (
             <MeetingParticipantsPopover
               onClose={() => setActiveControl('idle')}
               open={activeControl === 'participants'}
               participants={participants}
+              triggerRef={participantsTriggerRef}
             />
           ),
+          participantsTriggerRef,
         }}
         transcript={{
           actions: {
@@ -190,7 +203,7 @@ export function MeetingPage() {
         open={activeControl === 'edit-title'}
       />
       <MeetingExitDialog
-        mode="end"
+        mode={currentUserIsHost ? 'end' : 'leave'}
         onCancel={() => setActiveControl('idle')}
         onConfirm={() => setActiveControl('saving')}
         open={activeControl === 'end-confirm'}

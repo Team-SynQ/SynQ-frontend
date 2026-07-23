@@ -3,6 +3,7 @@ export type MeetingHeaderViewModel = {
   projectTitle: string
   meetingTitle: string
   participantCount: number
+  isHost: boolean
   liveStatus: 'live'
   elapsedSeconds: number
   recordingState: 'recording' | 'paused'

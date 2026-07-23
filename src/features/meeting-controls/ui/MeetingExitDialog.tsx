@@ -18,6 +18,7 @@ export function MeetingExitDialog({
   const titleId = useId()
   const descriptionId = useId()
   const title = mode === 'leave' ? '회의를 나가시겠어요?' : '회의를 종료할까요?'
+  const confirmLabel = mode === 'leave' ? '나가기' : '종료하기'
 
   return (
     <OverlayDialog
@@ -43,7 +44,7 @@ export function MeetingExitDialog({
           취소
         </Button>
         <Button fullWidth onClick={onConfirm} size="large">
-          종료하기
+          {confirmLabel}
         </Button>
       </div>
     </OverlayDialog>

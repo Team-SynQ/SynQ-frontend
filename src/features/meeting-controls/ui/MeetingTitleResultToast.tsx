@@ -8,7 +8,7 @@ export function MeetingTitleResultToast(props: MeetingTitleResultToastProps) {
   if (props.result === 'success') {
     return (
       <Toast
-        description={`'${props.nextTitle}' 으로 제목이 변경됐습니다.`}
+        description={`'${props.nextTitle}' 제목으로 변경됐습니다.`}
         className={props.className}
         position="topCenter"
         title="회의 기록 제목 변경 성공"

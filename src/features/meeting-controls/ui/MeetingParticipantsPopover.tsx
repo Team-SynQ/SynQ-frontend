@@ -25,7 +25,7 @@ export function MeetingParticipantsPopover({
   const popoverRef = useDismissableLayer<HTMLDivElement>({
     open,
     onDismiss: onClose,
-    restoreFocusRef: triggerRef,
+    triggerRef,
   })
 
   if (!open) return null

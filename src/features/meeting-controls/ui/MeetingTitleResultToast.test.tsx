@@ -8,7 +8,7 @@ describe('MeetingTitleResultToast', () => {
     render(<MeetingTitleResultToast nextTitle="2차 대면회의" result="success" />)
 
     expect(screen.getByText('회의 기록 제목 변경 성공')).toBeInTheDocument()
-    expect(screen.getByText("'2차 대면회의' 으로 제목이 변경됐습니다.")).toBeInTheDocument()
+    expect(screen.getByText("'2차 대면회의' 제목으로 변경됐습니다.")).toBeInTheDocument()
   })
 
   it('renders the failure copy', () => {

@@ -7,19 +7,27 @@ import type {
   MeetingHeaderViewModel,
 } from '../../../entities/meeting'
 import { Button, LiveStatus } from '../../../shared/ui'
-import type { ReactNode } from 'react'
+import type { ReactNode, RefObject } from 'react'
 
 export type MeetingHeaderProps = {
   model: MeetingHeaderViewModel
   actions: MeetingHeaderActions
+  participantsOpen: boolean
+  participantsTriggerRef?: RefObject<HTMLButtonElement | null>
   participantsPopover?: ReactNode
+  moreMenuOpen: boolean
+  moreMenuTriggerRef?: RefObject<HTMLButtonElement | null>
   moreMenuPopover?: ReactNode
 }
 
 export function MeetingHeader({
   model,
   actions,
+  participantsOpen,
+  participantsTriggerRef,
   participantsPopover,
+  moreMenuOpen,
+  moreMenuTriggerRef,
   moreMenuPopover,
 }: MeetingHeaderProps) {
   const recordingControlLabel = model.recordingState === 'recording'
@@ -40,12 +48,13 @@ export function MeetingHeader({
         </span>
         <div className="relative flex shrink-0">
           <Button
-            aria-expanded={Boolean(participantsPopover)}
+            aria-expanded={participantsOpen}
             aria-controls="meeting-participants-popover"
             aria-haspopup="dialog"
             aria-label={`참여자 ${model.participantCount}명 확인`}
             className="size-[32px] rounded-full! px-0!"
             onClick={actions.onOpenParticipants}
+            ref={participantsTriggerRef}
             size="small"
             variant="basic"
           >
@@ -71,16 +80,17 @@ export function MeetingHeader({
           <img alt="" aria-hidden="true" className="size-[42px]" src={pauseIcon} />
         </Button>
         <Button onClick={actions.onEndMeeting} size="medium">
-          회의 종료
+          {model.isHost ? '회의 종료' : '나가기'}
         </Button>
         <div className="relative flex shrink-0">
           <Button
-            aria-expanded={Boolean(moreMenuPopover)}
+            aria-expanded={moreMenuOpen}
             aria-controls="meeting-more-menu"
             aria-haspopup="menu"
             aria-label="회의 메뉴 더보기"
             className="size-[32px] px-0!"
             onClick={actions.onOpenMoreMenu}
+            ref={moreMenuTriggerRef}
             size="small"
             variant="basic"
           >

@@ -8,10 +8,12 @@ import { OverlayDialog } from './OverlayDialog'
 function DialogFixture({
   initialOpen = true,
   closeOnEscape = false,
+  closeOnBackdrop = false,
   onClose = vi.fn(),
 }: {
   initialOpen?: boolean
   closeOnEscape?: boolean
+  closeOnBackdrop?: boolean
   onClose?: () => void
 }) {
   const [open, setOpen] = useState(initialOpen)
@@ -20,6 +22,7 @@ function DialogFixture({
     <>
       <button onClick={() => setOpen(true)} type="button">대화상자 열기</button>
       <OverlayDialog
+        closeOnBackdrop={closeOnBackdrop}
         closeOnEscape={closeOnEscape}
         onClose={() => {
           onClose()
@@ -99,5 +102,23 @@ describe('OverlayDialog', () => {
 
     expect(onClose).not.toHaveBeenCalled()
     expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
+
+  it('closes only when the backdrop itself is pressed and backdrop closing is enabled', async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    const { container } = render(
+      <DialogFixture closeOnBackdrop onClose={onClose} />,
+    )
+
+    await user.click(screen.getByRole('heading', { name: '회의 종료' }))
+    expect(onClose).not.toHaveBeenCalled()
+
+    const backdrop = container.querySelector('.bg-overlay-black-60')
+    expect(backdrop).not.toBeNull()
+    await user.click(backdrop!)
+
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 })
