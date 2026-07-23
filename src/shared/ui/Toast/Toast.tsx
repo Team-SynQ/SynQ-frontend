@@ -18,8 +18,8 @@ type ToastProps = {
 }
 
 const typeClasses: Record<ToastType, string> = {
-  success: 'border-semantic-success',
-  error: 'border-semantic-error',
+  success: 'border-semantic-success shadow-toast-success',
+  error: 'border-semantic-error shadow-toast-error',
 }
 
 const iconClasses: Record<ToastType, string> = {
@@ -60,7 +60,7 @@ export function Toast({
       <section
         aria-live={type === 'error' ? 'assertive' : 'polite'}
         className={cn(
-          'flex items-center rounded-xl border-stroke-md bg-surface-default shadow-toast',
+          'flex items-center rounded-[20px] border-stroke-md bg-surface-default',
           typeClasses[type],
           sizeClasses[size],
         )}

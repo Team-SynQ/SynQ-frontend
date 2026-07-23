@@ -58,6 +58,8 @@
   --shadow-panel: 12px 0 16px rgb(0 0 0 / 0.02);
   --shadow-floating: 0 4px 24px rgb(0 0 0 / 0.08);
   --shadow-toast: 8px 8px 24px rgb(0 0 0 / 0.08);
+  --shadow-toast-error: 0 8px 24px rgb(216 45 45 / 0.08);
+  --shadow-toast-success: 0 8px 24px rgb(45 216 82 / 0.08);
 }
 
 :root {

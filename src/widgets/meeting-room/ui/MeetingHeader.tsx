@@ -7,13 +7,21 @@ import type {
   MeetingHeaderViewModel,
 } from '../../../entities/meeting'
 import { Button, LiveStatus } from '../../../shared/ui'
+import type { ReactNode } from 'react'
 
 export type MeetingHeaderProps = {
   model: MeetingHeaderViewModel
   actions: MeetingHeaderActions
+  participantsPopover?: ReactNode
+  moreMenuPopover?: ReactNode
 }
 
-export function MeetingHeader({ model, actions }: MeetingHeaderProps) {
+export function MeetingHeader({
+  model,
+  actions,
+  participantsPopover,
+  moreMenuPopover,
+}: MeetingHeaderProps) {
   const recordingControlLabel = model.recordingState === 'recording'
     ? '녹음 일시 정지'
     : '녹음 재개'
@@ -30,15 +38,21 @@ export function MeetingHeader({ model, actions }: MeetingHeaderProps) {
         >
           {model.meetingTitle}
         </span>
-        <Button
-          aria-label={`참여자 ${model.participantCount}명 확인`}
-          className="size-[32px] rounded-full! px-0!"
-          onClick={actions.onOpenParticipants}
-          size="small"
-          variant="basic"
-        >
-          <img alt="" aria-hidden="true" className="size-[32px]" src={membersIcon} />
-        </Button>
+        <div className="relative flex shrink-0">
+          <Button
+            aria-expanded={Boolean(participantsPopover)}
+            aria-controls="meeting-participants-popover"
+            aria-haspopup="dialog"
+            aria-label={`참여자 ${model.participantCount}명 확인`}
+            className="size-[32px] rounded-full! px-0!"
+            onClick={actions.onOpenParticipants}
+            size="small"
+            variant="basic"
+          >
+            <img alt="" aria-hidden="true" className="size-[32px]" src={membersIcon} />
+          </Button>
+          {participantsPopover}
+        </div>
         <LiveStatus className="h-[32px] border-0 bg-semantic-error-surface px-m font-normal" />
       </div>
 
@@ -59,15 +73,21 @@ export function MeetingHeader({ model, actions }: MeetingHeaderProps) {
         <Button onClick={actions.onEndMeeting} size="medium">
           회의 종료
         </Button>
-        <Button
-          aria-label="회의 메뉴 더보기"
-          className="size-[32px] px-0!"
-          onClick={actions.onOpenMoreMenu}
-          size="small"
-          variant="basic"
-        >
-          <img alt="" aria-hidden="true" className="size-[24px]" src={moreVerticalIcon} />
-        </Button>
+        <div className="relative flex shrink-0">
+          <Button
+            aria-expanded={Boolean(moreMenuPopover)}
+            aria-controls="meeting-more-menu"
+            aria-haspopup="menu"
+            aria-label="회의 메뉴 더보기"
+            className="size-[32px] px-0!"
+            onClick={actions.onOpenMoreMenu}
+            size="small"
+            variant="basic"
+          >
+            <img alt="" aria-hidden="true" className="size-[24px]" src={moreVerticalIcon} />
+          </Button>
+          {moreMenuPopover}
+        </div>
       </div>
     </header>
   )
