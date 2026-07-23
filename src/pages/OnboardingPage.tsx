@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Logo } from '../shared/ui/Logo';
 import { Button } from '../shared/ui/Button';
 
 const ONBOARDING_STEPS = [
@@ -20,6 +19,7 @@ const ONBOARDING_STEPS = [
   }
 ];
 
+// 💡 CodeRabbit 리뷰 반영: onOnboardingEnd를 필수(Required) prop으로 변경
 interface OnboardingPageProps {
   onOnboardingEnd: () => void;
 }
@@ -33,18 +33,22 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ onOnboardingEnd }) => {
     if (currentStep < totalSteps - 1) {
       setCurrentStep(prev => prev + 1);
     } else {
-      onOnboardingEnd(); // 마지막 단계 완료 시 콜백 호출
+      onOnboardingEnd(); // 필수 prop이므로 optional chaining(?.) 제거
     }
   };
 
   const handleSkip = () => {
-    onOnboardingEnd(); // 건너뛰기 클릭 시 바로 종료 콜백 호출
+    onOnboardingEnd(); // 문법 오류 수정 및 콜백 직접 실행
   };
 
   return (
     <div className="flex flex-col w-screen h-screen bg-white select-none">
       <header className="flex justify-between items-center px-10 py-6">
-        <Logo variant="wordmark" />
+        <img
+          src="/assets/images/landing-wordmark.png"
+          alt="SynQ 로고"
+          className="h-7 object-contain"
+        />
         <button 
           onClick={handleSkip}
           className="text-gray-400 hover:text-gray-600 text-sm font-medium transition-colors"
@@ -64,7 +68,6 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ onOnboardingEnd }) => {
         <div className="w-full max-w-[700px] h-auto aspect-[1.4/1] overflow-hidden flex items-center justify-center mb-8">
           <img 
             src={currentData.imageSrc} 
-            // 💡 3번 요구사항인 한국어 대체 텍스트(alt) 반영
             alt={`${currentData.title} 안내 화면`} 
             className="w-full h-full object-contain"
           />

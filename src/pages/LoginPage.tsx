@@ -42,7 +42,8 @@ const LoginPage: React.FC = () => {
             opacity: toastOpacity,
             transition: 'opacity 300ms ease-in-out',
           }}
-          className="fixed z-50 right-10 top-10 w-[calc(100%-80px)] md:w-[400px]"
+          /* 💡 right-10 제거 ➔ left-1/2 -translate-x-1/2 추가로 상단 가운데 정렬 */
+          className="fixed z-50 top-10 left-1/2 -translate-x-1/2 w-[calc(100%-80px)] md:w-[400px]"
         >
           <Toast
             type="error"
@@ -108,7 +109,7 @@ const LoginPage: React.FC = () => {
               alt="" 
               className="w-6 h-6 absolute left-6 object-contain" 
             />
-            gu글로 계속하기
+            구글로 계속하기
           </button>
         </div>
 

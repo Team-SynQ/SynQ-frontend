@@ -27,11 +27,12 @@ const iconClasses: Record<ToastType, string> = {
   error: 'bg-semantic-error',
 }
 
+// ✅ Tailwind v4 postfix '!' 적용 (위치 오버라이드 우선순위 확보)
 const positionClasses: Record<ToastPosition, string> = {
-  topRight: 'right-m top-m',
-  bottomRight: 'bottom-m right-m',
-  topCenter: 'left-1/2 top-m -translate-x-1/2',
-  bottomCenter: 'bottom-m left-1/2 -translate-x-1/2',
+  topRight: 'right-m! top-m!',
+  bottomRight: 'bottom-m! right-m!',
+  topCenter: 'left-1/2! top-m! -translate-x-1/2!',
+  bottomCenter: 'bottom-m! left-1/2! -translate-x-1/2!',
 }
 
 const sizeClasses: Record<ToastSize, string> = {
@@ -59,7 +60,7 @@ export function Toast({
       <section
         aria-live={type === 'error' ? 'assertive' : 'polite'}
         className={cn(
-          'flex items-center rounded-l border-stroke-md bg-surface-default shadow-toast',
+          'flex items-center rounded-xl border-stroke-md bg-surface-default shadow-toast',
           typeClasses[type],
           sizeClasses[size],
         )}
