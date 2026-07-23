@@ -12,7 +12,9 @@ function TranscriptContent({ segment }: { segment: TranscriptSegment }) {
       <time className="typo-body-01 text-gray-400">
         {formatElapsedTime(segment.startedAtSeconds)}
       </time>
-      <p className="m-0 typo-transcription-body-01 text-fg-primary">{segment.text}</p>
+      <span className="block w-full typo-transcription-body-01 text-fg-primary">
+        {segment.text}
+      </span>
     </>
   )
 }

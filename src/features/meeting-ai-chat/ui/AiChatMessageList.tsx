@@ -8,10 +8,12 @@ export type AiChatMessageListProps = {
 export function AiChatMessageList({ messages }: AiChatMessageListProps) {
   return (
     <div
+      aria-label="AI Chat 메시지"
       aria-live="polite"
       aria-relevant="additions text"
       className="flex min-h-0 flex-col gap-m overflow-y-auto border-x border-line-default bg-surface-muted p-m"
       role="log"
+      tabIndex={0}
     >
       {messages.map((message) => (
         <article
