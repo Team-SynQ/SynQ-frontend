@@ -4,12 +4,14 @@ import { cn } from '../../lib/cn'
 
 type ChatInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> & {
   onSend?: () => void
+  sendDisabled?: boolean
   sendLabel?: string
   wrapperClassName?: string
 }
 
 export function ChatInput({
   onSend,
+  sendDisabled = false,
   sendLabel = '보내기',
   wrapperClassName,
   className,
@@ -18,6 +20,7 @@ export function ChatInput({
 }: ChatInputProps) {
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (disabled || sendDisabled) return
     onSend?.()
   }
 
@@ -41,7 +44,7 @@ export function ChatInput({
       <button
         aria-label={sendLabel}
         className="flex size-[24px] shrink-0 items-center justify-center rounded-xs text-brand-primary transition-colors hover:bg-overlay-dark-02 disabled:cursor-not-allowed disabled:text-fg-secondary"
-        disabled={disabled}
+        disabled={disabled || sendDisabled}
         type="submit"
       >
         <SendIcon />
