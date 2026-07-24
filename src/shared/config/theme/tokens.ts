@@ -86,6 +86,8 @@ export const shadow = {
   panel: '12px 0 16px rgb(0 0 0 / 0.02)',
   floating: '0 4px 24px rgb(0 0 0 / 0.08)',
   toast: '8px 8px 24px rgb(0 0 0 / 0.08)',
+  aiChatFloating: '0 0 12.5px rgb(0 0 0 / 0.15)',
+  aiChatLauncher: '0 0 25px rgb(0 0 0 / 0.15)',
 } as const
 
 const fontFamily = {

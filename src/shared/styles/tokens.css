@@ -60,6 +60,8 @@
   --shadow-toast: 8px 8px 24px rgb(0 0 0 / 0.08);
   --shadow-toast-error: 0 8px 24px rgb(216 45 45 / 0.08);
   --shadow-toast-success: 0 8px 24px rgb(45 216 82 / 0.08);
+  --shadow-ai-chat-floating: 0 0 12.5px rgb(0 0 0 / 0.15);
+  --shadow-ai-chat-launcher: 0 0 25px rgb(0 0 0 / 0.15);
 }
 
 :root {
@@ -125,6 +127,14 @@
 
 @utility shadow-toast {
   box-shadow: var(--shadow-toast);
+}
+
+@utility shadow-ai-chat-floating {
+  box-shadow: var(--shadow-ai-chat-floating);
+}
+
+@utility shadow-ai-chat-launcher {
+  box-shadow: var(--shadow-ai-chat-launcher);
 }
 
 @utility typo-heading {

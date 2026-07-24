@@ -2,7 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import type { MeetingHeaderViewModel } from '../entities/meeting'
-import type { AiChatMessage } from '../features/meeting-ai-chat'
+import type {
+  AiChatDisplayMode,
+  AiChatMessage,
+} from '../features/meeting-ai-chat'
 import type { TranscriptPanelState } from '../features/live-transcription'
 import {
   MeetingExitDialog,
@@ -89,6 +92,8 @@ export function MeetingPage() {
   const [transcriptState, setTranscriptState] = useState<TranscriptPanelState>({ kind: 'waiting' })
   const [messages, setMessages] = useState<AiChatMessage[]>(initialMessages)
   const [draft, setDraft] = useState('')
+  const [aiChatDisplayMode, setAiChatDisplayMode] =
+    useState<AiChatDisplayMode>('docked')
   const [lastAction, setLastAction] = useState('회의 진행 화면 준비 완료')
   const [meetingTitle, setMeetingTitle] = useState('2차 대면회의')
   const [activeControl, setActiveControl] = useState<ActiveMeetingControl>('idle')
@@ -115,13 +120,24 @@ export function MeetingPage() {
     setLastAction('AI Chat 메시지를 전송했습니다.')
   }
 
+  const changeAiChatDisplayMode = (mode: AiChatDisplayMode) => {
+    setAiChatDisplayMode(mode)
+
+    const announcement: Record<AiChatDisplayMode, string> = {
+      docked: 'AI Chat을 기본 크기로 확장했습니다.',
+      floating: 'AI Chat을 작은 창으로 전환했습니다.',
+      launcher: 'AI Chat을 완전히 축소했습니다.',
+    }
+
+    setLastAction(announcement[mode])
+  }
+
   return (
     <div className="fixed inset-0 overflow-auto bg-surface-default">
       <MeetingRoom
         aiChat={{
           actions: {
             onDraftChange: setDraft,
-            onMinimize: () => setLastAction('AI Chat 최소화 요청'),
             onSelectSuggestion: (suggestionId) => {
               const suggestion = suggestions.find((item) => item.id === suggestionId)
               if (suggestion) setDraft(suggestion.label)
@@ -134,6 +150,10 @@ export function MeetingPage() {
             messages,
             suggestions,
           },
+        }}
+        aiChatDisplay={{
+          mode: aiChatDisplayMode,
+          onModeChange: changeAiChatDisplayMode,
         }}
         header={{
           actions: {
