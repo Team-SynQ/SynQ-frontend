@@ -42,7 +42,6 @@ const LoginPage: React.FC = () => {
             opacity: toastOpacity,
             transition: 'opacity 300ms ease-in-out',
           }}
-          /* 💡 right-10 제거 ➔ left-1/2 -translate-x-1/2 추가로 상단 가운데 정렬 */
           className="fixed z-50 top-10 left-1/2 -translate-x-1/2 w-[calc(100%-80px)] md:w-[400px]"
         >
           <Toast
