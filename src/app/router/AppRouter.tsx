@@ -24,6 +24,7 @@ export function AppRoutes() {
       <Route element={<OnboardingRoute />} path="/onboarding" />
       <Route element={<LoginPage />} path="/login" />
       <Route element={<UserSetupFlow />} path="/setup">
+        <Route index element={<Navigate replace to="role" />} />
         <Route element={<UserRoleSetupRoute />} path="role" />
         <Route
           element={<UserPerspectiveSetupRoute />}

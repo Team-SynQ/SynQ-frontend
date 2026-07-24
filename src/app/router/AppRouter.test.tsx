@@ -61,6 +61,12 @@ describe('AppRouter', () => {
     expect(window.location.pathname).toBe('/login')
   })
 
+  it('redirects the setup index route to role selection', () => {
+    renderAppAt('/setup')
+
+    expect(window.location.pathname).toBe('/setup/role')
+  })
+
   it('moves role and perspective selections to the preview URL', async () => {
     const user = userEvent.setup()
     renderAppAt('/setup/role')
