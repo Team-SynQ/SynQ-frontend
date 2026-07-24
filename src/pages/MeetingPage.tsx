@@ -1,9 +1,18 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import type { MeetingHeaderViewModel } from '../entities/meeting'
 import type { AiChatMessage } from '../features/meeting-ai-chat'
 import type { TranscriptPanelState } from '../features/live-transcription'
+import {
+  MeetingExitDialog,
+  MeetingMoreMenu,
+  MeetingParticipantsPopover,
+  MeetingSaveDialog,
+  MeetingTitleEditDialog,
+  meetingParticipantAvatars,
+  type MeetingParticipant,
+} from '../features/meeting-controls'
 import { MeetingRoom } from '../widgets/meeting-room'
 
 const activeTranscriptState: TranscriptPanelState = {
@@ -31,6 +40,48 @@ const suggestions = [
   { id: 'my-role', label: '오늘 내가 맡은 부분은?' },
 ]
 
+const participants: MeetingParticipant[] = [
+  {
+    id: 'you',
+    name: '윤금서',
+    role: 'Design',
+    avatarSrc: meetingParticipantAvatars.you,
+    isCurrentUser: true,
+    isHost: true,
+    isMicrophoneOn: true,
+  },
+  {
+    id: 'design',
+    name: '이동희',
+    role: 'Design',
+    avatarSrc: meetingParticipantAvatars.design,
+  },
+  {
+    id: 'pm',
+    name: '이소미',
+    role: 'PM',
+    avatarSrc: meetingParticipantAvatars.pm,
+  },
+  {
+    id: 'server',
+    name: '김도진',
+    role: 'Server',
+    avatarSrc: meetingParticipantAvatars.server,
+  },
+]
+
+const currentUserIsHost = participants.some(
+  (participant) => participant.isCurrentUser && participant.isHost,
+)
+
+type ActiveMeetingControl =
+  | 'idle'
+  | 'participants'
+  | 'more'
+  | 'edit-title'
+  | 'end-confirm'
+  | 'saving'
+
 export function MeetingPage() {
   const { meetingId = 'demo' } = useParams()
   const [elapsedSeconds, setElapsedSeconds] = useState(373)
@@ -39,6 +90,10 @@ export function MeetingPage() {
   const [messages, setMessages] = useState<AiChatMessage[]>(initialMessages)
   const [draft, setDraft] = useState('')
   const [lastAction, setLastAction] = useState('회의 진행 화면 준비 완료')
+  const [meetingTitle, setMeetingTitle] = useState('2차 대면회의')
+  const [activeControl, setActiveControl] = useState<ActiveMeetingControl>('idle')
+  const participantsTriggerRef = useRef<HTMLButtonElement>(null)
+  const moreMenuTriggerRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     const timerId = window.setInterval(() => {
@@ -82,22 +137,47 @@ export function MeetingPage() {
         }}
         header={{
           actions: {
-            onEndMeeting: () => setLastAction('회의 종료 요청'),
-            onOpenMoreMenu: () => setLastAction('회의 메뉴 열기 요청'),
-            onOpenParticipants: () => setLastAction('참여자 확인 요청'),
+            onEndMeeting: () => setActiveControl('end-confirm'),
+            onOpenMoreMenu: () => setActiveControl((current) => (
+              current === 'more' ? 'idle' : 'more'
+            )),
+            onOpenParticipants: () => setActiveControl((current) => (
+              current === 'participants' ? 'idle' : 'participants'
+            )),
             onToggleRecording: () => {
               setRecordingState((current) => current === 'recording' ? 'paused' : 'recording')
             },
           },
           model: {
             elapsedSeconds,
+            isHost: currentUserIsHost,
             liveStatus: 'live',
             meetingId,
-            meetingTitle: '2차 대면회의',
+            meetingTitle,
             participantCount: 4,
             projectTitle: '서비스디자인',
             recordingState,
           },
+          moreMenuOpen: activeControl === 'more',
+          moreMenuPopover: (
+            <MeetingMoreMenu
+              onClose={() => setActiveControl('idle')}
+              onEditTitle={() => setActiveControl('edit-title')}
+              open={activeControl === 'more'}
+              triggerRef={moreMenuTriggerRef}
+            />
+          ),
+          moreMenuTriggerRef,
+          participantsOpen: activeControl === 'participants',
+          participantsPopover: (
+            <MeetingParticipantsPopover
+              onClose={() => setActiveControl('idle')}
+              open={activeControl === 'participants'}
+              participants={participants}
+              triggerRef={participantsTriggerRef}
+            />
+          ),
+          participantsTriggerRef,
         }}
         transcript={{
           actions: {
@@ -111,6 +191,26 @@ export function MeetingPage() {
           },
           state: transcriptState,
         }}
+      />
+      <MeetingTitleEditDialog
+        currentTitle={meetingTitle}
+        onCancel={() => setActiveControl('idle')}
+        onSubmit={(nextTitle) => {
+          setMeetingTitle(nextTitle)
+          setActiveControl('idle')
+          setLastAction('회의 제목을 변경했습니다.')
+        }}
+        open={activeControl === 'edit-title'}
+      />
+      <MeetingExitDialog
+        mode={currentUserIsHost ? 'end' : 'leave'}
+        onCancel={() => setActiveControl('idle')}
+        onConfirm={() => setActiveControl('saving')}
+        open={activeControl === 'end-confirm'}
+      />
+      <MeetingSaveDialog
+        open={activeControl === 'saving'}
+        state="saving"
       />
       <p aria-live="polite" className="sr-only">{lastAction}</p>
     </div>
