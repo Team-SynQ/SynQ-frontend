@@ -20,5 +20,6 @@ export type AiChatActions = {
   onDraftChange: (value: string) => void
   onSend: () => void
   onSelectSuggestion: (suggestionId: string) => void
-  onMinimize: () => void
 }
+
+export type AiChatDisplayMode = 'docked' | 'floating' | 'launcher'
