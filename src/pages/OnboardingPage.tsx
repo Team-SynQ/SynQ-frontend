@@ -19,7 +19,7 @@ const ONBOARDING_STEPS = [
   }
 ];
 
-// 💡 CodeRabbit 리뷰 반영: onOnboardingEnd를 필수(Required) prop으로 변경
+
 interface OnboardingPageProps {
   onOnboardingEnd: () => void;
 }
@@ -33,12 +33,12 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ onOnboardingEnd }) => {
     if (currentStep < totalSteps - 1) {
       setCurrentStep(prev => prev + 1);
     } else {
-      onOnboardingEnd(); // 필수 prop이므로 optional chaining(?.) 제거
+      onOnboardingEnd(); 
     }
   };
 
   const handleSkip = () => {
-    onOnboardingEnd(); // 문법 오류 수정 및 콜백 직접 실행
+    onOnboardingEnd(); 
   };
 
   return (
