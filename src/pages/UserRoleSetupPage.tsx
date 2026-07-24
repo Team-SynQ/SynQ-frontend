@@ -32,23 +32,21 @@ const UserRoleSetupPage: React.FC<UserRoleSetupPageProps> = ({
   const isNextEnabled = selectedRole !== null;
 
   useEffect(() => {
-    if (showToast) {
+    if (!showToast) return;
+
+    const fadeTimer = setTimeout(() => {
+      setIsFadingOut(true);
+    }, 2000);
+
+    const removeTimer = setTimeout(() => {
+      setShowToast(false);
       setIsFadingOut(false);
-      
-      const fadeTimer = setTimeout(() => {
-        setIsFadingOut(true);
-      }, 2000);
+    }, 2300);
 
-      const removeTimer = setTimeout(() => {
-        setShowToast(false);
-        setIsFadingOut(false);
-      }, 2300);
-
-      return () => {
-        clearTimeout(fadeTimer);
-        clearTimeout(removeTimer);
-      };
-    }
+    return () => {
+      clearTimeout(fadeTimer);
+      clearTimeout(removeTimer);
+    };
   }, [showToast]);
 
   const triggerToast = () => {
@@ -72,7 +70,6 @@ const UserRoleSetupPage: React.FC<UserRoleSetupPageProps> = ({
 
   return (
     <div className="relative flex flex-col items-center justify-center min-h-screen w-screen bg-white px-4 py-8 select-none">
-      
       {showToast && (
         <div className={`transition-opacity duration-300 ${isFadingOut ? 'opacity-0' : 'opacity-100'}`}>
           <Toast
