@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import UserRoleSetupPage from './pages/UserRoleSetupPage';
 import UserPerspectiveSetupPage from './pages/UserPerspectiveSetupPage';
 import UserSetupPreviewPage from './pages/UserSetupPreviewPage';
