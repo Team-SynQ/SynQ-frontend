@@ -49,6 +49,16 @@ SynQ는 이렇게 같이 들었지만 다르게 이해하는 순간을 줄이기
 
 - 로컬 개발 서버는 `pnpm run dev`로 실행합니다.
 
+## Mock API 개발
+
+백엔드 연동 전 화면 개발에는 `src/shared/api/mock`의 Mock API 구조를 사용합니다.
+
+- Fixture는 읽기 전용 초기 데이터로 관리합니다.
+- 기존 하드코딩 데이터를 fixture로 이관하면 기존 상수는 함께 삭제합니다.
+- 실제 API와 Mock API는 동일한 contract를 사용합니다.
+
+자세한 규칙은 [Mock API 작성 가이드](src/shared/api/mock/README.md)를 참고하세요.
+
 ## 폴더 구조
 
 본 프로젝트는 FSD(Feature-Sliced Design) 구조를 따릅니다.
