@@ -1,10 +1,12 @@
 import type { ReactNode } from 'react'
 
+import errorIcon from '../../assets/icons/toast-error.svg'
+import successIcon from '../../assets/icons/toast-success.svg'
 import { cn } from '../../lib/cn'
 
 export type ToastType = 'success' | 'error'
 export type ToastPosition = 'topRight' | 'bottomRight' | 'topCenter' | 'bottomCenter'
-export type ToastSize = 'default' | 'compact'
+export type ToastSize = 'default' | 'compact' | 'wide'
 
 type ToastProps = {
   type?: ToastType
@@ -14,6 +16,7 @@ type ToastProps = {
   autoClose?: boolean
   position?: ToastPosition
   icon?: ReactNode
+  visible?: boolean
   className?: string
 }
 
@@ -23,8 +26,8 @@ const typeClasses: Record<ToastType, string> = {
 }
 
 const iconClasses: Record<ToastType, string> = {
-  success: 'bg-semantic-success',
-  error: 'bg-semantic-error',
+  success: 'bg-transparent',
+  error: 'bg-transparent',
 }
 
 // ✅ Tailwind v4 postfix '!' 적용 (위치 오버라이드 우선순위 확보)
@@ -36,13 +39,21 @@ const positionClasses: Record<ToastPosition, string> = {
 }
 
 const sizeClasses: Record<ToastSize, string> = {
-  default: 'min-h-[118px] w-full max-w-[460px] gap-m p-m',
-  compact: 'min-h-[100px] w-full max-w-[380px] gap-m p-m',
+  default: 'min-h-[118px] w-full gap-m p-m',
+  compact: 'min-h-[100px] w-full gap-m p-m',
+  wide: 'min-h-[118px] w-full gap-m p-m',
+}
+
+const wrapperSizeClasses: Record<ToastSize, string> = {
+  default: 'max-w-[460px]',
+  compact: 'max-w-[380px]',
+  wide: 'max-w-[497px]',
 }
 
 const iconSizeClasses: Record<ToastSize, string> = {
   default: 'size-[70px]',
   compact: 'size-[48px]',
+  wide: 'size-[70px]',
 }
 
 export function Toast({
@@ -53,11 +64,24 @@ export function Toast({
   autoClose = true,
   position = 'topRight',
   icon,
+  visible = true,
   className,
 }: ToastProps) {
   return (
-    <div className={cn('fixed z-50 flex w-[calc(100%-32px)] max-w-[460px]', positionClasses[position], className)}>
+    <div
+      className={cn(
+        'fixed z-50 flex w-[calc(100%-32px)]',
+        positionClasses[position],
+        wrapperSizeClasses[size],
+        'transition-[opacity,transform] duration-300 ease-out motion-reduce:transition-none',
+        visible
+          ? 'translate-y-0 opacity-100'
+          : 'pointer-events-none -translate-y-xs opacity-0',
+        className,
+      )}
+    >
       <section
+        aria-label={title}
         aria-live={type === 'error' ? 'assertive' : 'polite'}
         className={cn(
           'flex items-center rounded-[20px] border-stroke-md bg-surface-default',
@@ -75,7 +99,7 @@ export function Toast({
             iconSizeClasses[size],
           )}
         >
-          {icon ?? <ToastIcon type={type} />}
+          {icon ?? <ToastIcon size={size} type={type} />}
         </span>
         <span className="flex min-w-0 flex-col gap-xs">
           <strong className={cn('text-fg-primary', size === 'compact' ? 'typo-title-02' : 'typo-title-01')}>{title}</strong>
@@ -86,19 +110,17 @@ export function Toast({
   )
 }
 
-function ToastIcon({ type }: { type: ToastType }) {
-  if (type === 'error') {
-    return (
-      <svg className="size-[24px]" fill="none" viewBox="0 0 24 24">
-        <path d="M12 7v6" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
-        <path d="M12 17h.01" stroke="currentColor" strokeLinecap="round" strokeWidth="3" />
-      </svg>
-    )
-  }
+function ToastIcon({ type, size }: { type: ToastType; size: ToastSize }) {
+  const iconSource = type === 'error' ? errorIcon : successIcon
 
   return (
-    <svg className="size-[28px]" fill="none" viewBox="0 0 28 28">
-      <path d="m7 14 5 5 9-10" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.4" />
-    </svg>
+    <img
+      alt=""
+      aria-hidden="true"
+      className={iconSizeClasses[size]}
+      height={size === 'compact' ? 48 : 70}
+      src={iconSource}
+      width={size === 'compact' ? 48 : 70}
+    />
   )
 }
