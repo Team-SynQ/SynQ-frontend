@@ -13,6 +13,51 @@ const defaultProps = {
 }
 
 describe('ProjectMaterialUploadForm', () => {
+  it('renders the Figma reference-add variant and submits selected materials', async () => {
+    const user = userEvent.setup()
+    const onCreate = vi.fn()
+    const file = new File(['content'], 'roadmap.pdf', { type: 'application/pdf' })
+
+    render(
+      <ProjectMaterialUploadForm
+        mode="project-reference"
+        onClose={vi.fn()}
+        onCreate={onCreate}
+        titleId="reference-upload-title"
+      />,
+    )
+
+    expect(screen.getByRole('heading', { name: 'AI 참고 자료 업로드' })).toBeInTheDocument()
+    expect(screen.queryByRole('img', { name: '2 / 2 단계' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '이전' })).not.toBeInTheDocument()
+    expect(screen.getByText('파일 당 최대 10MB')).toBeInTheDocument()
+
+    await user.upload(screen.getByLabelText('AI 참고 자료 파일 선택'), file)
+    await waitFor(() => expect(screen.getByRole('button', { name: '추가하기' })).toBeEnabled())
+    await user.click(screen.getByRole('button', { name: '추가하기' }))
+
+    expect(onCreate).toHaveBeenCalledWith({ files: [file], links: [] })
+  })
+
+  it('uses the Figma 10MB limit in the reference-add variant', async () => {
+    const user = userEvent.setup()
+    const file = new File(['content'], 'large.pdf', { type: 'application/pdf' })
+    Object.defineProperty(file, 'size', { value: 10 * 1024 * 1024 + 1 })
+
+    render(
+      <ProjectMaterialUploadForm
+        mode="project-reference"
+        onClose={vi.fn()}
+        titleId="reference-upload-title"
+      />,
+    )
+    await user.upload(screen.getByLabelText('AI 참고 자료 파일 선택'), file)
+
+    expect(await screen.findByRole('status', { name: '파일 용량 초과' })).toHaveTextContent(
+      '파일은 10MB 이하로 업로드해 주세요',
+    )
+  })
+
   it('accepts supported files from the file picker', async () => {
     const user = userEvent.setup()
     const onUploadFiles = vi.fn()

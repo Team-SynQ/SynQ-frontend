@@ -29,6 +29,7 @@ import type { ProjectMaterialDraft } from '../model/projectCreate.types'
 import { ProjectMaterialList, type ProjectMaterialListItemModel } from './ProjectMaterialList'
 
 type MaterialSource = 'file' | 'link'
+export type ProjectMaterialUploadMode = 'project-create' | 'project-reference'
 
 type UploadFileItem = ProjectMaterialListItemModel & {
   file: File
@@ -38,10 +39,11 @@ export type ProjectMaterialUploadHandler = (files: File[]) => Promise<void> | vo
 
 export type ProjectCreationHandler = (materials: ProjectMaterialDraft) => Promise<void> | void
 
-type ProjectMaterialUploadFormProps = {
+export type ProjectMaterialUploadFormProps = {
   titleId: string
-  descriptionId: string
-  onBack: () => void
+  descriptionId?: string
+  mode?: ProjectMaterialUploadMode
+  onBack?: () => void
   onClose: () => void
   onCreate?: ProjectCreationHandler
   onUploadFiles?: ProjectMaterialUploadHandler
@@ -57,11 +59,14 @@ function createMaterialId(kind: 'file' | 'link') {
 export function ProjectMaterialUploadForm({
   titleId,
   descriptionId,
+  mode = 'project-create',
   onBack,
   onClose,
   onCreate,
   onUploadFiles,
 }: ProjectMaterialUploadFormProps) {
+  const maxFileSizeMb = mode === 'project-reference' ? 10 : PROJECT_MATERIAL_MAX_FILE_SIZE_MB
+  const maxFileSizeBytes = maxFileSizeMb * 1024 * 1024
   const fileInputId = useId()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [source, setSource] = useState<MaterialSource>('file')
@@ -81,7 +86,7 @@ export function ProjectMaterialUploadForm({
 
   const addFiles = async (nextFiles: File[]) => {
     const validationError = nextFiles
-      .map(getProjectMaterialFileError)
+      .map((file) => getProjectMaterialFileError(file, maxFileSizeBytes))
       .find((code): code is ProjectMaterialUploadErrorCode => code !== null)
 
     if (validationError) {
@@ -203,7 +208,20 @@ export function ProjectMaterialUploadForm({
     }
   }
 
-  const uploadErrorMessage = projectMaterialUploadErrorMessages[errorCode]
+  const uploadErrorMessage =
+    errorCode === 'file-too-large'
+      ? {
+          ...projectMaterialUploadErrorMessages[errorCode],
+          description: `파일은 ${maxFileSizeMb}MB 이하로 업로드해 주세요`,
+        }
+      : projectMaterialUploadErrorMessages[errorCode]
+  const submissionErrorMessage =
+    mode === 'project-reference'
+      ? {
+          title: '자료 추가 실패',
+          description: 'AI 참고 자료를 추가하지 못했습니다. 다시 시도해 주세요.',
+        }
+      : projectCreationFailureMessage
   const materialItems = [
     ...fileItems.map(({ id, name, status }) => ({ id, name, status })),
     ...linkItems,
@@ -213,20 +231,28 @@ export function ProjectMaterialUploadForm({
   return (
     <>
       <form className="flex min-h-0 flex-1 flex-col gap-m" onSubmit={handleSubmit}>
-        <header className="flex flex-col items-center gap-s text-center">
-          <div aria-label="2 / 2 단계" className="flex items-center gap-s" role="img">
-            <span className="size-[6px] rounded-full bg-primary-400" />
-            <span className="size-[6px] rounded-full bg-primary-400" />
-          </div>
-          <div className="flex flex-col gap-xs">
-            <p className="m-0 typo-body-02 text-brand-primary" id={descriptionId}>
-              선택
-            </p>
+        {mode === 'project-create' ? (
+          <header className="flex flex-col items-center gap-s text-center">
+            <div aria-label="2 / 2 단계" className="flex items-center gap-s" role="img">
+              <span className="size-[6px] rounded-full bg-primary-400" />
+              <span className="size-[6px] rounded-full bg-primary-400" />
+            </div>
+            <div className="flex flex-col gap-xs">
+              <p className="m-0 typo-body-02 text-brand-primary" id={descriptionId}>
+                선택
+              </p>
+              <h2 className="m-0 typo-title-02 text-fg-primary" id={titleId}>
+                AI 참고 자료 업로드
+              </h2>
+            </div>
+          </header>
+        ) : (
+          <header className="text-center">
             <h2 className="m-0 typo-title-02 text-fg-primary" id={titleId}>
               AI 참고 자료 업로드
             </h2>
-          </div>
-        </header>
+          </header>
+        )}
 
         <div className="flex min-h-0 flex-1 flex-col gap-l">
           <div className="flex flex-col gap-xs">
@@ -346,7 +372,7 @@ export function ProjectMaterialUploadForm({
                       파일을 드래그하거나 클릭하여 자료를 업로드 하세요
                     </span>
                     <span className="typo-caption text-fg-secondary">
-                      파일 당 최대 {PROJECT_MATERIAL_MAX_FILE_SIZE_MB}MB
+                      파일 당 최대 {maxFileSizeMb}MB
                     </span>
                   </span>
                 </button>
@@ -363,23 +389,37 @@ export function ProjectMaterialUploadForm({
           </section>
         </div>
 
-        <div className="flex w-full gap-s">
-          <Button className="w-[91px]" onClick={onBack} size="large" variant="fillGray100">
-            이전
-          </Button>
+        {mode === 'project-create' ? (
+          <div className="flex w-full gap-s">
+            <Button className="w-[91px]" onClick={onBack} size="large" variant="fillGray100">
+              이전
+            </Button>
+            <Button
+              aria-busy={isCreating}
+              className="min-w-0 flex-1"
+              disabled={isUploading || isCreating}
+              size="large"
+              type="submit"
+            >
+              {isCreating ? '프로젝트 생성 중...' : '생성하기'}
+            </Button>
+          </div>
+        ) : (
           <Button
             aria-busy={isCreating}
-            className="min-w-0 flex-1"
+            fullWidth
             disabled={isUploading || isCreating}
             size="large"
             type="submit"
           >
-            {isCreating ? '프로젝트 생성 중...' : '생성하기'}
+            {isCreating ? '추가 중...' : '추가하기'}
           </Button>
-        </div>
+        )}
 
         <Button
-          aria-label="프로젝트 생성 닫기"
+          aria-label={
+            mode === 'project-reference' ? 'AI 참고 자료 업로드 닫기' : '프로젝트 생성 닫기'
+          }
           className="absolute right-[15px] top-[15px] size-[42px] px-0"
           onClick={onClose}
           size="medium"
@@ -402,9 +442,9 @@ export function ProjectMaterialUploadForm({
       {creationErrorToast.isMounted ? (
         <Toast
           className="top-[20px]! z-[70]!"
-          description={projectCreationFailureMessage.description}
+          description={submissionErrorMessage.description}
           position="topCenter"
-          title={projectCreationFailureMessage.title}
+          title={submissionErrorMessage.title}
           type="error"
           visible={creationErrorToast.isVisible}
         />
