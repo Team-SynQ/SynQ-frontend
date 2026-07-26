@@ -13,7 +13,12 @@ type ProjectInformationPerspectiveSelectProps = {
   onChange: (value: ProjectInformationPerspective) => void
 }
 
-export function ProjectInformationPerspectiveSelect({ options, value, onAdd, onChange }: ProjectInformationPerspectiveSelectProps) {
+export function ProjectInformationPerspectiveSelect({
+  options,
+  value,
+  onAdd,
+  onChange,
+}: ProjectInformationPerspectiveSelectProps) {
   const [isOpen, setIsOpen] = useState(false)
   const listboxId = useId()
   const triggerRef = useRef<HTMLButtonElement>(null)
