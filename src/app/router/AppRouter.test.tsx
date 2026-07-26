@@ -45,9 +45,7 @@ describe('AppRouter', () => {
 
     await user.click(screen.getByRole('button', { name: '건너뛰기' }))
 
-    expect(
-      screen.getByRole('button', { name: '카카오로 계속하기' }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '카카오로 계속하기' })).toBeInTheDocument()
     expect(window.location.pathname).toBe('/login')
   })
 
@@ -83,9 +81,7 @@ describe('AppRouter', () => {
     await user.click(screen.getByRole('button', { name: '다음' }))
 
     expect(window.location.pathname).toBe('/setup/preview')
-    expect(
-      screen.getByRole('heading', { name: '선택 결과 미리보기' }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '선택 결과 미리보기' })).toBeInTheDocument()
     expect(screen.getByText('개발/기술')).toBeInTheDocument()
     expect(screen.getByText('일정')).toBeInTheDocument()
   })
@@ -93,18 +89,14 @@ describe('AppRouter', () => {
   it('opens the existing live meeting page directly', () => {
     renderAppAt('/meetings/demo/live')
 
-    expect(
-      screen.getByRole('button', { name: '회의 종료' }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '회의 종료' })).toBeInTheDocument()
     expect(window.location.pathname).toBe('/meetings/demo/live')
   })
 
   it('allows direct access to a setup step without stored selections', () => {
     renderAppAt('/setup/preview')
 
-    expect(
-      screen.getByRole('heading', { name: '선택 결과 미리보기' }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '선택 결과 미리보기' })).toBeInTheDocument()
     expect(window.location.pathname).toBe('/setup/preview')
   })
 

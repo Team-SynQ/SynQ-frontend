@@ -102,8 +102,14 @@ export default {
         'body-01': ['16px', { lineHeight: '1.5', letterSpacing: '0', fontWeight: '500' }],
         'body-02': ['14px', { lineHeight: '1.5', letterSpacing: '0', fontWeight: '500' }],
         caption: ['13px', { lineHeight: '1.5', letterSpacing: '0', fontWeight: '500' }],
-        'transcription-body-01': ['16px', { lineHeight: '1.6', letterSpacing: '0', fontWeight: '400' }],
-        'transcription-body-02': ['14px', { lineHeight: '1.6', letterSpacing: '0', fontWeight: '400' }],
+        'transcription-body-01': [
+          '16px',
+          { lineHeight: '1.6', letterSpacing: '0', fontWeight: '400' },
+        ],
+        'transcription-body-02': [
+          '14px',
+          { lineHeight: '1.6', letterSpacing: '0', fontWeight: '400' },
+        ],
       },
     },
   },

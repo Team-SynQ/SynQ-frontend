@@ -1,10 +1,10 @@
 # yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
-language: "ko-KR"
+language: 'ko-KR'
 
-tone_instructions: "모든 리뷰 요약, walkthrough, 리뷰 코멘트는 한국어로 간결하게 작성해주세요. 실무 프론트엔드 코드리뷰 톤을 유지해주세요."
+tone_instructions: '모든 리뷰 요약, walkthrough, 리뷰 코멘트는 한국어로 간결하게 작성해주세요. 실무 프론트엔드 코드리뷰 톤을 유지해주세요.'
 
 reviews:
-  profile: "chill"
+  profile: 'chill'
   request_changes_workflow: false
   high_level_summary: true
   review_status: true

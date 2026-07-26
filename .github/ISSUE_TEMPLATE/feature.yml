@@ -1,7 +1,7 @@
 name: Feature
 description: 새로운 기능 또는 화면 구현 작업
-title: "[Feat] "
-labels: ["feat"]
+title: '[Feat] '
+labels: ['feat']
 body:
   - type: textarea
     id: details

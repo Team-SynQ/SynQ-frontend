@@ -10,7 +10,9 @@ Figma `DesignSystem > Component` 기준으로 2회 이상 재사용될 공통 UI
 - State: 기본 CSS로 `hover`, `active`, `disabled` 처리
 
 ```tsx
-<Button variant="primaryFill" size="large">저장</Button>
+<Button variant="primaryFill" size="large">
+  저장
+</Button>
 ```
 
 ## InputBox

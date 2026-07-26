@@ -71,13 +71,13 @@ export function MeetingTutorialOverlay({
     const section = sectionRef.current
     if (!section) return
 
-    previousFocusRef.current = document.activeElement instanceof HTMLElement
-      ? document.activeElement
-      : null
+    previousFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null
 
-    const getFocusableElements = () => Array.from(
-      section.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
-    ).filter((element) => element.getAttribute('aria-hidden') !== 'true')
+    const getFocusableElements = () =>
+      Array.from(section.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+        (element) => element.getAttribute('aria-hidden') !== 'true',
+      )
 
     const focusableElements = getFocusableElements()
     ;(focusableElements[0] ?? section).focus()
@@ -139,16 +139,18 @@ export function MeetingTutorialOverlay({
         }
         const borderRadius = Number.parseFloat(getComputedStyle(target).borderRadius) || 0
 
-        return [{
-          css,
-          viewBox: {
-            height: (css.height / sectionRect.height) * VIEWBOX_HEIGHT,
-            radius: contained ? borderRadius : borderRadius / sectionRect.width * VIEWBOX_WIDTH,
-            width: (css.width / sectionRect.width) * VIEWBOX_WIDTH,
-            x: (css.x / sectionRect.width) * VIEWBOX_WIDTH,
-            y: (css.y / sectionRect.height) * VIEWBOX_HEIGHT,
+        return [
+          {
+            css,
+            viewBox: {
+              height: (css.height / sectionRect.height) * VIEWBOX_HEIGHT,
+              radius: contained ? borderRadius : (borderRadius / sectionRect.width) * VIEWBOX_WIDTH,
+              width: (css.width / sectionRect.width) * VIEWBOX_WIDTH,
+              x: (css.x / sectionRect.width) * VIEWBOX_WIDTH,
+              y: (css.y / sectionRect.height) * VIEWBOX_HEIGHT,
+            },
           },
-        }]
+        ]
       })
 
       setMeasuredRects(nextRects)
@@ -171,9 +173,10 @@ export function MeetingTutorialOverlay({
 
   if (!open) return null
 
-  const highlights = measuredRects.length === content.targetIds.length
-    ? measuredRects.map(({ viewBox }) => viewBox)
-    : content.highlights
+  const highlights =
+    measuredRects.length === content.targetIds.length
+      ? measuredRects.map(({ viewBox }) => viewBox)
+      : content.highlights
   const positionedRects = measuredRects.map(({ css }) => css)
   const tooltipPosition = (() => {
     if (measuredRects.length !== content.targetIds.length) {
@@ -202,16 +205,21 @@ export function MeetingTutorialOverlay({
       top: positionedRects[3].y + positionedRects[3].height + 54 * renderScale,
     }
   })()
-  const connectorPath = step === 2 && measuredRects.length === content.targetIds.length
-    ? (() => {
-        const panel = measuredRects[0].viewBox
-        const selected = measuredRects[1].viewBox
-        const circleX = panel.x - 20
-        const connectorY = selected.y - 106
-        const verticalX = selected.x + selected.width - 102
-        return { circleX, connectorY, path: `M ${circleX} ${connectorY} H ${verticalX} V ${selected.y}` }
-      })()
-    : null
+  const connectorPath =
+    step === 2 && measuredRects.length === content.targetIds.length
+      ? (() => {
+          const panel = measuredRects[0].viewBox
+          const selected = measuredRects[1].viewBox
+          const circleX = panel.x - 20
+          const connectorY = selected.y - 106
+          const verticalX = selected.x + selected.width - 102
+          return {
+            circleX,
+            connectorY,
+            path: `M ${circleX} ${connectorY} H ${verticalX} V ${selected.y}`,
+          }
+        })()
+      : null
 
   return (
     <section
@@ -263,7 +271,14 @@ export function MeetingTutorialOverlay({
               strokeLinecap="round"
               strokeWidth="2"
             />
-            {step === 2 ? <circle cx={connectorPath?.circleX ?? 918} cy={connectorPath?.connectorY ?? 492} fill="var(--color-fg-inverse)" r="5" /> : null}
+            {step === 2 ? (
+              <circle
+                cx={connectorPath?.circleX ?? 918}
+                cy={connectorPath?.connectorY ?? 492}
+                fill="var(--color-fg-inverse)"
+                r="5"
+              />
+            ) : null}
           </>
         ) : null}
       </svg>
@@ -304,7 +319,11 @@ export function MeetingTutorialOverlay({
         >
           <span
             className="flex items-center justify-center rounded-full bg-surface-elevated font-medium leading-none text-brand-primary"
-            style={{ fontSize: 12 * renderScale, height: 16 * renderScale, width: 16 * renderScale }}
+            style={{
+              fontSize: 12 * renderScale,
+              height: 16 * renderScale,
+              width: 16 * renderScale,
+            }}
           >
             {step}
           </span>
@@ -323,7 +342,7 @@ export function MeetingTutorialOverlay({
         style={{
           borderRadius: 100 * renderScale,
           gap: 6 * renderScale,
-          padding: `${8 * renderScale}px ${24 *renderScale}px`,
+          padding: `${8 * renderScale}px ${24 * renderScale}px`,
           top: `${(970 / VIEWBOX_HEIGHT) * 100}%`,
         }}
       >
@@ -331,7 +350,10 @@ export function MeetingTutorialOverlay({
           <button
             aria-current={targetStep === step ? 'step' : undefined}
             aria-label={`${targetStep}단계로 이동`}
-            className={cn('rounded-full transition-colors', targetStep === step ? 'bg-brand-primary' : 'bg-line-strong hover:bg-gray-500')}
+            className={cn(
+              'rounded-full transition-colors',
+              targetStep === step ? 'bg-brand-primary' : 'bg-line-strong hover:bg-gray-500',
+            )}
             key={targetStep}
             onClick={() => onStepChange?.(targetStep)}
             style={{ height: 6 * renderScale, width: 6 * renderScale }}

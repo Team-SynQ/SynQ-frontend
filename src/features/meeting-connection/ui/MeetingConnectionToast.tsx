@@ -17,10 +17,7 @@ const content: Record<MeetingConnectionStatus, { title: string; description: str
   },
 }
 
-export function MeetingConnectionToast({
-  status,
-  className,
-}: MeetingConnectionToastProps) {
+export function MeetingConnectionToast({ status, className }: MeetingConnectionToastProps) {
   const toastContent = content[status]
 
   return (

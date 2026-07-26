@@ -8,7 +8,9 @@ describe('MeetingSaveDialog', () => {
   it('renders a non-dismissable saving state without buttons', () => {
     render(<MeetingSaveDialog open state="saving" />)
 
-    expect(screen.getByRole('heading', { name: '회의 내용을 저장하고 있습니다.' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: '회의 내용을 저장하고 있습니다.' }),
+    ).toBeInTheDocument()
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
 
     fireEvent.keyDown(document, { key: 'Escape' })

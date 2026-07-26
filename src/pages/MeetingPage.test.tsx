@@ -78,7 +78,9 @@ describe('MeetingPage controls', () => {
     expect(screen.getByRole('dialog', { name: '회의를 종료할까요?' })).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '종료하기' }))
-    expect(screen.getByRole('dialog', { name: '회의 내용을 저장하고 있습니다.' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('dialog', { name: '회의 내용을 저장하고 있습니다.' }),
+    ).toBeInTheDocument()
   })
 
   it('moves between docked and floating while preserving the draft', async () => {
@@ -94,16 +96,12 @@ describe('MeetingPage controls', () => {
     await user.click(screen.getByRole('button', { name: 'AI Chat 창 축소' }))
 
     expect(root).toHaveAttribute('data-ai-chat-mode', 'floating')
-    expect(screen.getByRole('textbox', { name: 'AI Chat 질문' })).toHaveValue(
-      '회의 범위 질문',
-    )
+    expect(screen.getByRole('textbox', { name: 'AI Chat 질문' })).toHaveValue('회의 범위 질문')
 
     await user.click(screen.getByRole('button', { name: 'AI Chat 창 확장' }))
 
     expect(root).toHaveAttribute('data-ai-chat-mode', 'docked')
-    expect(screen.getByRole('textbox', { name: 'AI Chat 질문' })).toHaveValue(
-      '회의 범위 질문',
-    )
+    expect(screen.getByRole('textbox', { name: 'AI Chat 질문' })).toHaveValue('회의 범위 질문')
   })
 
   it('returns launcher to its entry mode while preserving the draft', async () => {
@@ -111,32 +109,21 @@ describe('MeetingPage controls', () => {
     const { container } = renderMeetingPage()
     const root = container.querySelector('[data-ai-chat-mode]')
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'AI Chat 질문' }),
-      '런처 왕복 질문',
-    )
-    await user.click(
-      screen.getByRole('button', { name: 'AI Chat 런처로 축소' }),
-    )
+    await user.type(screen.getByRole('textbox', { name: 'AI Chat 질문' }), '런처 왕복 질문')
+    await user.click(screen.getByRole('button', { name: 'AI Chat 런처로 축소' }))
 
     expect(root).toHaveAttribute('data-ai-chat-mode', 'launcher')
     await user.click(screen.getByRole('button', { name: 'AI Chat 열기' }))
 
     expect(root).toHaveAttribute('data-ai-chat-mode', 'docked')
-    expect(screen.getByRole('textbox', { name: 'AI Chat 질문' })).toHaveValue(
-      '런처 왕복 질문',
-    )
+    expect(screen.getByRole('textbox', { name: 'AI Chat 질문' })).toHaveValue('런처 왕복 질문')
 
     await user.click(screen.getByRole('button', { name: 'AI Chat 창 축소' }))
-    await user.click(
-      screen.getByRole('button', { name: 'AI Chat 런처로 축소' }),
-    )
+    await user.click(screen.getByRole('button', { name: 'AI Chat 런처로 축소' }))
     await user.click(screen.getByRole('button', { name: 'AI Chat 열기' }))
 
     expect(root).toHaveAttribute('data-ai-chat-mode', 'floating')
-    expect(screen.getByRole('textbox', { name: 'AI Chat 질문' })).toHaveValue(
-      '런처 왕복 질문',
-    )
+    expect(screen.getByRole('textbox', { name: 'AI Chat 질문' })).toHaveValue('런처 왕복 질문')
   })
 
   it('keeps floating mode while existing meeting controls open and close', async () => {

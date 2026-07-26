@@ -36,17 +36,20 @@ const basicSizeClasses: Record<ButtonSize, string> = {
   small: 'rounded-xs',
 }
 
-export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button({
-  variant = 'primaryFill',
-  size = 'medium',
-  leftIcon,
-  rightIcon,
-  fullWidth = false,
-  className,
-  children,
-  type = 'button',
-  ...props
-}, ref) {
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  {
+    variant = 'primaryFill',
+    size = 'medium',
+    leftIcon,
+    rightIcon,
+    fullWidth = false,
+    className,
+    children,
+    type = 'button',
+    ...props
+  },
+  ref,
+) {
   return (
     <button
       className={cn(

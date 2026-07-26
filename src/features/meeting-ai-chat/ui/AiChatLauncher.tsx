@@ -7,10 +7,7 @@ export type AiChatLauncherProps = {
   buttonRef?: Ref<HTMLButtonElement>
 }
 
-export function AiChatLauncher({
-  onOpen,
-  buttonRef,
-}: AiChatLauncherProps) {
+export function AiChatLauncher({ onOpen, buttonRef }: AiChatLauncherProps) {
   return (
     <button
       aria-label="AI Chat 열기"

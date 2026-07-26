@@ -20,11 +20,7 @@ export function MeetingTutorialFrame({
       data-meeting-tutorial-frame
       style={{ padding: 32 * scale }}
     >
-      <img
-        alt="SynQ"
-        src={synqLogoInverse}
-        style={{ height: 30 * scale, width: 78.621 * scale }}
-      />
+      <img alt="SynQ" src={synqLogoInverse} style={{ height: 30 * scale, width: 78.621 * scale }} />
 
       <div className="flex items-center" style={{ gap: 16 * scale }}>
         <div

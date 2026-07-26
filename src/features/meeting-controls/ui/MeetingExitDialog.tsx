@@ -9,12 +9,7 @@ export type MeetingExitDialogProps = {
   onConfirm: () => void
 }
 
-export function MeetingExitDialog({
-  open,
-  mode,
-  onCancel,
-  onConfirm,
-}: MeetingExitDialogProps) {
+export function MeetingExitDialog({ open, mode, onCancel, onConfirm }: MeetingExitDialogProps) {
   const titleId = useId()
   const descriptionId = useId()
   const title = mode === 'leave' ? '회의를 나가시겠어요?' : '회의를 종료할까요?'

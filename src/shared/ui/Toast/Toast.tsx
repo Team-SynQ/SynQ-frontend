@@ -56,7 +56,13 @@ export function Toast({
   className,
 }: ToastProps) {
   return (
-    <div className={cn('fixed z-50 flex w-[calc(100%-32px)] max-w-[460px]', positionClasses[position], className)}>
+    <div
+      className={cn(
+        'fixed z-50 flex w-[calc(100%-32px)] max-w-[460px]',
+        positionClasses[position],
+        className,
+      )}
+    >
       <section
         aria-live={type === 'error' ? 'assertive' : 'polite'}
         className={cn(
@@ -78,8 +84,24 @@ export function Toast({
           {icon ?? <ToastIcon type={type} />}
         </span>
         <span className="flex min-w-0 flex-col gap-xs">
-          <strong className={cn('text-fg-primary', size === 'compact' ? 'typo-title-02' : 'typo-title-01')}>{title}</strong>
-          {description ? <span className={cn('text-fg-secondary', size === 'compact' ? 'typo-body-02' : 'typo-body-01')}>{description}</span> : null}
+          <strong
+            className={cn(
+              'text-fg-primary',
+              size === 'compact' ? 'typo-title-02' : 'typo-title-01',
+            )}
+          >
+            {title}
+          </strong>
+          {description ? (
+            <span
+              className={cn(
+                'text-fg-secondary',
+                size === 'compact' ? 'typo-body-02' : 'typo-body-01',
+              )}
+            >
+              {description}
+            </span>
+          ) : null}
         </span>
       </section>
     </div>
@@ -98,7 +120,13 @@ function ToastIcon({ type }: { type: ToastType }) {
 
   return (
     <svg className="size-[28px]" fill="none" viewBox="0 0 28 28">
-      <path d="m7 14 5 5 9-10" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.4" />
+      <path
+        d="m7 14 5 5 9-10"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2.4"
+      />
     </svg>
   )
 }

@@ -15,15 +15,8 @@ describe('AiChatLauncher', () => {
     const surface = screen.getByTestId('ai-chat-launcher-surface')
 
     expect(launcher).toHaveClass('size-[100px]')
-    expect(surface).toHaveClass(
-      'size-[80px]',
-      'bg-gray-800',
-      'shadow-ai-chat-launcher',
-    )
-    expect(screen.getByTestId('ai-chat-launcher-symbol')).toHaveAttribute(
-      'aria-hidden',
-      'true',
-    )
+    expect(surface).toHaveClass('size-[80px]', 'bg-gray-800', 'shadow-ai-chat-launcher')
+    expect(screen.getByTestId('ai-chat-launcher-symbol')).toHaveAttribute('aria-hidden', 'true')
 
     await user.click(launcher)
 

@@ -21,13 +21,7 @@ const participants: MeetingParticipant[] = [
 
 describe('MeetingParticipantsPopover', () => {
   it('renders participants in order with current-user details', () => {
-    render(
-      <MeetingParticipantsPopover
-        onClose={vi.fn()}
-        open
-        participants={participants}
-      />,
-    )
+    render(<MeetingParticipantsPopover onClose={vi.fn()} open participants={participants} />)
 
     const items = screen.getAllByRole('listitem')
     expect(items).toHaveLength(4)
@@ -50,7 +44,9 @@ describe('MeetingParticipantsPopover', () => {
 
     render(
       <>
-        <button ref={triggerRef} type="button">참여자</button>
+        <button ref={triggerRef} type="button">
+          참여자
+        </button>
         <MeetingParticipantsPopover
           onClose={onClose}
           open
