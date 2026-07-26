@@ -27,7 +27,7 @@ const variantClasses: Record<ButtonVariant, string> = {
 const sizeClasses: Record<ButtonSize, string> = {
   large: 'h-[52px] rounded-m typo-title-02',
   medium: 'h-[42px] rounded-[10px] typo-body-01',
-  small: 'h-[32px] rounded-s typo-body-02',
+  small: 'h-[32px] rounded-[var(--radius-s)] typo-body-02',
 }
 
 const basicSizeClasses: Record<ButtonSize, string> = {

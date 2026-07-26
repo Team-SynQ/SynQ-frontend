@@ -10,12 +10,14 @@ import { MeetingContentLayout } from './MeetingContentLayout'
 const aiChat: AiChatContentProps = {
   actions: {
     onDraftChange: vi.fn(),
+    onClearContext: vi.fn(),
     onSelectSuggestion: vi.fn(),
     onSend: vi.fn(),
   },
   model: {
     draft: '',
     isSending: false,
+    sendError: null,
     messages: [
       {
         id: 'welcome',
@@ -23,6 +25,7 @@ const aiChat: AiChatContentProps = {
         content: '회의가 시작되었습니다.',
       },
     ],
+    pinnedContext: null,
     suggestions: [],
   },
 }

@@ -41,13 +41,30 @@ export function TranscriptPanel({ state, actions }: TranscriptPanelProps) {
             className="flex flex-col gap-s"
             role="log"
           >
-            {state.segments.map((segment) => (
-              <TranscriptItem
-                key={segment.id}
-                onSelect={actions.onSelectSegment}
-                segment={segment}
-              />
-            ))}
+            <div aria-label="회의 전사 목록" className="flex flex-col gap-s" role="list">
+              {state.segments.map((segment) => {
+                const editState = state.editState ?? { status: 'idle' as const }
+                const editing = editState.status === 'editing'
+
+                return (
+                  <TranscriptItem
+                    editState={editState}
+                    hintState={state.hintState ?? { status: 'idle' }}
+                    isSelected={state.selectedSegmentId === segment.id}
+                    key={segment.id}
+                    onAskAi={actions.onAskAi}
+                    onCancelEdit={actions.onCancelEdit}
+                    onCollapseHint={actions.onCollapseHint}
+                    onEditDraftChange={actions.onEditDraftChange}
+                    onRetryHint={actions.onRetryHint}
+                    onSaveEdit={actions.onSaveEdit}
+                    onSelect={editing ? undefined : actions.onSelectSegment}
+                    onStartEdit={actions.onStartEdit}
+                    segment={segment}
+                  />
+                )
+              })}
+            </div>
             {state.isSpeaking ? <SpeakingIndicator /> : null}
           </div>
         )}

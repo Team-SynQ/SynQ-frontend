@@ -1,24 +1,32 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 
+import { resetLiveMeetingMockDb } from '../shared/api/mock/db/liveMeeting.mockDb'
 import { MeetingPage } from './MeetingPage'
 
-function renderMeetingPage() {
-  return render(
-    <MemoryRouter initialEntries={['/meetings/demo/live']}>
+async function renderMeetingPage(path = '/meetings/demo/live') {
+  const result = render(
+    <MemoryRouter initialEntries={[path]}>
       <Routes>
         <Route element={<MeetingPage />} path="/meetings/:meetingId/live" />
       </Routes>
     </MemoryRouter>,
   )
+
+  await screen.findByRole('button', { name: '참여자 4명 확인' })
+  return result
 }
 
 describe('MeetingPage controls', () => {
+  beforeEach(() => {
+    resetLiveMeetingMockDb()
+  })
+
   it('opens and dismisses the participant list', async () => {
     const user = userEvent.setup()
-    renderMeetingPage()
+    await renderMeetingPage()
 
     const trigger = screen.getByRole('button', { name: '참여자 4명 확인' })
     expect(trigger).toHaveAttribute('aria-expanded', 'false')
@@ -37,7 +45,7 @@ describe('MeetingPage controls', () => {
 
   it('closes each popover when its trigger is pressed again', async () => {
     const user = userEvent.setup()
-    renderMeetingPage()
+    await renderMeetingPage()
 
     const participantsTrigger = screen.getByRole('button', { name: '참여자 4명 확인' })
     await user.click(participantsTrigger)
@@ -55,7 +63,7 @@ describe('MeetingPage controls', () => {
 
   it('edits the meeting title from the more menu', async () => {
     const user = userEvent.setup()
-    renderMeetingPage()
+    await renderMeetingPage()
 
     await user.click(screen.getByRole('button', { name: '회의 메뉴 더보기' }))
     await user.click(screen.getByRole('menuitem', { name: '제목 수정하기' }))
@@ -72,7 +80,7 @@ describe('MeetingPage controls', () => {
 
   it('moves from end confirmation to the saving dialog', async () => {
     const user = userEvent.setup()
-    renderMeetingPage()
+    await renderMeetingPage()
 
     await user.click(screen.getByRole('button', { name: '회의 종료' }))
     expect(screen.getByRole('dialog', { name: '회의를 종료할까요?' })).toBeInTheDocument()
@@ -85,7 +93,7 @@ describe('MeetingPage controls', () => {
 
   it('moves between docked and floating while preserving the draft', async () => {
     const user = userEvent.setup()
-    const { container } = renderMeetingPage()
+    const { container } = await renderMeetingPage()
 
     const root = container.querySelector('[data-ai-chat-mode]')
     const input = screen.getByRole('textbox', { name: 'AI Chat 질문' })
@@ -106,7 +114,7 @@ describe('MeetingPage controls', () => {
 
   it('returns launcher to its entry mode while preserving the draft', async () => {
     const user = userEvent.setup()
-    const { container } = renderMeetingPage()
+    const { container } = await renderMeetingPage()
     const root = container.querySelector('[data-ai-chat-mode]')
 
     await user.type(screen.getByRole('textbox', { name: 'AI Chat 질문' }), '런처 왕복 질문')
@@ -128,7 +136,7 @@ describe('MeetingPage controls', () => {
 
   it('keeps floating mode while existing meeting controls open and close', async () => {
     const user = userEvent.setup()
-    const { container } = renderMeetingPage()
+    const { container } = await renderMeetingPage()
 
     await user.click(screen.getByRole('button', { name: 'AI Chat 창 축소' }))
     expect(container.querySelector('[data-ai-chat-mode]')).toHaveAttribute(
@@ -145,5 +153,77 @@ describe('MeetingPage controls', () => {
       'data-ai-chat-mode',
       'floating',
     )
+  })
+
+  it('moves a selected transcript snapshot to AI Chat and focuses an empty draft', async () => {
+    const user = userEvent.setup()
+    await renderMeetingPage()
+
+    await user.click(await screen.findByText(/지난주 유저 인터뷰 결과/))
+    await user.click(screen.getByRole('button', { name: 'AI에게 질문하기' }))
+
+    expect(screen.getByRole('region', { name: 'AI 질문 전사 컨텍스트' })).toHaveTextContent(
+      '지난주 유저 인터뷰 결과',
+    )
+    expect(screen.getByRole('textbox', { name: 'AI Chat 질문' })).toHaveValue('')
+    expect(screen.getByRole('textbox', { name: 'AI Chat 질문' })).toHaveFocus()
+  })
+
+  it('collapses a SynQ hint and restores it from cache when the transcript is selected again', async () => {
+    const user = userEvent.setup()
+    await renderMeetingPage()
+
+    const transcript = await screen.findByText(/지난주 유저 인터뷰 결과/)
+    await user.click(transcript)
+    expect(await screen.findByRole('article', { name: 'SynQ 힌트' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'SynQ 힌트 접기' }))
+    expect(screen.queryByRole('article', { name: 'SynQ 힌트' })).not.toBeInTheDocument()
+
+    await user.click(transcript)
+    expect(await screen.findByRole('article', { name: 'SynQ 힌트' })).toBeInTheDocument()
+  })
+
+  it('commits a successful transcript edit and shows the edited marker', async () => {
+    const user = userEvent.setup()
+    await renderMeetingPage()
+
+    await user.click(await screen.findByText(/지난주 유저 인터뷰 결과/))
+    await user.click(screen.getByRole('button', { name: '전사 수정' }))
+    const editor = screen.getByRole('textbox', { name: '전사 내용' })
+    await user.clear(editor)
+    await user.type(editor, '수정된 전사 문장')
+    await user.click(screen.getByRole('button', { name: '확인' }))
+
+    expect(await screen.findByText('수정된 전사 문장')).toBeInTheDocument()
+    expect(screen.getByText('수정됨')).toBeInTheDocument()
+  })
+
+  it('keeps a failed transcript draft visible without committing it', async () => {
+    const user = userEvent.setup()
+    await renderMeetingPage('/meetings/demo-edit-error/live')
+
+    await user.click(await screen.findByText(/지난주 유저 인터뷰 결과/))
+    await user.click(screen.getByRole('button', { name: '전사 수정' }))
+    const editor = screen.getByRole('textbox', { name: '전사 내용' })
+    await user.clear(editor)
+    await user.type(editor, '저장에 실패할 초안')
+    await user.click(screen.getByRole('button', { name: '확인' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('전사 내용을 수정하지 못했습니다.')
+    expect(screen.getByRole('textbox', { name: '전사 내용' })).toHaveValue('저장에 실패할 초안')
+  })
+
+  it('retries a failed SynQ hint request', async () => {
+    const user = userEvent.setup()
+    await renderMeetingPage('/meetings/demo-hint-error/live')
+
+    await user.click(await screen.findByText(/지난주 유저 인터뷰 결과/))
+    expect(await screen.findByRole('alert')).toHaveTextContent('SynQ 힌트를 불러오지 못했습니다.')
+
+    await user.click(screen.getByRole('button', { name: '다시 시도' }))
+
+    expect(await screen.findByText('팀 질문')).toBeInTheDocument()
+    expect(screen.getByText('온보딩 개선의 완료 기준은 무엇인가요?')).toBeInTheDocument()
   })
 })

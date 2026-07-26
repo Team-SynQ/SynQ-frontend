@@ -1,3 +1,5 @@
+import type { AiChatPinnedContext } from '../../../shared/api/contracts/meeting.contracts'
+
 export type AiChatMessage = {
   id: string
   role: 'assistant' | 'user'
@@ -14,10 +16,13 @@ export type AiChatViewModel = {
   suggestions: AiChatSuggestion[]
   draft: string
   isSending: boolean
+  sendError: string | null
+  pinnedContext: AiChatPinnedContext | null
 }
 
 export type AiChatActions = {
   onDraftChange: (value: string) => void
+  onClearContext: () => void
   onSend: () => void
   onSelectSuggestion: (suggestionId: string) => void
 }

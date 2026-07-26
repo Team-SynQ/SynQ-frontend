@@ -1,4 +1,4 @@
-import type { FormEvent, InputHTMLAttributes } from 'react'
+import { forwardRef, type FormEvent, type InputHTMLAttributes } from 'react'
 
 import { cn } from '../../lib/cn'
 
@@ -9,15 +9,18 @@ type ChatInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> & {
   wrapperClassName?: string
 }
 
-export function ChatInput({
-  onSend,
-  sendDisabled = false,
-  sendLabel = '보내기',
-  wrapperClassName,
-  className,
-  disabled,
-  ...props
-}: ChatInputProps) {
+export const ChatInput = forwardRef<HTMLInputElement, ChatInputProps>(function ChatInput(
+  {
+    onSend,
+    sendDisabled = false,
+    sendLabel = '보내기',
+    wrapperClassName,
+    className,
+    disabled,
+    ...props
+  },
+  ref,
+) {
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (disabled || sendDisabled) return
@@ -38,6 +41,7 @@ export function ChatInput({
           className,
         )}
         disabled={disabled}
+        ref={ref}
         type="text"
         {...props}
       />
@@ -51,7 +55,7 @@ export function ChatInput({
       </button>
     </form>
   )
-}
+})
 
 function SendIcon() {
   return (
