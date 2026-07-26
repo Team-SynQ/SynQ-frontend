@@ -103,8 +103,24 @@ export function Toast({
           {icon ?? <ToastIcon size={size} type={type} />}
         </span>
         <span className="flex min-w-0 flex-col gap-xs">
-          <strong className={cn('text-fg-primary', size === 'compact' ? 'typo-title-02' : 'typo-title-01')}>{title}</strong>
-          {description ? <span className={cn('text-fg-secondary', size === 'compact' ? 'typo-body-02' : 'typo-body-01')}>{description}</span> : null}
+          <strong
+            className={cn(
+              'text-fg-primary',
+              size === 'compact' ? 'typo-title-02' : 'typo-title-01',
+            )}
+          >
+            {title}
+          </strong>
+          {description ? (
+            <span
+              className={cn(
+                'text-fg-secondary',
+                size === 'compact' ? 'typo-body-02' : 'typo-body-01',
+              )}
+            >
+              {description}
+            </span>
+          ) : null}
         </span>
       </section>
     </div>

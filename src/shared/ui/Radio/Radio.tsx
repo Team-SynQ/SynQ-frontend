@@ -8,7 +8,13 @@ type RadioProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> & {
 
 export function Radio({ label, className, disabled, ...props }: RadioProps) {
   return (
-    <label className={cn('inline-flex items-center gap-xs typo-body-02 text-fg-primary', disabled && 'text-fg-secondary', className)}>
+    <label
+      className={cn(
+        'inline-flex items-center gap-xs typo-body-02 text-fg-primary',
+        disabled && 'text-fg-secondary',
+        className,
+      )}
+    >
       <input className="peer sr-only" disabled={disabled} type="radio" {...props} />
       <span
         aria-hidden="true"

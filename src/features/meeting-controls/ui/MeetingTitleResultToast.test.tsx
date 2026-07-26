@@ -19,12 +19,7 @@ describe('MeetingTitleResultToast', () => {
   })
 
   it('forwards a custom class name to the toast positioner', () => {
-    render(
-      <MeetingTitleResultToast
-        className="meeting-title-result"
-        result="failure"
-      />,
-    )
+    render(<MeetingTitleResultToast className="meeting-title-result" result="failure" />)
 
     expect(screen.getByRole('status').parentElement).toHaveClass('meeting-title-result')
   })

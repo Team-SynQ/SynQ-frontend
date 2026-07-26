@@ -49,7 +49,7 @@ export function SharedUiHubPage() {
   const selectedItem = useMemo(
     () =>
       selectedRoute && selectedRoute !== 'components'
-        ? componentReviewItems.find((item) => item.route === selectedRoute) ?? null
+        ? (componentReviewItems.find((item) => item.route === selectedRoute) ?? null)
         : null,
     [selectedRoute],
   )
@@ -58,13 +58,25 @@ export function SharedUiHubPage() {
     <main className="min-h-screen bg-surface-muted px-m py-l text-fg-primary">
       <div className="flex w-full flex-col gap-l">
         <PageHeader selectedItem={selectedItem} selectedRoute={selectedRoute} />
-        {selectedItem ? <ComponentDetail item={selectedItem} /> : selectedRoute === 'components' ? <ComponentList /> : <HubLanding />}
+        {selectedItem ? (
+          <ComponentDetail item={selectedItem} />
+        ) : selectedRoute === 'components' ? (
+          <ComponentList />
+        ) : (
+          <HubLanding />
+        )}
       </div>
     </main>
   )
 }
 
-function PageHeader({ selectedItem, selectedRoute }: { selectedItem: ComponentReviewItem | null; selectedRoute: HubRoute }) {
+function PageHeader({
+  selectedItem,
+  selectedRoute,
+}: {
+  selectedItem: ComponentReviewItem | null
+  selectedRoute: HubRoute
+}) {
   return (
     <header className="flex flex-col gap-s">
       <div className="flex flex-col gap-xs">
@@ -75,9 +87,18 @@ function PageHeader({ selectedItem, selectedRoute }: { selectedItem: ComponentRe
       </div>
       {selectedRoute ? (
         <nav className="flex flex-wrap gap-xs" aria-label="공통 컴포넌트">
-          <RouteLink active={selectedRoute === 'components'} href="#components" label="공통 컴포넌트" />
+          <RouteLink
+            active={selectedRoute === 'components'}
+            href="#components"
+            label="공통 컴포넌트"
+          />
           {componentReviewItems.map((item) => (
-            <RouteLink active={selectedItem?.route === item.route} href={`#${item.route}`} key={item.route} label={item.title} />
+            <RouteLink
+              active={selectedItem?.route === item.route}
+              href={`#${item.route}`}
+              key={item.route}
+              label={item.title}
+            />
           ))}
         </nav>
       ) : null}
@@ -125,7 +146,13 @@ function ComponentDetail({ item }: { item: ComponentReviewItem }) {
             <dt className="text-fg-primary">Figma node</dt>
             <dd className="flex flex-wrap gap-xs">
               {item.figmaNodes.map((nodeId) => (
-                <a className="text-brand-primary" href={getFigmaNodeUrl(nodeId)} key={nodeId} rel="noreferrer" target="_blank">
+                <a
+                  className="text-brand-primary"
+                  href={getFigmaNodeUrl(nodeId)}
+                  key={nodeId}
+                  rel="noreferrer"
+                  target="_blank"
+                >
                   {nodeId}
                 </a>
               ))}
@@ -167,7 +194,9 @@ function RouteLink({ active, href, label }: { active: boolean; href: string; lab
   return (
     <a
       className={`rounded-s border-stroke-md px-xs py-xs typo-caption transition-colors ${
-        active ? 'border-primary-300 bg-primary-100 text-brand-primary' : 'border-line-default bg-surface-elevated text-fg-secondary'
+        active
+          ? 'border-primary-300 bg-primary-100 text-brand-primary'
+          : 'border-line-default bg-surface-elevated text-fg-secondary'
       }`}
       href={href}
     >
@@ -177,5 +206,11 @@ function RouteLink({ active, href, label }: { active: boolean; href: string; lab
 }
 
 function StatusPill({ status }: { status: ComponentStatus }) {
-  return <span className={`inline-flex shrink-0 rounded-s border-stroke-md px-xs py-xs typo-caption ${statusClasses[status]}`}>{statusLabels[status]}</span>
+  return (
+    <span
+      className={`inline-flex shrink-0 rounded-s border-stroke-md px-xs py-xs typo-caption ${statusClasses[status]}`}
+    >
+      {statusLabels[status]}
+    </span>
+  )
 }

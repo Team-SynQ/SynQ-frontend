@@ -53,22 +53,16 @@ describe('AiChatPanel', () => {
       'border-surface-muted',
     )
     expect(screen.getByRole('button', { name: '지난 회의 범위는?' })).toBeInTheDocument()
-    expect(screen.getByRole('textbox', { name: 'AI Chat 질문' })).toHaveValue(
-      '작성 중인 질문',
-    )
+    expect(screen.getByRole('textbox', { name: 'AI Chat 질문' })).toHaveValue('작성 중인 질문')
 
-    await user.click(
-      screen.getByRole('button', { name: 'AI Chat 런처로 축소' }),
-    )
+    await user.click(screen.getByRole('button', { name: 'AI Chat 런처로 축소' }))
 
     expect(onCollapse).toHaveBeenCalledTimes(1)
 
     await user.click(screen.getByRole('button', { name: 'AI Chat 창 축소' }))
 
     expect(onMinimize).toHaveBeenCalledTimes(1)
-    expect(
-      screen.queryByRole('button', { name: 'AI Chat 창 확장' }),
-    ).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'AI Chat 창 확장' })).not.toBeInTheDocument()
   })
 
   it('renders floating content and requests docked mode', async () => {
@@ -93,17 +87,13 @@ describe('AiChatPanel', () => {
       'border-line-default',
     )
 
-    await user.click(
-      screen.getByRole('button', { name: 'AI Chat 런처로 축소' }),
-    )
+    await user.click(screen.getByRole('button', { name: 'AI Chat 런처로 축소' }))
 
     expect(onCollapse).toHaveBeenCalledTimes(1)
 
     await user.click(screen.getByRole('button', { name: 'AI Chat 창 확장' }))
 
     expect(onMaximize).toHaveBeenCalledTimes(1)
-    expect(
-      screen.queryByRole('button', { name: 'AI Chat 창 축소' }),
-    ).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'AI Chat 창 축소' })).not.toBeInTheDocument()
   })
 })

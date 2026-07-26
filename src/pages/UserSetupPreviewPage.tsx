@@ -1,12 +1,12 @@
-import React from 'react';
+import React from 'react'
 
 interface UserSetupPreviewPageProps {
-  selectedRoleLabel?: string;
-  selectedRoleIcon?: string;
-  detailRole?: string;
-  selectedPerspectiveLabels?: string[];
-  onComplete?: () => void;
-  onPrev?: () => void;
+  selectedRoleLabel?: string
+  selectedRoleIcon?: string
+  detailRole?: string
+  selectedPerspectiveLabels?: string[]
+  onComplete?: () => void
+  onPrev?: () => void
 }
 
 const UserSetupPreviewPage: React.FC<UserSetupPreviewPageProps> = ({
@@ -17,9 +17,8 @@ const UserSetupPreviewPage: React.FC<UserSetupPreviewPageProps> = ({
   onComplete,
   onPrev,
 }) => {
-  const perspectivesText = selectedPerspectiveLabels.length > 0
-    ? selectedPerspectiveLabels.join(', ')
-    : '-';
+  const perspectivesText =
+    selectedPerspectiveLabels.length > 0 ? selectedPerspectiveLabels.join(', ') : '-'
 
   return (
     <div className="relative flex flex-col items-center justify-center min-h-screen w-screen bg-white px-4 py-8 select-none">
@@ -34,7 +33,8 @@ const UserSetupPreviewPage: React.FC<UserSetupPreviewPageProps> = ({
           선택 결과 미리보기
         </h1>
         <p className="text-xs md:text-sm text-gray-400 leading-relaxed">
-          SynQ가 나에게 더 필요한 힌트와 정리를<br className="block sm:hidden" />
+          SynQ가 나에게 더 필요한 힌트와 정리를
+          <br className="block sm:hidden" />
           제공할 수 있도록 마지막으로 확인해 주세요.
         </p>
       </div>
@@ -63,17 +63,13 @@ const UserSetupPreviewPage: React.FC<UserSetupPreviewPageProps> = ({
 
           <div className="flex justify-between items-center text-sm">
             <span className="text-gray-500 font-medium">관점</span>
-            <span className="text-gray-900 font-semibold text-right pl-4">
-              {perspectivesText}
-            </span>
+            <span className="text-gray-900 font-semibold text-right pl-4">{perspectivesText}</span>
           </div>
         </div>
       </div>
 
       <div className="w-full max-w-[480px] flex flex-col items-center">
-        <p className="text-xs text-gray-400 mb-4">
-          모든 설정은 추후 수정 가능합니다.
-        </p>
+        <p className="text-xs text-gray-400 mb-4">모든 설정은 추후 수정 가능합니다.</p>
 
         <div className="flex w-full gap-3">
           <button
@@ -93,7 +89,7 @@ const UserSetupPreviewPage: React.FC<UserSetupPreviewPageProps> = ({
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default UserSetupPreviewPage;
+export default UserSetupPreviewPage

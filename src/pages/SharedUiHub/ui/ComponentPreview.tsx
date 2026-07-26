@@ -76,7 +76,10 @@ function DesignTokensPreview() {
     <>
       <div className="flex flex-wrap gap-xs">
         {colorTokens.map((colorToken) => (
-          <span className={`${colorToken} rounded-s border-stroke-md border-line-default px-m py-l`} key={colorToken}>
+          <span
+            className={`${colorToken} rounded-s border-stroke-md border-line-default px-m py-l`}
+            key={colorToken}
+          >
             <span className="sr-only">{colorToken}</span>
           </span>
         ))}
@@ -195,7 +198,10 @@ function BadgePreview() {
 function ModalPreview() {
   return (
     <div className="grid gap-m xl:grid-cols-2">
-      <Modal description="선택한 회의 기록을 삭제하면 다시 복구할 수 없습니다." title="회의 기록을 삭제할까요?" />
+      <Modal
+        description="선택한 회의 기록을 삭제하면 다시 복구할 수 없습니다."
+        title="회의 기록을 삭제할까요?"
+      />
       <Modal cancelLabel="닫기" title="회의 이해 힌트" type="info">
         역할별 영향을 다시 확인하고 팀과 맞출 질문을 정리하세요.
       </Modal>

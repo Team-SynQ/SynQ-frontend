@@ -1,9 +1,6 @@
 import refreshIcon from '../../../shared/assets/icons/refresh.svg'
 import { Button } from '../../../shared/ui'
-import type {
-  TranscriptPanelActions,
-  TranscriptPanelState,
-} from '../model/transcript.types'
+import type { TranscriptPanelActions, TranscriptPanelState } from '../model/transcript.types'
 import { SpeakingIndicator } from './SpeakingIndicator'
 import { TranscriptEmptyState } from './TranscriptEmptyState'
 import { TranscriptItem } from './TranscriptItem'
@@ -38,7 +35,12 @@ export function TranscriptPanel({ state, actions }: TranscriptPanelProps) {
         {state.kind === 'waiting' ? (
           <TranscriptEmptyState />
         ) : (
-          <div aria-live="polite" aria-relevant="additions text" className="flex flex-col gap-s" role="log">
+          <div
+            aria-live="polite"
+            aria-relevant="additions text"
+            className="flex flex-col gap-s"
+            role="log"
+          >
             {state.segments.map((segment) => (
               <TranscriptItem
                 key={segment.id}

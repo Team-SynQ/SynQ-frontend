@@ -42,7 +42,8 @@ export const componentReviewItems: ComponentReviewItem[] = [
     figmaNodes: ['523:490'],
     target: 'shared/ui/Button',
     status: 'implemented',
-    summary: 'Primary Fill, Primary Line, Fill Gray, Basic과 large, medium, small 크기를 제공합니다.',
+    summary:
+      'Primary Fill, Primary Line, Fill Gray, Basic과 large, medium, small 크기를 제공합니다.',
   },
   {
     route: 'input-box',
@@ -50,7 +51,8 @@ export const componentReviewItems: ComponentReviewItem[] = [
     figmaNodes: ['525:442', '673:4248'],
     target: 'shared/ui/InputBox',
     status: 'implemented',
-    summary: 'default, hover, active, error, disabled, filled 상태와 label, helper text, slot을 제공합니다.',
+    summary:
+      'default, hover, active, error, disabled, filled 상태와 label, helper text, slot을 제공합니다.',
   },
   {
     route: 'panel',
@@ -158,7 +160,9 @@ export const componentReviewItems: ComponentReviewItem[] = [
   },
 ]
 
-export const componentRouteKeys = new Set<ComponentRouteKey>(componentReviewItems.map((item) => item.route))
+export const componentRouteKeys = new Set<ComponentRouteKey>(
+  componentReviewItems.map((item) => item.route),
+)
 
 export const figmaFileKey = 'FHZ49MS3HLNgs6JOIv13HX'
 

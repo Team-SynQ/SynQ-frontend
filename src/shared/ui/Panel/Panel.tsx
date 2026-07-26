@@ -25,9 +25,15 @@ export function Panel({ type = 'unfolded', header, footer, children, className }
     >
       <div className={cn('flex w-full flex-col gap-xl', isFold && 'items-center')}>
         {header}
-        {children ? <div className={cn('flex w-full flex-col gap-xs', isFold && 'items-center')}>{children}</div> : null}
+        {children ? (
+          <div className={cn('flex w-full flex-col gap-xs', isFold && 'items-center')}>
+            {children}
+          </div>
+        ) : null}
       </div>
-      {footer ? <div className={cn('w-full', isFold && 'flex justify-center')}>{footer}</div> : null}
+      {footer ? (
+        <div className={cn('w-full', isFold && 'flex justify-center')}>{footer}</div>
+      ) : null}
     </aside>
   )
 }

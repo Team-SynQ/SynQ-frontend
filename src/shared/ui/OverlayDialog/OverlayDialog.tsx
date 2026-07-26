@@ -1,10 +1,4 @@
-import {
-  useEffect,
-  useRef,
-  type KeyboardEvent,
-  type MouseEvent,
-  type ReactNode,
-} from 'react'
+import { useEffect, useRef, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
 
 import { cn } from '../../lib/cn'
 
@@ -44,9 +38,8 @@ export function OverlayDialog({
   useEffect(() => {
     if (!open) return
 
-    previousFocusRef.current = document.activeElement instanceof HTMLElement
-      ? document.activeElement
-      : null
+    previousFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null
 
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
@@ -63,9 +56,8 @@ export function OverlayDialog({
 
   if (!open) return null
 
-  const getFocusableElements = () => Array.from(
-    dialogRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR) ?? [],
-  )
+  const getFocusableElements = () =>
+    Array.from(dialogRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR) ?? [])
 
   const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key === 'Escape') {

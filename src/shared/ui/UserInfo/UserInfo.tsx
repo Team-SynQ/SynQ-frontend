@@ -51,7 +51,12 @@ function DefaultAvatarIcon() {
   return (
     <svg aria-hidden="true" className="size-[24px]" fill="none" viewBox="0 0 24 24">
       <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" fill="currentColor" opacity="0.5" />
-      <path d="M4.5 21a7.5 7.5 0 0 1 15 0" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+      <path
+        d="M4.5 21a7.5 7.5 0 0 1 15 0"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="2"
+      />
     </svg>
   )
 }

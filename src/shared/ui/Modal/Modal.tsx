@@ -47,7 +47,13 @@ export function Modal({
         </h2>
         {description ? <p className="typo-body-01 text-fg-secondary">{description}</p> : null}
         {children ? (
-          <div className={cn(type === 'form' && 'pt-xs', isInfo && 'rounded-m bg-surface-muted p-s typo-transcription-body-01 text-fg-secondary')}>
+          <div
+            className={cn(
+              type === 'form' && 'pt-xs',
+              isInfo &&
+                'rounded-m bg-surface-muted p-s typo-transcription-body-01 text-fg-secondary',
+            )}
+          >
             {children}
           </div>
         ) : null}

@@ -1,13 +1,5 @@
-import {
-  type Dispatch,
-  type SetStateAction,
-  useState,
-} from 'react'
-import {
-  Outlet,
-  useNavigate,
-  useOutletContext,
-} from 'react-router-dom'
+import { type Dispatch, type SetStateAction, useState } from 'react'
+import { Outlet, useNavigate, useOutletContext } from 'react-router-dom'
 
 import UserPerspectiveSetupPage from '../../pages/UserPerspectiveSetupPage'
 import UserRoleSetupPage from '../../pages/UserRoleSetupPage'
@@ -70,12 +62,14 @@ export function UserSetupFlow() {
 
   return (
     <Outlet
-      context={{
-        perspectives,
-        roleData,
-        setPerspectives,
-        setRoleData,
-      } satisfies UserSetupContextValue}
+      context={
+        {
+          perspectives,
+          roleData,
+          setPerspectives,
+          setRoleData,
+        } satisfies UserSetupContextValue
+      }
     />
   )
 }
@@ -120,9 +114,7 @@ export function UserSetupPreviewRoute() {
       selectedRoleLabel={ROLE_LABEL_MAP[selectedRole] ?? selectedRole}
       selectedRoleIcon={ROLE_ICON_MAP[selectedRole] ?? ''}
       detailRole={roleData?.detailRole}
-      selectedPerspectiveLabels={perspectives.map(
-        (id) => PERSPECTIVE_LABEL_MAP[id] ?? id,
-      )}
+      selectedPerspectiveLabels={perspectives.map((id) => PERSPECTIVE_LABEL_MAP[id] ?? id)}
       onPrev={() => navigate('/setup/perspectives')}
       onComplete={() => {
         console.log('최종 온보딩 완료 데이터:', {
