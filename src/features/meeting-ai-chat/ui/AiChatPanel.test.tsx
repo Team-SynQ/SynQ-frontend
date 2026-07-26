@@ -8,6 +8,7 @@ import { AiChatPanel } from './AiChatPanel'
 const model: AiChatViewModel = {
   draft: '작성 중인 질문',
   isSending: false,
+  pinnedContext: null,
   messages: [
     {
       id: 'assistant-welcome',
@@ -26,6 +27,7 @@ const model: AiChatViewModel = {
 function createActions(): AiChatActions {
   return {
     onDraftChange: vi.fn(),
+    onClearContext: vi.fn(),
     onSelectSuggestion: vi.fn(),
     onSend: vi.fn(),
   }
@@ -95,5 +97,35 @@ describe('AiChatPanel', () => {
 
     expect(onMaximize).toHaveBeenCalledTimes(1)
     expect(screen.queryByRole('button', { name: 'AI Chat 창 축소' })).not.toBeInTheDocument()
+  })
+
+  it('renders and clears a pinned transcript above the message list', async () => {
+    const user = userEvent.setup()
+    const actions = createActions()
+
+    render(
+      <AiChatPanel
+        actions={actions}
+        model={{
+          ...model,
+          pinnedContext: {
+            transcriptId: 'segment-1',
+            text: '선택한 전사 문장',
+          },
+        }}
+        onCollapse={vi.fn()}
+        onMinimize={vi.fn()}
+        variant="docked"
+      />,
+    )
+
+    const context = screen.getByRole('region', { name: 'AI 질문 전사 컨텍스트' })
+    const messageLog = screen.getByRole('log', { name: 'AI Chat 메시지' })
+    expect(context).toHaveTextContent('선택한 전사 문장')
+    expect(context.compareDocumentPosition(messageLog)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+
+    await user.click(screen.getByRole('button', { name: '전사 컨텍스트 제거' }))
+
+    expect(actions.onClearContext).toHaveBeenCalledTimes(1)
   })
 })

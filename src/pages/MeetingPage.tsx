@@ -128,6 +128,7 @@ export function MeetingPage() {
         aiChat={{
           actions: {
             onDraftChange: setDraft,
+            onClearContext: () => undefined,
             onSelectSuggestion: (suggestionId) => {
               const suggestion = suggestions.find((item) => item.id === suggestionId)
               if (suggestion) setDraft(suggestion.label)
@@ -138,6 +139,7 @@ export function MeetingPage() {
             draft,
             isSending: false,
             messages,
+            pinnedContext: null,
             suggestions,
           },
         }}
