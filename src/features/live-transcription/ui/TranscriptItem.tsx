@@ -41,12 +41,7 @@ export function TranscriptItem({
     hintState.status !== 'idle' && hintState.transcriptId === segment.id ? hintState : null
 
   return (
-    <article
-      aria-label={segment.text}
-      aria-selected={isSelected}
-      className="flex w-full flex-col gap-xs"
-      role="option"
-    >
+    <article aria-label={segment.text} className="flex w-full flex-col gap-xs" role="listitem">
       <div
         className={cn(
           'flex w-full flex-col rounded-m p-s',
@@ -89,6 +84,7 @@ export function TranscriptItem({
           </div>
         ) : (
           <button
+            aria-pressed={isSelected}
             className="mt-xs w-full text-left typo-transcription-body-01 text-fg-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
             onClick={() => onSelect?.(segment.id)}
             type="button"

@@ -106,7 +106,7 @@ describe('useLiveMeetingController async boundaries', () => {
       }
     })
 
-    act(() => {
+    await act(async () => {
       updateRequest.resolve({
         id: 'segment-1',
         sequenceIndex: 0,
@@ -121,17 +121,16 @@ describe('useLiveMeetingController async boundaries', () => {
         content: '이전 회의의 답변',
         context: null,
       })
+      await Promise.resolve()
+      await Promise.resolve()
     })
 
-    await waitFor(() => {
-      if (result.current.status !== 'ready') throw new Error('controller is not ready')
-      expect(result.current.meeting.transcript.segments[0]?.text).not.toBe(
-        '이전 회의에서 수정한 문장',
-      )
-      expect(result.current.aiChat.model.messages).not.toContainEqual(
-        expect.objectContaining({ id: 'stale-assistant' }),
-      )
-    })
+    if (result.current.status !== 'ready') throw new Error('controller is not ready')
+    expect(result.current.meeting.transcript.segments[0]?.text).toBe(
+      '네, 지난주 유저 인터뷰 결과를 토대로 봤을 때, 제품 측면에서는 온보딩 플로우 개선이 가장 큰 임팩트를 줄 수 있을 것 같습니다. 사용자들이 앱에 처음 들어왔을 때 핵심 기능을 파악하기 전에 헤매는 구간이 너무 길어요.',
+    )
+    expect(result.current.aiChat.model.messages).toHaveLength(1)
+    expect(result.current.aiChat.model.messages[0]?.id).toBe('assistant-welcome')
   })
 
   it('handles transcript refresh rejection without an unhandled promise', async () => {
@@ -223,5 +222,106 @@ describe('useLiveMeetingController async boundaries', () => {
       })
     })
     expect(hintSpy).toHaveBeenCalledOnce()
+  })
+
+  it('does not recreate the elapsed timer when transcript data is replaced', async () => {
+    const setIntervalSpy = vi.spyOn(window, 'setInterval')
+    const { result, unmount } = await renderReadyController()
+    setIntervalSpy.mockClear()
+    vi.spyOn(meetingApi, 'listTranscripts').mockResolvedValue([
+      {
+        id: 'segment-1',
+        sequenceIndex: 1,
+        startedAtSeconds: 284,
+        text: '새로고침된 전사 문장',
+        isEdited: false,
+        editedAt: null,
+      },
+    ])
+
+    act(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      result.current.transcript.actions.onRefresh()
+    })
+
+    await waitFor(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      expect(result.current.meeting.transcript.segments[0]?.text).toBe('새로고침된 전사 문장')
+    })
+    expect(setIntervalSpy.mock.calls.filter(([, delay]) => delay === 1000)).toHaveLength(0)
+    unmount()
+  })
+
+  it('reloads the hint after the selected transcript is edited', async () => {
+    const previousHint: TranscriptHintResponse = {
+      transcriptId: 'segment-1',
+      notice: null,
+      meaning: '수정 전 의미',
+      personalImpact: '수정 전 영향',
+      teamQuestion: '수정 전 질문',
+    }
+    const updatedHint: TranscriptHintResponse = {
+      transcriptId: 'segment-1',
+      notice: null,
+      meaning: '수정 후 의미',
+      personalImpact: '수정 후 영향',
+      teamQuestion: '수정 후 질문',
+    }
+    const hintSpy = vi
+      .spyOn(meetingAiMockGateway, 'getTranscriptHint')
+      .mockResolvedValueOnce(previousHint)
+      .mockResolvedValueOnce(updatedHint)
+    const { result } = await renderReadyController()
+
+    act(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      result.current.transcript.actions.onSelectSegment?.('segment-1')
+    })
+    await waitFor(() => {
+      if (result.current.status !== 'ready' || result.current.transcript.state.kind !== 'active') {
+        throw new Error('transcript is not active')
+      }
+      expect(result.current.transcript.state.hintState).toEqual({
+        status: 'ready',
+        transcriptId: 'segment-1',
+        hint: previousHint,
+      })
+    })
+
+    act(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      result.current.transcript.actions.onStartEdit?.('segment-1')
+    })
+    act(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      result.current.transcript.actions.onEditDraftChange?.('수정된 전사 문장')
+    })
+    act(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      result.current.transcript.actions.onSaveEdit?.()
+    })
+    await waitFor(() => {
+      if (result.current.status !== 'ready' || result.current.transcript.state.kind !== 'active') {
+        throw new Error('transcript is not active')
+      }
+      expect(result.current.meeting.transcript.segments[0]?.text).toBe('수정된 전사 문장')
+      expect(result.current.transcript.state.hintState?.status).toBe('idle')
+    })
+
+    act(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      result.current.transcript.actions.onSelectSegment?.('segment-1')
+    })
+    await waitFor(() => {
+      if (result.current.status !== 'ready' || result.current.transcript.state.kind !== 'active') {
+        throw new Error('transcript is not active')
+      }
+      expect(result.current.transcript.state.hintState).toEqual({
+        status: 'ready',
+        transcriptId: 'segment-1',
+        hint: updatedHint,
+      })
+    })
+    expect(hintSpy).toHaveBeenCalledTimes(2)
   })
 })

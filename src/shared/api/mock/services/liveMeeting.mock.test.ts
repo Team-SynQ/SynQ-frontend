@@ -1,10 +1,11 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { resetLiveMeetingMockDb } from '../db/liveMeeting.mockDb'
 import { liveMeetingAiMockGateway, liveMeetingMockService } from './liveMeeting.mock'
 
 describe('liveMeetingMockService', () => {
   beforeEach(() => {
+    vi.restoreAllMocks()
     resetLiveMeetingMockDb()
   })
 
@@ -109,5 +110,24 @@ describe('liveMeetingMockService', () => {
         context: response.context,
       }),
     ])
+  })
+
+  it('creates unique message IDs for questions handled in the same millisecond', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1_000)
+
+    await liveMeetingAiMockGateway.sendMeetingAiQuestion({
+      meetingId: 'demo',
+      question: '첫 번째 질문',
+      context: null,
+    })
+    await liveMeetingAiMockGateway.sendMeetingAiQuestion({
+      meetingId: 'demo',
+      question: '두 번째 질문',
+      context: null,
+    })
+
+    const meeting = await liveMeetingMockService.joinMeeting('demo')
+    const generatedIds = meeting.aiChat.messages.slice(-4).map((message) => message.id)
+    expect(new Set(generatedIds).size).toBe(4)
   })
 })

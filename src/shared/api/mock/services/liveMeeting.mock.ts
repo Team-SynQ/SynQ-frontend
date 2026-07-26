@@ -10,6 +10,8 @@ import type {
 import { liveMeetingMockDb } from '../db/liveMeeting.mockDb'
 import { MockApiError, waitForMockApi } from '../lib/mockApi'
 
+let messageSequence = 0
+
 function requireMeeting(meetingId: string): LiveMeetingResponse {
   const meeting = liveMeetingMockDb.getMeeting(meetingId)
   if (!meeting) {
@@ -100,15 +102,15 @@ export const liveMeetingAiMockGateway = {
     }
 
     const scenario = liveMeetingMockDb.getScenario(request.meetingId)
-    const timestamp = Date.now()
+    const messageId = `${Date.now()}-${messageSequence++}`
     const userMessage: MeetingAiChatMessageResponse = {
-      id: `user-${timestamp}`,
+      id: `user-${messageId}`,
       role: 'user',
       content: question,
       context: request.context ? { ...request.context } : null,
     }
     const assistantMessage: MeetingAiChatMessageResponse = {
-      id: `assistant-${timestamp}`,
+      id: `assistant-${messageId}`,
       role: 'assistant',
       content: scenario?.aiAnswer ?? '질문에 답변할 수 없습니다.',
       context: request.context ? { ...request.context } : null,

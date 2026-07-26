@@ -41,7 +41,7 @@ export function TranscriptPanel({ state, actions }: TranscriptPanelProps) {
             className="flex flex-col gap-s"
             role="log"
           >
-            <div aria-label="회의 전사 목록" className="flex flex-col gap-s" role="listbox">
+            <div aria-label="회의 전사 목록" className="flex flex-col gap-s" role="list">
               {state.segments.map((segment) => {
                 const editState = state.editState ?? { status: 'idle' as const }
                 const editing = editState.status === 'editing'

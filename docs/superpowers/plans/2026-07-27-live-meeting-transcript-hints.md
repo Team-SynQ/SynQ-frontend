@@ -15,7 +15,7 @@
 - fixture는 읽기 전용이고 변경 가능한 성공 상태만 Mock DB에 저장한다.
 - 수정 실패 초안은 화면 상태에 유지하지만 Mock DB에는 저장하지 않는다.
 - AI Chat 고정 컨텍스트는 전달 시점의 전사 스냅샷이며 질문 draft를 자동 입력하지 않는다.
-- 힌트 접기 아이콘은 실제 `button`으로 구현하지만 콘텐츠 접기 동작은 연결하지 않는다.
+- 힌트 접기 아이콘은 실제 `button`으로 구현하고, 클릭하면 힌트 카드를 제거한다. 같은 전사를 다시 선택하면 성공한 힌트를 캐시에서 복원한다.
 - 튜토리얼 화면의 고정값은 Mock으로 이관하지 않는다.
 - AI 힌트와 AI Chat은 명세에 URL이 없으므로 의미 기반 mock-only 메서드만 제공한다.
 - 실제 STT WebSocket과 백엔드 HTTP 연결은 구현하지 않는다.
@@ -40,7 +40,8 @@
 
 **Interfaces:**
 - Produces: `LiveMeetingResponse`, `TranscriptSegmentResponse`, `TranscriptHintResponse`, `AiChatPinnedContext`, `UpdateTranscriptRequest`, `SendMeetingAiQuestionRequest`
-- Produces: `meetingApi.joinMeeting`, `meetingApi.listTranscripts`, `meetingApi.updateTranscript`, `meetingApi.getTranscriptHint`, `meetingApi.sendMeetingAiQuestion`
+- Produces: `meetingApi.joinMeeting`, `meetingApi.listTranscripts`, `meetingApi.updateTranscript`
+- Produces: `meetingAiMockGateway.getTranscriptHint`, `meetingAiMockGateway.sendMeetingAiQuestion`
 - Produces: `resetLiveMeetingMockDb()` for test isolation
 - Consumes: `waitForMockApi`, `MockApiError`
 
@@ -87,14 +88,14 @@ it('keeps committed text when an edit scenario fails', async () => {
 
 it('fails the first hint request and succeeds when retried', async () => {
   await expect(
-    liveMeetingMockService.getTranscriptHint({
+    liveMeetingAiMockGateway.getTranscriptHint({
       meetingId: 'demo-hint-error',
       transcriptId: 'segment-1',
     }),
   ).rejects.toMatchObject({ code: 'TRANSCRIPT_HINT_LOAD_FAILED' })
 
   await expect(
-    liveMeetingMockService.getTranscriptHint({
+    liveMeetingAiMockGateway.getTranscriptHint({
       meetingId: 'demo-hint-error',
       transcriptId: 'segment-1',
     }),
@@ -102,7 +103,7 @@ it('fails the first hint request and succeeds when retried', async () => {
 })
 
 it('returns an AI response while preserving the supplied transcript snapshot', async () => {
-  const response = await liveMeetingMockService.sendMeetingAiQuestion({
+  const response = await liveMeetingAiMockGateway.sendMeetingAiQuestion({
     meetingId: 'demo',
     question: '이 내용이 왜 중요해?',
     context: { transcriptId: 'segment-1', text: '질문 시점 문장' },
@@ -324,7 +325,7 @@ git commit -m "feat/#45: AI Chat 전사 컨텍스트 추가"
 **Interfaces:**
 - Consumes: `TranscriptSegmentResponse`, `TranscriptHintResponse`
 - Produces: `TranscriptHintState`, `TranscriptEditState`
-- Produces actions: `onSelectSegment`, `onAskAi`, `onStartEdit`, `onEditDraftChange`, `onCancelEdit`, `onSaveEdit`, `onRetryHint`
+- Produces actions: `onSelectSegment`, `onAskAi`, `onStartEdit`, `onEditDraftChange`, `onCancelEdit`, `onCollapseHint`, `onSaveEdit`, `onRetryHint`
 
 - [ ] **Step 1: Write failing component tests**
 
@@ -334,7 +335,7 @@ Use a real `TranscriptPanel` with literal state and assert:
 2. ready hint renders `의미`, `나에게 미치는 영향`, `함께 확인할 질문`;
 3. loading state exposes `SynQ 힌트를 불러오는 중입니다.`;
 4. error state exposes an alert and `다시 시도`;
-5. the hint collapse control is a button and clicking it does not hide the hint;
+5. the hint collapse control removes the hint card, and selecting the transcript again restores a successful hint from cache;
 6. editing starts with `확인` disabled;
 7. changing to non-empty different text enables `확인`;
 8. whitespace-only text keeps `확인` disabled;
@@ -364,7 +365,7 @@ Add `sequenceIndex`, `isEdited`, and `editedAt` to segments. Model selected ID, 
 - gray-200, 16px padding, 12px radius;
 - title and optional notice;
 - 81px gray-100 labels;
-- a real no-op collapse button labeled `SynQ 힌트 접기`;
+- a collapse button labeled `SynQ 힌트 접기` that removes the card;
 - loading and error variants in the same card position.
 
 Use a local 28px loader SVG/CSS asset with `motion-reduce:animate-none`; do not add a dependency.
@@ -375,7 +376,7 @@ Use an auto-height textarea that focuses on mount. Render `취소` and `확인`;
 
 - [ ] **Step 6: Refactor `TranscriptItem` and `TranscriptPanel`**
 
-Use a semantic selected article/list option boundary with `aria-selected`. The segment body remains keyboard-selectable. Render actions and hint only for the selected segment. While editing, hide selection actions and hint and prevent another selection callback.
+Use `list`/`listitem` semantics because each transcript contains interactive controls. The segment body remains keyboard-selectable and exposes selection with `aria-pressed`. Render actions and hint only for the selected segment. While editing, hide selection actions and hint and prevent another selection callback.
 
 - [ ] **Step 7: Run tests and verify GREEN**
 

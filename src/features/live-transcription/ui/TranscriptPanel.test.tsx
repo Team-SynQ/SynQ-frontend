@@ -56,8 +56,10 @@ describe('TranscriptPanel', () => {
 
     render(<TranscriptPanel actions={actions} state={createActiveState()} />)
 
-    const option = screen.getByRole('option', { name: /온보딩 개선/ })
-    expect(option).toHaveAttribute('aria-selected', 'true')
+    const transcriptItem = screen.getByRole('listitem', { name: /온보딩 개선/ })
+    const transcriptButton = screen.getByRole('button', { name: segment.text })
+    expect(transcriptItem).not.toHaveAttribute('aria-selected')
+    expect(transcriptButton).toHaveAttribute('aria-pressed', 'true')
 
     await user.click(screen.getByRole('button', { name: '전사 수정' }))
     await user.click(screen.getByRole('button', { name: 'AI에게 질문하기' }))
@@ -93,13 +95,13 @@ describe('TranscriptPanel', () => {
     expect(screen.getByText('내 영향')).toBeInTheDocument()
     expect(screen.getByText('팀 질문')).toBeInTheDocument()
     expect(screen.getByText(hint.teamQuestion)).toBeInTheDocument()
-    const option = screen.getByRole('option', { name: segment.text })
+    const transcriptItem = screen.getByRole('listitem', { name: segment.text })
     const transcriptSurface = screen.getByRole('button', { name: segment.text }).parentElement
     const hintSurface = screen.getByText(hint.teamQuestion).closest('article')
 
-    expect(option).toHaveClass('gap-xs')
-    expect(option).not.toHaveClass('bg-surface-muted', 'p-s')
-    expect(transcriptSurface).not.toBe(option)
+    expect(transcriptItem).toHaveClass('gap-xs')
+    expect(transcriptItem).not.toHaveClass('bg-surface-muted', 'p-s')
+    expect(transcriptSurface).not.toBe(transcriptItem)
     expect(transcriptSurface).toHaveClass('rounded-m', 'bg-surface-muted', 'p-s')
     expect(hintSurface).toHaveClass('rounded-m', 'bg-surface-muted', 'p-s')
     expect(hintSurface).not.toHaveClass('mt-xs')

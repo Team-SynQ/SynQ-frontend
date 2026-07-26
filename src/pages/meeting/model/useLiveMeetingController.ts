@@ -119,15 +119,17 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
     }
   }, [isCurrentMeetingSession, meetingId])
 
+  const hasMeeting = meeting !== null
+
   useEffect(() => {
-    if (!meeting) return
+    if (!hasMeeting) return
 
     const timerId = window.setInterval(() => {
       setElapsedSeconds((current) => current + 1)
     }, 1000)
 
     return () => window.clearInterval(timerId)
-  }, [meeting])
+  }, [hasMeeting])
 
   const loadHint = useCallback(
     async (transcriptId: string, useCache: boolean) => {
@@ -221,6 +223,13 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
         text: savingState.draftText,
       })
       if (!isCurrentMeetingSession(requestMeetingId, requestSessionSequence)) return
+      hintCacheRef.current.delete(savingState.transcriptId)
+      hintRequestSequenceRef.current += 1
+      setHintState((current) =>
+        current.status !== 'idle' && current.transcriptId === savingState.transcriptId
+          ? { status: 'idle' }
+          : current,
+      )
       setMeeting((current) =>
         current?.meetingId === requestMeetingId
           ? {
