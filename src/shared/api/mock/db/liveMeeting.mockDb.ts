@@ -114,9 +114,7 @@ export const liveMeetingMockDb = {
     return true
   },
 
-  addCompletedMeeting(
-    record: Omit<CompletedMeetingSummary, 'recordId'>,
-  ): CompletedMeetingSummary {
+  addCompletedMeeting(record: Omit<CompletedMeetingSummary, 'recordId'>): CompletedMeetingSummary {
     const completedMeeting = {
       ...structuredClone(record),
       recordId: `meeting-record-${++completedMeetingSequence}`,
@@ -129,8 +127,7 @@ export const liveMeetingMockDb = {
 
   listCompletedMeetings(projectId: string): CompletedMeetingSummary[] {
     return structuredClone(completedMeetingRecords.get(projectId) ?? []).sort(
-      (left, right) =>
-        new Date(right.completedAt).getTime() - new Date(left.completedAt).getTime(),
+      (left, right) => new Date(right.completedAt).getTime() - new Date(left.completedAt).getTime(),
     )
   },
 }

@@ -48,7 +48,12 @@ export function ProjectLatestMeetingSummary({
             >
               자세히 보기
               <span className="flex size-[24px] items-center justify-center">
-                <img alt="" aria-hidden="true" className="h-[12px] w-[7px]" src={chevronRightIcon} />
+                <img
+                  alt=""
+                  aria-hidden="true"
+                  className="h-[12px] w-[7px]"
+                  src={chevronRightIcon}
+                />
               </span>
             </button>
           </div>

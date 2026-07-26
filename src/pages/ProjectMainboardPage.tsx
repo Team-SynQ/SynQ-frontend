@@ -112,17 +112,15 @@ export function ProjectMainboardPage({
   const [completedMeetingsByProject, setCompletedMeetingsByProject] = useState<
     Record<string, CompletedMeeting[]>
   >({})
-  const [meetingHistoryErrorProjectId, setMeetingHistoryErrorProjectId] =
-    useState<string>()
+  const [meetingHistoryErrorProjectId, setMeetingHistoryErrorProjectId] = useState<string>()
   const [meetingHistoryReloadKey, setMeetingHistoryReloadKey] = useState(0)
   const [latestCreatedProjectName, setLatestCreatedProjectName] = useState<string>()
   const [projectReferenceFeedback, setProjectReferenceFeedback] =
     useState<ProjectReferenceFeedback>()
   const creationSuccessToast = useTransientVisibility()
   const projectReferenceFeedbackToast = useTransientVisibility()
-  const requestedActiveProjectId = (
-    location.state as { activeProjectId?: string } | null
-  )?.activeProjectId
+  const requestedActiveProjectId = (location.state as { activeProjectId?: string } | null)
+    ?.activeProjectId
   const {
     isMounted: isProjectLoadErrorMounted,
     isVisible: isProjectLoadErrorVisible,
@@ -181,12 +179,7 @@ export function ProjectMainboardPage({
     return () => {
       isSubscribed = false
     }
-  }, [
-    activeProjectId,
-    completedMeetingsByProject,
-    loadCompletedMeetings,
-    meetingHistoryReloadKey,
-  ])
+  }, [activeProjectId, completedMeetingsByProject, loadCompletedMeetings, meetingHistoryReloadKey])
 
   const handleCreateProject = () => {
     setIsCreateModalOpen(true)

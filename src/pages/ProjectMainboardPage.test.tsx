@@ -106,9 +106,7 @@ describe('ProjectMainboardPage', () => {
     })
 
     expect(await screen.findByRole('heading', { name: '서비스 디자인' })).toBeInTheDocument()
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      '회의 기록을 불러오지 못했습니다.',
-    )
+    expect(await screen.findByRole('alert')).toHaveTextContent('회의 기록을 불러오지 못했습니다.')
 
     await user.click(screen.getByRole('button', { name: '다시 불러오기' }))
 

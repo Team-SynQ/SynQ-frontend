@@ -317,9 +317,7 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
     }
   }
 
-  const completeMeeting = async (
-    context: LiveMeetingProjectContext,
-  ): Promise<CompletedMeeting> => {
+  const completeMeeting = async (context: LiveMeetingProjectContext): Promise<CompletedMeeting> => {
     const host = meeting.participants.find((participant) => participant.isHost)
     if (!host) {
       throw new Error('회의 진행자 정보를 찾을 수 없습니다.')

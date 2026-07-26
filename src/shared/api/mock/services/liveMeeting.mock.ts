@@ -80,11 +80,7 @@ export const liveMeetingMockService = {
     requireMeeting(request.meetingId)
 
     if (liveMeetingMockDb.getScenario(request.meetingId)?.completionFails) {
-      throw new MockApiError(
-        500,
-        'MEETING_COMPLETE_FAILED',
-        '회의 기록을 저장하지 못했습니다.',
-      )
+      throw new MockApiError(500, 'MEETING_COMPLETE_FAILED', '회의 기록을 저장하지 못했습니다.')
     }
 
     return liveMeetingMockDb.addCompletedMeeting({

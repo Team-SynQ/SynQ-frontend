@@ -1,10 +1,7 @@
 import { useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 
-import type {
-  CompletedMeeting,
-  LiveMeetingProjectContext,
-} from '../entities/meeting'
+import type { CompletedMeeting, LiveMeetingProjectContext } from '../entities/meeting'
 import type { AiChatDisplayMode } from '../features/meeting-ai-chat'
 import {
   MeetingExitDialog,
