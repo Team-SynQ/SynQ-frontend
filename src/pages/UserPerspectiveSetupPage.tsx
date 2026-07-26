@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from 'react'
 
 const PERSPECTIVE_OPTIONS = [
   { id: 'schedule', label: '일정' },
@@ -11,35 +11,32 @@ const PERSPECTIVE_OPTIONS = [
   { id: 'ops_issue', label: '운영 이슈' },
   { id: 'action_item', label: '액션 아이템' },
   { id: 'team_qna', label: '팀 질문' },
-];
+]
 
 interface UserPerspectiveSetupPageProps {
-  onNext?: (selectedPerspectives: string[]) => void;
-  onPrev?: () => void;
+  onNext?: (selectedPerspectives: string[]) => void
+  onPrev?: () => void
 }
 
-const UserPerspectiveSetupPage: React.FC<UserPerspectiveSetupPageProps> = ({
-  onNext,
-  onPrev,
-}) => {
-  const [selectedPerspectives, setSelectedPerspectives] = useState<string[]>([]);
+const UserPerspectiveSetupPage: React.FC<UserPerspectiveSetupPageProps> = ({ onNext, onPrev }) => {
+  const [selectedPerspectives, setSelectedPerspectives] = useState<string[]>([])
 
   const handleToggle = (id: string) => {
     if (selectedPerspectives.includes(id)) {
-      setSelectedPerspectives(prev => prev.filter(item => item !== id));
+      setSelectedPerspectives((prev) => prev.filter((item) => item !== id))
     } else {
       if (selectedPerspectives.length < 3) {
-        setSelectedPerspectives(prev => [...prev, id]);
+        setSelectedPerspectives((prev) => [...prev, id])
       }
     }
-  };
+  }
 
-  const isNextEnabled = selectedPerspectives.length > 0;
+  const isNextEnabled = selectedPerspectives.length > 0
 
   const handleNext = () => {
-    if (!isNextEnabled) return;
-    onNext?.(selectedPerspectives);
-  };
+    if (!isNextEnabled) return
+    onNext?.(selectedPerspectives)
+  }
 
   return (
     <div className="relative flex flex-col items-center justify-center min-h-screen w-screen bg-white px-4 py-8 select-none">
@@ -65,10 +62,10 @@ const UserPerspectiveSetupPage: React.FC<UserPerspectiveSetupPageProps> = ({
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          {PERSPECTIVE_OPTIONS.map(option => {
-            const isChecked = selectedPerspectives.includes(option.id);
-            const isMaxReached = selectedPerspectives.length >= 3;
-            const isDisabled = !isChecked && isMaxReached;
+          {PERSPECTIVE_OPTIONS.map((option) => {
+            const isChecked = selectedPerspectives.includes(option.id)
+            const isMaxReached = selectedPerspectives.length >= 3
+            const isDisabled = !isChecked && isMaxReached
 
             return (
               <button
@@ -80,22 +77,17 @@ const UserPerspectiveSetupPage: React.FC<UserPerspectiveSetupPageProps> = ({
                   isChecked
                     ? 'border-[#0089FF] bg-white shadow-sm'
                     : isDisabled
-                    ? 'border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed'
-                    : 'border-gray-200 bg-white hover:border-gray-300'
+                      ? 'border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed'
+                      : 'border-gray-200 bg-white hover:border-gray-300'
                 }`}
               >
                 <div
                   className={`w-5 h-5 rounded flex items-center justify-center transition-colors ${
-                    isChecked
-                      ? 'bg-[#0089FF] text-white'
-                      : 'border border-gray-300 bg-white'
+                    isChecked ? 'bg-[#0089FF] text-white' : 'border border-gray-300 bg-white'
                   }`}
                 >
                   {isChecked && (
-                    <svg
-                      className="w-3.5 h-3.5 fill-current"
-                      viewBox="0 0 20 20"
-                    >
+                    <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20">
                       <path d="M0 11l2-2 5 5L18 3l2 2L7 18z" />
                     </svg>
                   )}
@@ -103,25 +95,19 @@ const UserPerspectiveSetupPage: React.FC<UserPerspectiveSetupPageProps> = ({
 
                 <span
                   className={`text-sm font-semibold ${
-                    isChecked
-                      ? 'text-gray-900'
-                      : isDisabled
-                      ? 'text-gray-400'
-                      : 'text-gray-700'
+                    isChecked ? 'text-gray-900' : isDisabled ? 'text-gray-400' : 'text-gray-700'
                   }`}
                 >
                   {option.label}
                 </span>
               </button>
-            );
+            )
           })}
         </div>
       </div>
 
       <div className="w-full max-w-[540px] flex flex-col items-center">
-        <p className="text-xs text-gray-400 mb-4">
-          모든 설정은 추후 수정 가능합니다.
-        </p>
+        <p className="text-xs text-gray-400 mb-4">모든 설정은 추후 수정 가능합니다.</p>
 
         <div className="flex w-full gap-3">
           <button
@@ -146,7 +132,7 @@ const UserPerspectiveSetupPage: React.FC<UserPerspectiveSetupPageProps> = ({
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default UserPerspectiveSetupPage;
+export default UserPerspectiveSetupPage

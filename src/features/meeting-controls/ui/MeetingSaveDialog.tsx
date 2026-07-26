@@ -54,11 +54,7 @@ export function MeetingSaveDialog(props: MeetingSaveDialogProps) {
         open={props.open}
         titleId={titleId}
       >
-        <img
-          alt="저장 완료"
-          className="size-[72px]"
-          src={clipboardIcon}
-        />
+        <img alt="저장 완료" className="size-[72px]" src={clipboardIcon} />
         <h2 className="typo-title-01 text-fg-primary" id={titleId}>
           회의가 종료되었습니다.
         </h2>
@@ -94,7 +90,9 @@ export function MeetingSaveDialog(props: MeetingSaveDialogProps) {
           <path d="M15 21h.01" stroke="currentColor" strokeLinecap="round" strokeWidth="3.5" />
         </svg>
       </span>
-      <h2 className="sr-only" id={titleId}>회의 저장 실패</h2>
+      <h2 className="sr-only" id={titleId}>
+        회의 저장 실패
+      </h2>
       <div className="typo-title-01 text-fg-primary">
         <p>회의 내용을 저장하지 못했습니다.</p>
         <p>다시 시도해 주세요.</p>

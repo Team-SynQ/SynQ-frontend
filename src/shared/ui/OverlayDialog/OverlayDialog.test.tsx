@@ -20,7 +20,9 @@ function DialogFixture({
 
   return (
     <>
-      <button onClick={() => setOpen(true)} type="button">대화상자 열기</button>
+      <button onClick={() => setOpen(true)} type="button">
+        대화상자 열기
+      </button>
       <OverlayDialog
         closeOnBackdrop={closeOnBackdrop}
         closeOnEscape={closeOnEscape}
@@ -107,9 +109,7 @@ describe('OverlayDialog', () => {
   it('closes only when the backdrop itself is pressed and backdrop closing is enabled', async () => {
     const user = userEvent.setup()
     const onClose = vi.fn()
-    const { container } = render(
-      <DialogFixture closeOnBackdrop onClose={onClose} />,
-    )
+    const { container } = render(<DialogFixture closeOnBackdrop onClose={onClose} />)
 
     await user.click(screen.getByRole('heading', { name: '회의 종료' }))
     expect(onClose).not.toHaveBeenCalled()

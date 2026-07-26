@@ -2,10 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import type { MeetingHeaderViewModel } from '../entities/meeting'
-import type {
-  AiChatDisplayMode,
-  AiChatMessage,
-} from '../features/meeting-ai-chat'
+import type { AiChatDisplayMode, AiChatMessage } from '../features/meeting-ai-chat'
 import type { TranscriptPanelState } from '../features/live-transcription'
 import {
   MeetingExitDialog,
@@ -34,7 +31,8 @@ const initialMessages: AiChatMessage[] = [
   {
     id: 'assistant-welcome',
     role: 'assistant',
-    content: '회의가 시작되었습니다. 프로젝트 자료와 지난 회의 맥락을 바탕으로 언제든 답변해 드립니다.',
+    content:
+      '회의가 시작되었습니다. 프로젝트 자료와 지난 회의 맥락을 바탕으로 언제든 답변해 드립니다.',
   },
 ]
 
@@ -78,22 +76,17 @@ const currentUserIsHost = participants.some(
 )
 
 type ActiveMeetingControl =
-  | 'idle'
-  | 'participants'
-  | 'more'
-  | 'edit-title'
-  | 'end-confirm'
-  | 'saving'
+  'idle' | 'participants' | 'more' | 'edit-title' | 'end-confirm' | 'saving'
 
 export function MeetingPage() {
   const { meetingId = 'demo' } = useParams()
   const [elapsedSeconds, setElapsedSeconds] = useState(373)
-  const [recordingState, setRecordingState] = useState<MeetingHeaderViewModel['recordingState']>('recording')
+  const [recordingState, setRecordingState] =
+    useState<MeetingHeaderViewModel['recordingState']>('recording')
   const [transcriptState, setTranscriptState] = useState<TranscriptPanelState>({ kind: 'waiting' })
   const [messages, setMessages] = useState<AiChatMessage[]>(initialMessages)
   const [draft, setDraft] = useState('')
-  const [aiChatDisplayMode, setAiChatDisplayMode] =
-    useState<AiChatDisplayMode>('docked')
+  const [aiChatDisplayMode, setAiChatDisplayMode] = useState<AiChatDisplayMode>('docked')
   const [lastAction, setLastAction] = useState('회의 진행 화면 준비 완료')
   const [meetingTitle, setMeetingTitle] = useState('2차 대면회의')
   const [activeControl, setActiveControl] = useState<ActiveMeetingControl>('idle')
@@ -112,10 +105,7 @@ export function MeetingPage() {
     const content = draft.trim()
     if (!content) return
 
-    setMessages((current) => [
-      ...current,
-      { id: `user-${current.length}`, role: 'user', content },
-    ])
+    setMessages((current) => [...current, { id: `user-${current.length}`, role: 'user', content }])
     setDraft('')
     setLastAction('AI Chat 메시지를 전송했습니다.')
   }
@@ -158,14 +148,12 @@ export function MeetingPage() {
         header={{
           actions: {
             onEndMeeting: () => setActiveControl('end-confirm'),
-            onOpenMoreMenu: () => setActiveControl((current) => (
-              current === 'more' ? 'idle' : 'more'
-            )),
-            onOpenParticipants: () => setActiveControl((current) => (
-              current === 'participants' ? 'idle' : 'participants'
-            )),
+            onOpenMoreMenu: () =>
+              setActiveControl((current) => (current === 'more' ? 'idle' : 'more')),
+            onOpenParticipants: () =>
+              setActiveControl((current) => (current === 'participants' ? 'idle' : 'participants')),
             onToggleRecording: () => {
-              setRecordingState((current) => current === 'recording' ? 'paused' : 'recording')
+              setRecordingState((current) => (current === 'recording' ? 'paused' : 'recording'))
             },
           },
           model: {
@@ -202,9 +190,9 @@ export function MeetingPage() {
         transcript={{
           actions: {
             onRefresh: () => {
-              setTranscriptState((current) => current.kind === 'waiting'
-                ? activeTranscriptState
-                : { kind: 'waiting' })
+              setTranscriptState((current) =>
+                current.kind === 'waiting' ? activeTranscriptState : { kind: 'waiting' },
+              )
               setLastAction('전사 상태를 전환했습니다.')
             },
             onSelectSegment: (segmentId) => setLastAction(`${segmentId} 발화 선택`),
@@ -228,11 +216,10 @@ export function MeetingPage() {
         onConfirm={() => setActiveControl('saving')}
         open={activeControl === 'end-confirm'}
       />
-      <MeetingSaveDialog
-        open={activeControl === 'saving'}
-        state="saving"
-      />
-      <p aria-live="polite" className="sr-only">{lastAction}</p>
+      <MeetingSaveDialog open={activeControl === 'saving'} state="saving" />
+      <p aria-live="polite" className="sr-only">
+        {lastAction}
+      </p>
     </div>
   )
 }

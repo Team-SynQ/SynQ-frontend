@@ -2,10 +2,7 @@ import membersIcon from '../../../shared/assets/icons/members.svg'
 import moreVerticalIcon from '../../../shared/assets/icons/more-vertical.svg'
 import pauseIcon from '../../../shared/assets/icons/pause.svg'
 import { formatElapsedTime } from '../../../entities/meeting'
-import type {
-  MeetingHeaderActions,
-  MeetingHeaderViewModel,
-} from '../../../entities/meeting'
+import type { MeetingHeaderActions, MeetingHeaderViewModel } from '../../../entities/meeting'
 import { Button, LiveStatus } from '../../../shared/ui'
 import type { ReactNode, RefObject } from 'react'
 
@@ -30,9 +27,8 @@ export function MeetingHeader({
   moreMenuTriggerRef,
   moreMenuPopover,
 }: MeetingHeaderProps) {
-  const recordingControlLabel = model.recordingState === 'recording'
-    ? '녹음 일시 정지'
-    : '녹음 재개'
+  const recordingControlLabel =
+    model.recordingState === 'recording' ? '녹음 일시 정지' : '녹음 재개'
 
   return (
     <header className="flex h-[90px] min-w-0 items-center justify-between gap-s bg-surface-elevated px-l py-m">

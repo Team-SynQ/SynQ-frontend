@@ -17,8 +17,7 @@ export type AiChatContentProps = {
 export type AiChatPanelProps = AiChatContentProps & {
   onCollapse: () => void
   collapseButtonRef?: Ref<HTMLButtonElement>
-} &
-  (
+} & (
     | {
         variant: 'docked'
         onMinimize: () => void
@@ -32,14 +31,7 @@ export type AiChatPanelProps = AiChatContentProps & {
   )
 
 export function AiChatPanel(props: AiChatPanelProps) {
-  const {
-    model,
-    actions,
-    variant,
-    actionButtonRef,
-    collapseButtonRef,
-    onCollapse,
-  } = props
+  const { model, actions, variant, actionButtonRef, collapseButtonRef, onCollapse } = props
   const floating = variant === 'floating'
   const resizeLabel = floating ? 'AI Chat 창 확장' : 'AI Chat 창 축소'
   const resizeIcon = floating ? maximizeIcon : minimizeIcon

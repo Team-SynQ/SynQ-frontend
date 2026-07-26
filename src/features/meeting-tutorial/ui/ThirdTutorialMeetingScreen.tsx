@@ -31,11 +31,13 @@ const revisitQuestions = [
   },
   {
     question: 'QA 기간은 최소 얼마나 확보할 수 있나요?',
-    answer: '현재 일정 기준으로는 최소 1주 확보를 목표로 하고 있습니다. 개발 일정 변동 여부를 확인한 뒤 최종 확정할 예정입니다.',
+    answer:
+      '현재 일정 기준으로는 최소 1주 확보를 목표로 하고 있습니다. 개발 일정 변동 여부를 확인한 뒤 최종 확정할 예정입니다.',
   },
   {
     question: '베타 버전에서 제외 가능한 기능은 무엇인가요?',
-    answer: '사용자 이탈 개선과 직접 관련 없는 고급 AI 추천 기능과 일부 부가 기능은 베타 이후 반영하는 방향으로 검토되었습니다.',
+    answer:
+      '사용자 이탈 개선과 직접 관련 없는 고급 AI 추천 기능과 일부 부가 기능은 베타 이후 반영하는 방향으로 검토되었습니다.',
   },
 ] as const
 
@@ -72,13 +74,23 @@ function SidebarHeader() {
     <div className="flex w-full flex-col gap-m">
       <div className="flex items-center justify-between">
         <img alt="SynQ" className="h-[30px] w-[79px]" src={synqLogo} />
-        <Button aria-label="사이드바 접기" className="size-[52px] px-0" size="large" variant="basic">
+        <Button
+          aria-label="사이드바 접기"
+          className="size-[52px] px-0"
+          size="large"
+          variant="basic"
+        >
           <img alt="" aria-hidden="true" className="size-[28px]" src={sidebarIcon} />
         </Button>
       </div>
       <div className="flex items-center gap-s">
         <span className="flex-1 typo-body-01 text-fg-secondary">프로젝트</span>
-        <Button aria-label="프로젝트 추가" className="size-[32px] px-0" size="small" variant="basic">
+        <Button
+          aria-label="프로젝트 추가"
+          className="size-[32px] px-0"
+          size="small"
+          variant="basic"
+        >
           <img alt="" aria-hidden="true" className="size-[24px]" src={plusIcon} />
         </Button>
       </div>
@@ -117,7 +129,10 @@ function ReviewTopBar() {
 
 function ReviewTabs() {
   return (
-    <nav aria-label="회의 정리 탭" className="flex border-b-[2px] border-line-strong bg-surface-default">
+    <nav
+      aria-label="회의 정리 탭"
+      className="flex border-b-[2px] border-line-strong bg-surface-default"
+    >
       {reviewTabs.map((tab, index) => (
         <button
           className={cn(
@@ -156,13 +171,16 @@ function PerspectiveSummarySection() {
         className="flex list-none items-center gap-s rounded-[16px] border-stroke-md border-line-default bg-surface-elevated p-m shadow-floating [&::-webkit-details-marker]:hidden"
         data-tutorial-target="record-section-1"
       >
-        <span className="flex h-[32px] items-center rounded-s bg-brand-primary px-s typo-body-02 text-fg-inverse">PM</span>
+        <span className="flex h-[32px] items-center rounded-s bg-brand-primary px-s typo-body-02 text-fg-inverse">
+          PM
+        </span>
         <h2 className="m-0 typo-title-02">내 관점 요약</h2>
       </summary>
       <p className="m-0 mt-s typo-transcription-body-01 text-gray-800">
-        이번 회의에서는 온보딩 개선을 이번 분기의 핵심 과제로 확정하고, 개발 일정과 리소스 배분, QA 계획, 베타 출시 범위를 중심으로
-        논의했습니다. 프로젝트는 예정된 일정 내 출시를 목표로 하지만 QA 기간과 기능 범위에 대한 추가 조율이 필요하며, PM은 우선순위와
-        일정 관리를 중심으로 후속 의사결정을 진행해야 합니다.
+        이번 회의에서는 온보딩 개선을 이번 분기의 핵심 과제로 확정하고, 개발 일정과 리소스 배분, QA
+        계획, 베타 출시 범위를 중심으로 논의했습니다. 프로젝트는 예정된 일정 내 출시를 목표로 하지만
+        QA 기간과 기능 범위에 대한 추가 조율이 필요하며, PM은 우선순위와 일정 관리를 중심으로 후속
+        의사결정을 진행해야 합니다.
       </p>
     </details>
   )

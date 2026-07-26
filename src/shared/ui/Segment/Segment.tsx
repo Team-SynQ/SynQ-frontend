@@ -20,7 +20,11 @@ const itemStateClasses: Record<SegmentItemState, string> = {
 }
 
 export function Segment({ children, className }: SegmentProps) {
-  return <div className={cn('inline-flex gap-xs rounded-m bg-surface-muted p-[4px]', className)}>{children}</div>
+  return (
+    <div className={cn('inline-flex gap-xs rounded-m bg-surface-muted p-[4px]', className)}>
+      {children}
+    </div>
+  )
 }
 
 export function SegmentItem({

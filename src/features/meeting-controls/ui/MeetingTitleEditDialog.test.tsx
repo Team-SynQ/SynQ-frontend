@@ -20,11 +20,7 @@ describe('MeetingTitleEditDialog', () => {
       'rounded-[20px]',
       'shadow-[0_4px_16px_rgb(0_0_0/0.12)]',
     )
-    expect(screen.getByLabelText('회의 제목')).toHaveClass(
-      'h-[42px]',
-      'rounded-m',
-      'typo-body-02',
-    )
+    expect(screen.getByLabelText('회의 제목')).toHaveClass('h-[42px]', 'rounded-m', 'typo-body-02')
     expect(screen.getByRole('button', { name: '취소' })).toHaveClass('w-[91px]')
   })
 
