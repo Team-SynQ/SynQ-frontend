@@ -8,6 +8,7 @@ import {
 } from '../../../entities/project'
 import {
   ProjectMaterialUploadForm,
+  projectPerspectiveOptions,
   type ProjectMaterialDraft,
 } from '../../../features/project-create'
 import {
@@ -15,7 +16,10 @@ import {
   ProjectReferenceEditDialog,
   ProjectReferenceMenu,
 } from '../../../features/project-reference-actions'
-import { ProjectSettingsMenu } from '../../../features/project-settings'
+import {
+  ProjectSettingsMenu,
+  type ProjectInformationDraft,
+} from '../../../features/project-settings'
 import burgerIcon from '../../../shared/assets/icons/burger.svg'
 import clipboardIcon from '../assets/clipboard.svg'
 import fileIcon from '../assets/file.svg'
@@ -30,6 +34,9 @@ type ProjectCreatedDashboardProps = {
   onAddMaterials?: (materials: ProjectMaterialDraft) => Promise<void> | void
   onDeleteMaterial?: (materialId: string) => Promise<void> | void
   onRenameMaterial?: (materialId: string, nextName: string) => Promise<void> | void
+  onLoadProject?: () => Promise<ProjectSummary | void> | ProjectSummary | void
+  onUpdateProject?: (draft: ProjectInformationDraft) => Promise<void> | void
+  onDeleteProject?: () => Promise<void> | void
 }
 
 const projectDateFormatter = new Intl.DateTimeFormat('ko-KR', {
@@ -43,6 +50,9 @@ export function ProjectCreatedDashboard({
   onAddMaterials,
   onDeleteMaterial,
   onRenameMaterial,
+  onLoadProject,
+  onUpdateProject,
+  onDeleteProject,
 }: ProjectCreatedDashboardProps) {
   const navigate = useNavigate()
 
@@ -60,7 +70,16 @@ export function ProjectCreatedDashboard({
             <Badge size="extraSmall">{project.perspectiveDescription}</Badge>
           </div>
         </div>
-        <ProjectSettingsMenu />
+        <ProjectSettingsMenu
+          onDeleteProject={onDeleteProject}
+          onLoadProject={onLoadProject}
+          onUpdateProject={onUpdateProject}
+          perspectiveOptions={projectPerspectiveOptions.map((option) => ({
+            label: option.label,
+            description: option.selectedDescription,
+          }))}
+          project={project}
+        />
       </header>
 
       <section className="flex flex-col gap-s">
