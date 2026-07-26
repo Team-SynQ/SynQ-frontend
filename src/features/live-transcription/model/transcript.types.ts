@@ -50,6 +50,7 @@ export type TranscriptPanelActions = {
   onStartEdit?: (segmentId: string) => void
   onEditDraftChange?: (value: string) => void
   onCancelEdit?: () => void
+  onCollapseHint?: (segmentId: string) => void
   onSaveEdit?: () => void
   onRetryHint?: (segmentId: string) => void
 }

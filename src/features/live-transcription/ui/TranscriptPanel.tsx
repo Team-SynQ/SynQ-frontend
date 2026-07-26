@@ -54,6 +54,7 @@ export function TranscriptPanel({ state, actions }: TranscriptPanelProps) {
                     key={segment.id}
                     onAskAi={actions.onAskAi}
                     onCancelEdit={actions.onCancelEdit}
+                    onCollapseHint={actions.onCollapseHint}
                     onEditDraftChange={actions.onEditDraftChange}
                     onRetryHint={actions.onRetryHint}
                     onSaveEdit={actions.onSaveEdit}

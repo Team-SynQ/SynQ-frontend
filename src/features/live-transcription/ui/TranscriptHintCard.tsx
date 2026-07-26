@@ -1,16 +1,17 @@
-import chevronDownIcon from '../../../shared/assets/icons/chevron-down.svg'
+import chevronUpIcon from '../../../shared/assets/icons/chevron-up.svg'
 import { Button } from '../../../shared/ui'
 import type { TranscriptHintState } from '../model/transcript.types'
 import { TranscriptFeedback } from './TranscriptFeedback'
 
 export type TranscriptHintCardProps = {
   state: Exclude<TranscriptHintState, { status: 'idle' }>
+  onCollapse?: (transcriptId: string) => void
   onRetry?: (transcriptId: string) => void
 }
 
-export function TranscriptHintCard({ state, onRetry }: TranscriptHintCardProps) {
+export function TranscriptHintCard({ state, onCollapse, onRetry }: TranscriptHintCardProps) {
   return (
-    <article aria-label="SynQ 힌트" className="mt-xs min-h-[106px] rounded-m bg-surface-muted p-s">
+    <article aria-label="SynQ 힌트" className="min-h-[106px] rounded-m bg-surface-muted p-s">
       <header className="mb-s flex items-center justify-between gap-s">
         <div className="min-w-0">
           <h3 className="m-0 typo-body-01 text-gray-800">SynQ 힌트</h3>
@@ -21,10 +22,16 @@ export function TranscriptHintCard({ state, onRetry }: TranscriptHintCardProps) 
         <Button
           aria-label="SynQ 힌트 접기"
           className="size-[32px] px-0!"
+          onClick={() => onCollapse?.(state.transcriptId)}
           size="small"
           variant="basic"
         >
-          <img alt="" aria-hidden="true" className="size-[24px]" src={chevronDownIcon} />
+          <span
+            aria-hidden="true"
+            className="flex size-[24px] items-center justify-center overflow-hidden"
+          >
+            <img alt="" className="h-[7px] w-[12px]" src={chevronUpIcon} />
+          </span>
         </Button>
       </header>
 
@@ -81,7 +88,7 @@ export function TranscriptHintCard({ state, onRetry }: TranscriptHintCardProps) 
 function HintRow({ label, description }: { label: string; description: string }) {
   return (
     <div className="flex min-h-[42px] items-center gap-s">
-      <span className="flex w-[81px] shrink-0 items-center justify-center rounded-s bg-surface-elevated px-[12px] py-xs typo-body-01 text-fg-primary">
+      <span className="flex w-[81px] shrink-0 items-center justify-center rounded-[var(--radius-s)] bg-surface-elevated px-[12px] py-xs typo-body-01 text-fg-primary">
         {label}
       </span>
       <span className="min-w-0 typo-transcription-body-01 text-fg-primary">{description}</span>

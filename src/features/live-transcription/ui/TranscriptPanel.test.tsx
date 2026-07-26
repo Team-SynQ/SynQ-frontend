@@ -66,12 +66,19 @@ describe('TranscriptPanel', () => {
     expect(actions.onAskAi).toHaveBeenCalledWith('segment-1')
   })
 
-  it('renders a ready hint and keeps it visible when the no-op collapse button is pressed', async () => {
+  it('separates the selected transcript and hint surfaces with Figma token radii', async () => {
     const user = userEvent.setup()
+    const onCollapseHint = vi.fn()
+    const actions = {
+      ...createActions(),
+      onCollapseHint,
+    } as TranscriptPanelActions & {
+      onCollapseHint: (transcriptId: string) => void
+    }
 
     render(
       <TranscriptPanel
-        actions={createActions()}
+        actions={actions}
         state={createActiveState({
           hintState: {
             status: 'ready',
@@ -86,13 +93,28 @@ describe('TranscriptPanel', () => {
     expect(screen.getByText('내 영향')).toBeInTheDocument()
     expect(screen.getByText('팀 질문')).toBeInTheDocument()
     expect(screen.getByText(hint.teamQuestion)).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: segment.text })).toHaveClass('bg-surface-muted')
-    expect(screen.getByText(hint.teamQuestion).closest('article')).toHaveClass('bg-surface-muted')
+    const option = screen.getByRole('option', { name: segment.text })
+    const transcriptSurface = screen.getByRole('button', { name: segment.text }).parentElement
+    const hintSurface = screen.getByText(hint.teamQuestion).closest('article')
+
+    expect(option).toHaveClass('gap-xs')
+    expect(option).not.toHaveClass('bg-surface-muted', 'p-s')
+    expect(transcriptSurface).not.toBe(option)
+    expect(transcriptSurface).toHaveClass('rounded-m', 'bg-surface-muted', 'p-s')
+    expect(hintSurface).toHaveClass('rounded-m', 'bg-surface-muted', 'p-s')
+    expect(hintSurface).not.toHaveClass('mt-xs')
     expect(screen.getByRole('heading', { level: 3 })).toHaveClass('text-gray-800')
+    expect(screen.getByText('의미')).toHaveClass('rounded-[var(--radius-s)]')
+    expect(screen.getByText('내 영향')).toHaveClass('rounded-[var(--radius-s)]')
+    expect(screen.getByText('팀 질문')).toHaveClass('rounded-[var(--radius-s)]')
 
-    await user.click(screen.getByRole('button', { name: 'SynQ 힌트 접기' }))
+    const collapseButton = screen.getByRole('button', { name: 'SynQ 힌트 접기' })
+    expect(collapseButton.querySelector('img')?.getAttribute('src')).toContain(
+      'M0.6%205.93333L5.93333%200.6L11.2667%205.93333',
+    )
+    await user.click(collapseButton)
 
-    expect(screen.getByText(hint.teamQuestion)).toBeInTheDocument()
+    expect(onCollapseHint).toHaveBeenCalledWith('segment-1')
   })
 
   it('renders hint loading and error states and forwards retry', async () => {
