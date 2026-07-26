@@ -391,6 +391,10 @@ describe('ProjectMainboard', () => {
     await user.clear(overviewInput)
     await user.type(overviewInput, '수정된 프로젝트 개요')
     await user.click(within(settingsDialog).getByRole('button', { name: /PM/ }))
+    expect(within(settingsDialog).getByRole('listbox')).toBeInTheDocument()
+    await user.click(overviewInput)
+    expect(within(settingsDialog).queryByRole('listbox')).not.toBeInTheDocument()
+    await user.click(within(settingsDialog).getByRole('button', { name: /PM/ }))
     await user.click(within(settingsDialog).getByRole('button', { name: '관점 추가' }))
 
     const perspectiveDialog = screen.getByRole('dialog', { name: '새 역할/관점 추가' })

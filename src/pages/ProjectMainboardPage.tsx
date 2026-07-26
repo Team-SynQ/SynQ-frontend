@@ -288,13 +288,11 @@ export function ProjectMainboardPage({
 
     try {
       await deleteProject?.(activeProjectId)
-      setProjects((currentProjects) => {
-        const nextProjects = currentProjects.filter((project) => project.id !== activeProjectId)
-        setActiveProjectId((currentId) =>
-          currentId === activeProjectId ? nextProjects[0]?.id : currentId,
-        )
-        return nextProjects
-      })
+      const nextProjects = projects.filter((project) => project.id !== activeProjectId)
+      setProjects(nextProjects)
+      setActiveProjectId((currentId) =>
+        currentId === activeProjectId ? nextProjects[0]?.id : currentId,
+      )
       showProjectReferenceFeedback({
         title: '프로젝트 삭제 성공',
         description: `‘${deletedProject.name}’ 프로젝트를 삭제했습니다.`,

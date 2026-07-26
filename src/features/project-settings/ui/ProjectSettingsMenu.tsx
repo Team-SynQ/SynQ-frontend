@@ -16,11 +16,11 @@ import {
 import moreVerticalIcon from '../../../shared/assets/icons/more-vertical.svg'
 import { useTransientVisibility } from '../../../shared/lib/useTransientVisibility'
 import { Button, Toast, type ToastType } from '../../../shared/ui'
-import {
-  ProjectInformationEditDialog,
-  type ProjectInformationDraft,
-  type ProjectInformationPerspective,
-} from './ProjectInformationEditDialog'
+import type {
+  ProjectInformationDraft,
+  ProjectInformationPerspective,
+} from '../model/projectInformation.types'
+import { ProjectInformationEditDialog } from './ProjectInformationEditDialog'
 import { ProjectDeleteDialog } from './ProjectDeleteDialog'
 import { ProjectMemberExportDialog } from './ProjectMemberExportDialog'
 import { ProjectMemberManagementDialog } from './ProjectMemberManagementDialog'

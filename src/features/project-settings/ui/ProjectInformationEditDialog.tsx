@@ -7,22 +7,16 @@ import {
   ProjectRolePerspectiveForm,
   type ProjectRolePerspectiveDraft,
 } from '../../../features/project-create'
-import chevronDownIcon from '../../../shared/assets/icons/chevron-down.svg'
 import closeIcon from '../../../shared/assets/icons/close.svg'
-import plusIcon from '../../../shared/assets/icons/plus.svg'
-import { cn } from '../../../shared/lib/cn'
 import { Button, InputBox, OverlayDialog } from '../../../shared/ui'
+import type {
+  ProjectInformationDraft,
+  ProjectInformationPerspective,
+} from '../model/projectInformation.types'
+import { ProjectInformationPerspectiveSelect } from './ProjectInformationPerspectiveSelect'
 
 const PROJECT_NAME_MAX_LENGTH = 50
 const PROJECT_OVERVIEW_MAX_LENGTH = 500
-
-export type ProjectInformationPerspective = { label: string; description: string }
-export type ProjectInformationDraft = {
-  name: string
-  overview: string
-  perspectiveLabel: string
-  perspectiveDescription: string
-}
 
 type Props = {
   open: boolean
@@ -162,7 +156,7 @@ function ProjectInformationEditForm({
               visualState="filled"
             />
           </div>
-          <PerspectiveSelect
+          <ProjectInformationPerspectiveSelect
             onAdd={() => setIsAddingPerspective(true)}
             onChange={(perspective) =>
               setDraft((current) => ({
@@ -224,96 +218,5 @@ function ProjectInformationEditForm({
         />
       </Button>
     </form>
-  )
-}
-
-type PerspectiveSelectProps = {
-  options: ProjectInformationPerspective[]
-  value: ProjectInformationPerspective
-  onAdd: () => void
-  onChange: (value: ProjectInformationPerspective) => void
-}
-
-function PerspectiveSelect({ options, value, onAdd, onChange }: PerspectiveSelectProps) {
-  const [isOpen, setIsOpen] = useState(false)
-  const listboxId = useId()
-  return (
-    <div className="relative flex w-full flex-col gap-xs">
-      <span className="px-xs typo-body-01 text-fg-primary">관점</span>
-      <button
-        aria-controls={listboxId}
-        aria-expanded={isOpen}
-        aria-haspopup="listbox"
-        className={cn(
-          'flex h-[42px] w-full items-center gap-xs rounded-m border-stroke-md bg-surface-default px-s text-left transition-colors',
-          isOpen ? 'border-brand-primary' : 'border-line-default',
-        )}
-        onClick={() => setIsOpen((current) => !current)}
-        type="button"
-      >
-        <span className="shrink-0 truncate typo-body-02 text-fg-primary">{value.label}</span>
-        <span className="min-w-0 flex-1 truncate typo-body-02 text-fg-secondary">
-          {value.description}
-        </span>
-        <img
-          alt=""
-          aria-hidden="true"
-          className={cn('size-[28px] shrink-0 transition-transform', isOpen && 'rotate-180')}
-          height="28"
-          src={chevronDownIcon}
-          width="28"
-        />
-      </button>
-      {isOpen ? (
-        <div
-          className="absolute left-0 top-[calc(100%+8px)] z-20 flex w-full flex-col rounded-m border-stroke-md border-brand-primary bg-surface-default px-s shadow-floating"
-          id={listboxId}
-          role="listbox"
-        >
-          {options.map((option, index) => (
-            <button
-              aria-selected={
-                option.label === value.label && option.description === value.description
-              }
-              className={cn(
-                'flex min-h-[52px] w-full items-center gap-xs text-left',
-                index > 0 && 'border-t-stroke-md border-line-default',
-              )}
-              key={`${option.label}-${option.description}`}
-              onClick={() => {
-                onChange(option)
-                setIsOpen(false)
-              }}
-              role="option"
-              type="button"
-            >
-              <span className="shrink-0 typo-body-02 text-fg-primary">{option.label}</span>
-              <span className="min-w-0 flex-1 truncate typo-body-02 text-fg-secondary">
-                {option.description}
-              </span>
-            </button>
-          ))}
-          <Button
-            aria-label="관점 추가"
-            className="h-[40px] w-full border-t-stroke-md border-line-default px-0"
-            onClick={() => {
-              setIsOpen(false)
-              onAdd()
-            }}
-            size="small"
-            variant="basic"
-          >
-            <img
-              alt=""
-              aria-hidden="true"
-              className="size-[24px]"
-              height="24"
-              src={plusIcon}
-              width="24"
-            />
-          </Button>
-        </div>
-      ) : null}
-    </div>
   )
 }
