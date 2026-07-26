@@ -1,7 +1,4 @@
-import type {
-  LiveMeetingResponse,
-  TranscriptHintResponse,
-} from '../../contracts/meeting.contracts'
+import type { LiveMeetingResponse, TranscriptHintResponse } from '../../contracts/meeting.contracts'
 
 export const liveMeetingFixture = {
   meetingId: 'demo',

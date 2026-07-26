@@ -13,17 +13,10 @@ export type TranscriptEditorProps = {
   onSave?: () => void
 }
 
-export function TranscriptEditor({
-  state,
-  onCancel,
-  onChange,
-  onSave,
-}: TranscriptEditorProps) {
+export function TranscriptEditor({ state, onCancel, onChange, onSave }: TranscriptEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const canSave =
-    state.draftText !== state.originalText &&
-    state.draftText.trim().length > 0 &&
-    !state.isSaving
+    state.draftText !== state.originalText && state.draftText.trim().length > 0 && !state.isSaving
 
   useEffect(() => {
     const textarea = textareaRef.current

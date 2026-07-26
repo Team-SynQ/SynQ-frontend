@@ -55,11 +55,7 @@ export const liveMeetingMockService = {
 
     const scenario = liveMeetingMockDb.getScenario(request.meetingId)
     if (scenario?.transcriptEditFails) {
-      throw new MockApiError(
-        500,
-        'TRANSCRIPT_UPDATE_FAILED',
-        '전사 내용을 수정하지 못했습니다.',
-      )
+      throw new MockApiError(500, 'TRANSCRIPT_UPDATE_FAILED', '전사 내용을 수정하지 못했습니다.')
     }
 
     const updated = liveMeetingMockDb.updateTranscript(
@@ -79,16 +75,9 @@ export const liveMeetingMockService = {
     requireTranscript(request.meetingId, request.transcriptId)
 
     const scenario = liveMeetingMockDb.getScenario(request.meetingId)
-    const attempt = liveMeetingMockDb.incrementHintAttempt(
-      request.meetingId,
-      request.transcriptId,
-    )
+    const attempt = liveMeetingMockDb.incrementHintAttempt(request.meetingId, request.transcriptId)
     if (scenario && attempt <= scenario.hintFailureCount) {
-      throw new MockApiError(
-        503,
-        'TRANSCRIPT_HINT_LOAD_FAILED',
-        'SynQ 힌트를 불러오지 못했습니다.',
-      )
+      throw new MockApiError(503, 'TRANSCRIPT_HINT_LOAD_FAILED', 'SynQ 힌트를 불러오지 못했습니다.')
     }
 
     const hint = liveMeetingMockDb.getHint(request.meetingId, request.transcriptId)

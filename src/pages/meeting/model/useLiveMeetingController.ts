@@ -32,9 +32,7 @@ type ReadyController = {
 }
 
 type LiveMeetingController =
-  | { status: 'loading' }
-  | { status: 'error'; message: string }
-  | ReadyController
+  { status: 'loading' } | { status: 'error'; message: string } | ReadyController
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error && error.message ? error.message : fallback
@@ -47,9 +45,7 @@ function getErrorCode(error: unknown) {
 
 export function useLiveMeetingController(meetingId: string): LiveMeetingController {
   const [meeting, setMeeting] = useState<LiveMeeting | null>(null)
-  const [loadError, setLoadError] = useState<{ meetingId: string; message: string } | null>(
-    null,
-  )
+  const [loadError, setLoadError] = useState<{ meetingId: string; message: string } | null>(null)
   const [meetingTitle, setMeetingTitle] = useState('')
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [recordingState, setRecordingState] = useState<'recording' | 'paused'>('recording')
@@ -183,10 +179,7 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
 
   const saveEdit = async () => {
     if (editState.status !== 'editing' || editState.isSaving) return
-    if (
-      editState.draftText === editState.originalText ||
-      editState.draftText.trim().length === 0
-    ) {
+    if (editState.draftText === editState.originalText || editState.draftText.trim().length === 0) {
       return
     }
 

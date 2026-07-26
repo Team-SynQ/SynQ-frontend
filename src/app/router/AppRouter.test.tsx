@@ -99,10 +99,10 @@ describe('AppRouter', () => {
     expect(screen.getByText(projectMockActorFixture.email)).toBeInTheDocument()
   })
 
-  it('opens the existing live meeting page directly', () => {
+  it('opens the existing live meeting page directly', async () => {
     renderAppAt('/meetings/demo/live')
 
-    expect(screen.getByRole('button', { name: '회의 종료' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: '회의 종료' })).toBeInTheDocument()
     expect(window.location.pathname).toBe('/meetings/demo/live')
   })
 

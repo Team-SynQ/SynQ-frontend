@@ -201,9 +201,7 @@ describe('TranscriptPanel', () => {
       />,
     )
 
-    expect(screen.getByRole('textbox', { name: '전사 내용' })).toHaveValue(
-      '저장에 실패한 초안',
-    )
+    expect(screen.getByRole('textbox', { name: '전사 내용' })).toHaveValue('저장에 실패한 초안')
     expect(screen.getByRole('alert')).toHaveTextContent('전사 내용을 수정하지 못했습니다.')
   })
 

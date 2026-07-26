@@ -34,12 +34,9 @@ export function TranscriptItem({
   onSaveEdit,
   onRetryHint,
 }: TranscriptItemProps) {
-  const isEditing =
-    editState.status === 'editing' && editState.transcriptId === segment.id
+  const isEditing = editState.status === 'editing' && editState.transcriptId === segment.id
   const segmentHintState =
-    hintState.status !== 'idle' && hintState.transcriptId === segment.id
-      ? hintState
-      : null
+    hintState.status !== 'idle' && hintState.transcriptId === segment.id ? hintState : null
 
   return (
     <article
@@ -69,11 +66,7 @@ export function TranscriptItem({
             >
               <img alt="" aria-hidden="true" className="size-[24px]" src={editIcon} />
             </Button>
-            <Button
-              onClick={() => onAskAi?.(segment.id)}
-              size="small"
-              variant="primaryFill"
-            >
+            <Button onClick={() => onAskAi?.(segment.id)} size="small" variant="primaryFill">
               AI에게 질문하기
             </Button>
           </div>

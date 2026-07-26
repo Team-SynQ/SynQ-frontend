@@ -195,12 +195,8 @@ describe('MeetingPage controls', () => {
     await user.type(editor, '저장에 실패할 초안')
     await user.click(screen.getByRole('button', { name: '확인' }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      '전사 내용을 수정하지 못했습니다.',
-    )
-    expect(screen.getByRole('textbox', { name: '전사 내용' })).toHaveValue(
-      '저장에 실패할 초안',
-    )
+    expect(await screen.findByRole('alert')).toHaveTextContent('전사 내용을 수정하지 못했습니다.')
+    expect(screen.getByRole('textbox', { name: '전사 내용' })).toHaveValue('저장에 실패할 초안')
   })
 
   it('retries a failed SynQ hint request', async () => {
@@ -208,9 +204,7 @@ describe('MeetingPage controls', () => {
     await renderMeetingPage('/meetings/demo-hint-error/live')
 
     await user.click(await screen.findByText(/지난주 유저 인터뷰 결과/))
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'SynQ 힌트를 불러오지 못했습니다.',
-    )
+    expect(await screen.findByRole('alert')).toHaveTextContent('SynQ 힌트를 불러오지 못했습니다.')
 
     await user.click(screen.getByRole('button', { name: '다시 시도' }))
 

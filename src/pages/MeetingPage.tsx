@@ -53,17 +53,15 @@ export function MeetingPage() {
     )
   }
 
-  const participants: MeetingParticipant[] = controller.meeting.participants.map(
-    (participant) => ({
-      id: participant.id,
-      name: participant.name,
-      role: participant.role,
-      avatarSrc: meetingParticipantAvatars[participant.avatarKey],
-      isCurrentUser: participant.isCurrentUser,
-      isHost: participant.isHost,
-      isMicrophoneOn: participant.isMicrophoneOn,
-    }),
-  )
+  const participants: MeetingParticipant[] = controller.meeting.participants.map((participant) => ({
+    id: participant.id,
+    name: participant.name,
+    role: participant.role,
+    avatarSrc: meetingParticipantAvatars[participant.avatarKey],
+    isCurrentUser: participant.isCurrentUser,
+    isHost: participant.isHost,
+    isMicrophoneOn: participant.isMicrophoneOn,
+  }))
   const currentUserIsHost = participants.some(
     (participant) => participant.isCurrentUser && participant.isHost,
   )
@@ -87,9 +85,7 @@ export function MeetingPage() {
             onOpenMoreMenu: () =>
               setActiveControl((current) => (current === 'more' ? 'idle' : 'more')),
             onOpenParticipants: () =>
-              setActiveControl((current) =>
-                current === 'participants' ? 'idle' : 'participants',
-              ),
+              setActiveControl((current) => (current === 'participants' ? 'idle' : 'participants')),
             onToggleRecording: controller.toggleRecording,
           },
           model: {

@@ -60,8 +60,8 @@ export const liveMeetingMockDb = {
   },
 
   listTranscripts(meetingId: string): TranscriptSegmentResponse[] | undefined {
-    return requireRecord(meetingId)?.meeting.transcript.segments
-      .map(cloneSegment)
+    return requireRecord(meetingId)
+      ?.meeting.transcript.segments.map(cloneSegment)
       .sort(
         (left, right) =>
           left.startedAtSeconds - right.startedAtSeconds ||

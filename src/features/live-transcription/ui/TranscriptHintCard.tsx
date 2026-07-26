@@ -10,10 +10,7 @@ export type TranscriptHintCardProps = {
 
 export function TranscriptHintCard({ state, onRetry }: TranscriptHintCardProps) {
   return (
-    <article
-      aria-label="SynQ 힌트"
-      className="mt-xs min-h-[106px] rounded-m bg-surface-muted p-s"
-    >
+    <article aria-label="SynQ 힌트" className="mt-xs min-h-[106px] rounded-m bg-surface-muted p-s">
       <header className="mb-s flex items-center justify-between gap-s">
         <div className="min-w-0">
           <h3 className="m-0 typo-body-01 text-gray-800">SynQ 힌트</h3>
