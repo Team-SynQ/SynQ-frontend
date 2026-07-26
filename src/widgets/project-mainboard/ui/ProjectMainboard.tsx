@@ -1,3 +1,4 @@
+import type { CompletedMeeting } from '../../../entities/meeting'
 import type { ProjectSummary } from '../../../entities/project'
 import type { ProjectMaterialDraft } from '../../../features/project-create'
 import { cn } from '../../../shared/lib/cn'
@@ -11,6 +12,10 @@ type ProjectMainboardProps = {
   onAddMaterials?: (materials: ProjectMaterialDraft) => Promise<void> | void
   onDeleteMaterial?: (materialId: string) => Promise<void> | void
   onRenameMaterial?: (materialId: string, nextName: string) => Promise<void> | void
+  meetings?: CompletedMeeting[]
+  meetingHistoryError?: string
+  onOpenMeetingSummary?: (recordId: string) => void
+  onStartMeeting?: () => void
 }
 
 export function ProjectMainboard({
@@ -19,6 +24,10 @@ export function ProjectMainboard({
   onCreateProject,
   onDeleteMaterial,
   onRenameMaterial,
+  meetings = [],
+  meetingHistoryError,
+  onOpenMeetingSummary,
+  onStartMeeting,
 }: ProjectMainboardProps) {
   return (
     <section
@@ -32,6 +41,10 @@ export function ProjectMainboard({
           onAddMaterials={onAddMaterials}
           onDeleteMaterial={onDeleteMaterial}
           onRenameMaterial={onRenameMaterial}
+          meetings={meetings}
+          meetingHistoryError={meetingHistoryError}
+          onOpenMeetingSummary={onOpenMeetingSummary}
+          onStartMeeting={onStartMeeting}
           project={project}
         />
       ) : (

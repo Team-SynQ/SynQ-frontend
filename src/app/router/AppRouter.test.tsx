@@ -106,6 +106,18 @@ describe('AppRouter', () => {
     expect(window.location.pathname).toBe('/meetings/demo/live')
   })
 
+  it('opens the meeting summary placeholder and returns to projects', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/meetings/meeting-record-1/summary')
+
+    expect(screen.getByRole('heading', { name: '회의 정리' })).toBeInTheDocument()
+    expect(screen.getByText('회의 기록 상세 화면은 준비 중입니다.')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '프로젝트로 돌아가기' }))
+
+    expect(window.location.pathname).toBe('/projects')
+  })
+
   it('allows direct access to a setup step without stored selections', () => {
     renderAppAt('/setup/preview')
 

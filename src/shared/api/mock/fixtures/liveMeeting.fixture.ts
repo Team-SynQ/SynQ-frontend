@@ -2,6 +2,7 @@ import type { LiveMeetingResponse, TranscriptHintResponse } from '../../contract
 
 export const liveMeetingFixture = {
   meetingId: 'demo',
+  projectId: '1',
   projectTitle: '서비스디자인',
   meetingTitle: '2차 대면회의',
   elapsedSeconds: 373,
@@ -93,3 +94,13 @@ export const liveMeetingHintFixture = {
 
 export const liveMeetingAiAnswerFixture =
   '선택한 전사와 프로젝트 맥락을 기준으로 보면, 온보딩 개선의 우선순위와 완료 기준을 먼저 합의하는 것이 좋습니다.'
+
+export const completedMeetingSummaryFixture = {
+  overview: '온보딩 개선 우선순위와 완료 기준을 중심으로 논의',
+  keywords: ['온보딩 플로우', '일정 재조율', '역할 분담'],
+  decisions: [
+    '온보딩 개선을 이번 분기 우선순위로 확정',
+    '완료 기준과 담당 범위를 다음 회의 전 정리',
+    'QA는 기능 안정화 이후 진행',
+  ],
+} as const

@@ -130,4 +130,90 @@ describe('liveMeetingMockService', () => {
     const generatedIds = meeting.aiChat.messages.slice(-4).map((message) => message.id)
     expect(new Set(generatedIds).size).toBe(4)
   })
+
+  it('stores completed meetings newest first with unique record IDs', async () => {
+    const first = await liveMeetingMockService.completeMeeting({
+      meetingId: 'demo',
+      projectId: 'project-1',
+      projectTitle: '서비스 디자인',
+      meetingTitle: '첫 번째 회의',
+      durationSeconds: 3723,
+      completedAt: '2026-07-27T01:00:00.000Z',
+      host: {
+        id: 'you',
+        name: '오금동',
+        avatarKey: 'you',
+      },
+    })
+    const second = await liveMeetingMockService.completeMeeting({
+      meetingId: 'demo',
+      projectId: 'project-1',
+      projectTitle: '서비스 디자인',
+      meetingTitle: '두 번째 회의',
+      durationSeconds: 3800,
+      completedAt: '2026-07-27T02:00:00.000Z',
+      host: {
+        id: 'you',
+        name: '오금동',
+        avatarKey: 'you',
+      },
+    })
+
+    expect(first.recordId).not.toBe(second.recordId)
+    await expect(liveMeetingMockService.listCompletedMeetings('project-1')).resolves.toEqual([
+      expect.objectContaining({ meetingTitle: '두 번째 회의' }),
+      expect.objectContaining({ meetingTitle: '첫 번째 회의' }),
+    ])
+  })
+
+  it('isolates completed meetings by project', async () => {
+    const baseRequest = {
+      meetingId: 'demo',
+      projectTitle: '서비스 디자인',
+      meetingTitle: '프로젝트 회의',
+      durationSeconds: 600,
+      completedAt: '2026-07-27T03:00:00.000Z',
+      host: {
+        id: 'you',
+        name: '오금동',
+        avatarKey: 'you' as const,
+      },
+    }
+
+    await liveMeetingMockService.completeMeeting({
+      ...baseRequest,
+      projectId: 'project-1',
+    })
+    await liveMeetingMockService.completeMeeting({
+      ...baseRequest,
+      projectId: 'project-2',
+    })
+
+    await expect(liveMeetingMockService.listCompletedMeetings('project-1')).resolves.toEqual([
+      expect.objectContaining({ projectId: 'project-1' }),
+    ])
+    await expect(liveMeetingMockService.listCompletedMeetings('project-2')).resolves.toEqual([
+      expect.objectContaining({ projectId: 'project-2' }),
+    ])
+  })
+
+  it('fails completion for the save error scenario', async () => {
+    await expect(
+      liveMeetingMockService.completeMeeting({
+        meetingId: 'demo-save-error',
+        projectId: 'project-1',
+        projectTitle: '서비스 디자인',
+        meetingTitle: '저장 실패 회의',
+        durationSeconds: 600,
+        completedAt: '2026-07-27T03:00:00.000Z',
+        host: {
+          id: 'you',
+          name: '오금동',
+          avatarKey: 'you',
+        },
+      }),
+    ).rejects.toMatchObject({
+      code: 'MEETING_COMPLETE_FAILED',
+    })
+  })
 })

@@ -1,4 +1,6 @@
 import type {
+  CompleteMeetingRequest,
+  CompletedMeetingSummary,
   LiveMeetingResponse,
   TranscriptSegmentResponse,
   UpdateTranscriptRequest,
@@ -9,6 +11,8 @@ export type MeetingApi = {
   joinMeeting(meetingId: string): Promise<LiveMeetingResponse>
   listTranscripts(meetingId: string): Promise<TranscriptSegmentResponse[]>
   updateTranscript(request: UpdateTranscriptRequest): Promise<TranscriptSegmentResponse>
+  completeMeeting(request: CompleteMeetingRequest): Promise<CompletedMeetingSummary>
+  listCompletedMeetings(projectId: string): Promise<CompletedMeetingSummary[]>
 }
 
 export const meetingApi: MeetingApi = liveMeetingMockService

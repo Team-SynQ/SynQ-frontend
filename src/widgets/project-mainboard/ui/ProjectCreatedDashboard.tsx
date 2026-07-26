@@ -1,6 +1,7 @@
 import { useId, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
+import type { CompletedMeeting } from '../../../entities/meeting'
 import {
   PROJECT_REFERENCE_MAX_MATERIALS,
   type ProjectReferenceMaterial,
@@ -17,19 +18,24 @@ import {
 } from '../../../features/project-reference-actions'
 import { ProjectSettingsMenu } from '../../../features/project-settings'
 import burgerIcon from '../../../shared/assets/icons/burger.svg'
-import clipboardIcon from '../assets/clipboard.svg'
 import fileIcon from '../assets/file.svg'
 import folderIcon from '../assets/folder.svg'
 import microphoneIcon from '../assets/microphone.svg'
 import plusIcon from '../../../shared/assets/icons/plus.svg'
 import { useTransientVisibility } from '../../../shared/lib/useTransientVisibility'
 import { Badge, Button, OverlayDialog, Toast } from '../../../shared/ui'
+import { ProjectLatestMeetingSummary } from './ProjectLatestMeetingSummary'
+import { ProjectMeetingHistory } from './ProjectMeetingHistory'
 
 type ProjectCreatedDashboardProps = {
   project: ProjectSummary
   onAddMaterials?: (materials: ProjectMaterialDraft) => Promise<void> | void
   onDeleteMaterial?: (materialId: string) => Promise<void> | void
   onRenameMaterial?: (materialId: string, nextName: string) => Promise<void> | void
+  meetings?: CompletedMeeting[]
+  meetingHistoryError?: string
+  onOpenMeetingSummary?: (recordId: string) => void
+  onStartMeeting?: () => void
 }
 
 const projectDateFormatter = new Intl.DateTimeFormat('ko-KR', {
@@ -43,6 +49,10 @@ export function ProjectCreatedDashboard({
   onAddMaterials,
   onDeleteMaterial,
   onRenameMaterial,
+  meetings = [],
+  meetingHistoryError,
+  onOpenMeetingSummary,
+  onStartMeeting,
 }: ProjectCreatedDashboardProps) {
   const navigate = useNavigate()
 
@@ -80,28 +90,18 @@ export function ProjectCreatedDashboard({
                 />
               </span>
             }
-            onClick={() => navigate('/meetings/demo/tutorial')}
+            onClick={onStartMeeting ?? (() => navigate('/meetings/demo/tutorial'))}
             size="large"
           >
             새 회의 시작
           </Button>
         </div>
 
-        <div className="grid min-h-[300px] grid-cols-[minmax(0,1fr)_472px] gap-s max-[1100px]:grid-cols-1">
-          <section className="flex min-h-[300px] flex-col gap-s rounded-[16px] border-stroke-md border-line-default bg-surface-default p-m">
-            <div className="flex items-center gap-xs">
-              <img
-                alt=""
-                aria-hidden="true"
-                className="size-[24px]"
-                height="24"
-                src={clipboardIcon}
-                width="24"
-              />
-              <h3 className="m-0 typo-body-01 text-fg-primary">최신 회의 요약</h3>
-            </div>
-            <p className="m-auto typo-body-01 text-gray-500">아직 회의 기록이 없습니다</p>
-          </section>
+        <div className="grid min-h-[300px] grid-cols-[minmax(0,1fr)_472px] gap-s max-[1200px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <ProjectLatestMeetingSummary
+            meeting={meetings[0]}
+            onOpenMeetingSummary={onOpenMeetingSummary}
+          />
 
           <ProjectReferenceMaterials
             onAddMaterials={onAddMaterials}
@@ -112,20 +112,19 @@ export function ProjectCreatedDashboard({
         </div>
       </section>
 
-      <section className="flex flex-col gap-s">
-        <h2 className="m-0 typo-title-02 text-fg-primary">회의 기록</h2>
-        <div className="flex flex-col gap-xs">
-          <div className="flex items-center gap-xl border-b border-line-default px-m pb-s typo-body-01 text-gray-500">
-            <span className="min-w-0 flex-1">회의 이름</span>
-            <span className="w-[66px] text-center">길이</span>
-            <span className="w-[66px] text-center">생성일</span>
-            <span className="w-[24px]" />
-          </div>
-          <p className="flex h-[200px] items-center justify-center whitespace-pre-line text-center typo-body-01 text-gray-500">
-            {'아직 회의 기록이 없습니다\n‘새 회의 시작’을 통해 기록을 시작해 보세요'}
+      {meetingHistoryError ? (
+        <section className="flex flex-col gap-s">
+          <h2 className="m-0 typo-title-02 text-fg-primary">회의 기록</h2>
+          <p
+            className="flex h-[200px] items-center justify-center typo-body-01 text-gray-500"
+            role="alert"
+          >
+            {meetingHistoryError}
           </p>
-        </div>
-      </section>
+        </section>
+      ) : (
+        <ProjectMeetingHistory meetings={meetings} />
+      )}
     </div>
   )
 }

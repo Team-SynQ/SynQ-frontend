@@ -1,6 +1,10 @@
 import { useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 
+import type {
+  CompletedMeeting,
+  LiveMeetingProjectContext,
+} from '../entities/meeting'
 import type { AiChatDisplayMode } from '../features/meeting-ai-chat'
 import {
   MeetingExitDialog,
@@ -15,7 +19,14 @@ import { MeetingRoom } from '../widgets/meeting-room'
 import { useLiveMeetingController } from './meeting/model/useLiveMeetingController'
 
 type ActiveMeetingControl =
-  'idle' | 'participants' | 'more' | 'edit-title' | 'end-confirm' | 'saving'
+  | 'idle'
+  | 'participants'
+  | 'more'
+  | 'edit-title'
+  | 'end-confirm'
+  | 'saving'
+  | 'save-success'
+  | 'save-failure'
 
 const aiChatModeAnnouncements: Record<AiChatDisplayMode, string> = {
   docked: 'AI Chat을 기본 크기로 확장했습니다.',
@@ -24,10 +35,13 @@ const aiChatModeAnnouncements: Record<AiChatDisplayMode, string> = {
 }
 
 export function MeetingPage() {
+  const location = useLocation()
+  const navigate = useNavigate()
   const { meetingId = 'demo' } = useParams()
   const controller = useLiveMeetingController(meetingId)
   const [lastAction, setLastAction] = useState('회의 진행 화면 준비 완료')
   const [activeControl, setActiveControl] = useState<ActiveMeetingControl>('idle')
+  const [completedMeeting, setCompletedMeeting] = useState<CompletedMeeting | null>(null)
   const participantsTriggerRef = useRef<HTMLButtonElement>(null)
   const moreMenuTriggerRef = useRef<HTMLButtonElement>(null)
 
@@ -69,6 +83,23 @@ export function MeetingPage() {
   const changeAiChatDisplayMode = (mode: AiChatDisplayMode) => {
     controller.changeAiChatDisplayMode(mode)
     setLastAction(aiChatModeAnnouncements[mode])
+  }
+
+  const locationState = location.state as Partial<LiveMeetingProjectContext> | null
+  const projectContext: LiveMeetingProjectContext = {
+    projectId: locationState?.projectId ?? controller.meeting.projectId,
+    projectTitle: locationState?.projectTitle ?? controller.meeting.projectTitle,
+  }
+
+  const saveMeeting = async () => {
+    setActiveControl('saving')
+    try {
+      const completed = await controller.completeMeeting(projectContext)
+      setCompletedMeeting(completed)
+      setActiveControl('save-success')
+    } catch {
+      setActiveControl('save-failure')
+    }
   }
 
   return (
@@ -134,10 +165,27 @@ export function MeetingPage() {
       <MeetingExitDialog
         mode={currentUserIsHost ? 'end' : 'leave'}
         onCancel={() => setActiveControl('idle')}
-        onConfirm={() => setActiveControl('saving')}
+        onConfirm={() => void saveMeeting()}
         open={activeControl === 'end-confirm'}
       />
-      <MeetingSaveDialog open={activeControl === 'saving'} state="saving" />
+      {activeControl === 'saving' ? <MeetingSaveDialog open state="saving" /> : null}
+      {activeControl === 'save-success' && completedMeeting ? (
+        <MeetingSaveDialog
+          meetingTitle={completedMeeting.meetingTitle}
+          onClose={() =>
+            navigate('/projects', {
+              replace: true,
+              state: { activeProjectId: completedMeeting.projectId },
+            })
+          }
+          open
+          projectTitle={completedMeeting.projectTitle}
+          state="success"
+        />
+      ) : null}
+      {activeControl === 'save-failure' ? (
+        <MeetingSaveDialog onRetry={() => void saveMeeting()} open state="failure" />
+      ) : null}
       <p aria-live="polite" className="sr-only">
         {lastAction}
       </p>

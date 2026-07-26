@@ -1,9 +1,12 @@
 import type {
   AiChatPinnedContext,
+  CompleteMeetingRequest,
+  CompletedMeetingSummary,
   LiveMeetingResponse,
   MeetingAiChatMessageResponse,
   MeetingAiChatSuggestionResponse,
   MeetingParticipantResponse,
+  MeetingProjectContext,
   TranscriptHintResponse,
   TranscriptSegmentResponse,
 } from '../../../shared/api/contracts/meeting.contracts'
@@ -33,3 +36,6 @@ export type LiveMeetingTranscriptHint = TranscriptHintResponse
 export type LiveMeetingAiChatMessage = MeetingAiChatMessageResponse
 export type LiveMeetingAiChatSuggestion = MeetingAiChatSuggestionResponse
 export type LiveMeetingAiPinnedContext = AiChatPinnedContext
+export type CompletedMeeting = CompletedMeetingSummary
+export type CompleteMeeting = CompleteMeetingRequest
+export type LiveMeetingProjectContext = MeetingProjectContext

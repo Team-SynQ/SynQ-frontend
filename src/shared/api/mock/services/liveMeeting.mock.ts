@@ -1,4 +1,6 @@
 import type {
+  CompleteMeetingRequest,
+  CompletedMeetingSummary,
   GetTranscriptHintRequest,
   LiveMeetingResponse,
   MeetingAiChatMessageResponse,
@@ -8,6 +10,7 @@ import type {
   UpdateTranscriptRequest,
 } from '../../contracts/meeting.contracts'
 import { liveMeetingMockDb } from '../db/liveMeeting.mockDb'
+import { completedMeetingSummaryFixture } from '../fixtures/liveMeeting.fixture'
 import { MockApiError, waitForMockApi } from '../lib/mockApi'
 
 let messageSequence = 0
@@ -70,6 +73,31 @@ export const liveMeetingMockService = {
       throw new MockApiError(404, 'TRANSCRIPT_NOT_FOUND', '전사 문장을 찾을 수 없습니다.')
     }
     return updated
+  },
+
+  async completeMeeting(request: CompleteMeetingRequest): Promise<CompletedMeetingSummary> {
+    await waitForMockApi()
+    requireMeeting(request.meetingId)
+
+    if (liveMeetingMockDb.getScenario(request.meetingId)?.completionFails) {
+      throw new MockApiError(
+        500,
+        'MEETING_COMPLETE_FAILED',
+        '회의 기록을 저장하지 못했습니다.',
+      )
+    }
+
+    return liveMeetingMockDb.addCompletedMeeting({
+      ...request,
+      overview: completedMeetingSummaryFixture.overview,
+      keywords: [...completedMeetingSummaryFixture.keywords],
+      decisions: [...completedMeetingSummaryFixture.decisions],
+    })
+  },
+
+  async listCompletedMeetings(projectId: string): Promise<CompletedMeetingSummary[]> {
+    await waitForMockApi()
+    return liveMeetingMockDb.listCompletedMeetings(projectId)
   },
 }
 

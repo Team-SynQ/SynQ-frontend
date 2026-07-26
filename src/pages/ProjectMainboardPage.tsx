@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 
+import { meetingApi, type CompletedMeeting } from '../entities/meeting'
 import {
   listProjectSummaries,
   PROJECT_REFERENCE_MAX_MATERIALS,
@@ -39,6 +41,7 @@ type ProjectMainboardPageProps = {
     materialId: string,
     nextName: string,
   ) => Promise<void> | void
+  loadCompletedMeetings?: (projectId: string) => Promise<CompletedMeeting[]>
 }
 
 type ProjectReferenceFeedback = {
@@ -84,15 +87,26 @@ export function ProjectMainboardPage({
   addProjectReferences,
   deleteProjectReference,
   renameProjectReference,
+  loadCompletedMeetings = meetingApi.listCompletedMeetings,
 }: ProjectMainboardPageProps) {
+  const location = useLocation()
+  const navigate = useNavigate()
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [projects, setProjects] = useState<ProjectSummary[]>([])
   const [activeProjectId, setActiveProjectId] = useState<string>()
+  const [completedMeetingsByProject, setCompletedMeetingsByProject] = useState<
+    Record<string, CompletedMeeting[]>
+  >({})
+  const [meetingHistoryErrorProjectId, setMeetingHistoryErrorProjectId] =
+    useState<string>()
   const [latestCreatedProjectName, setLatestCreatedProjectName] = useState<string>()
   const [projectReferenceFeedback, setProjectReferenceFeedback] =
     useState<ProjectReferenceFeedback>()
   const creationSuccessToast = useTransientVisibility()
   const projectReferenceFeedbackToast = useTransientVisibility()
+  const requestedActiveProjectId = (
+    location.state as { activeProjectId?: string } | null
+  )?.activeProjectId
   const {
     isMounted: isProjectLoadErrorMounted,
     isVisible: isProjectLoadErrorVisible,
@@ -113,7 +127,12 @@ export function ProjectMainboardPage({
               !currentProjects.some((project) => project.id === initialProject.id),
           ),
         ])
-        setActiveProjectId((currentProjectId) => currentProjectId ?? initialProjects[0]?.id)
+        setActiveProjectId(
+          (currentProjectId) =>
+            currentProjectId ??
+            initialProjects.find((project) => project.id === requestedActiveProjectId)?.id ??
+            initialProjects[0]?.id,
+        )
       })
       .catch(() => {
         if (isSubscribed) showProjectLoadError()
@@ -122,7 +141,31 @@ export function ProjectMainboardPage({
     return () => {
       isSubscribed = false
     }
-  }, [loadProjects, showProjectLoadError])
+  }, [loadProjects, requestedActiveProjectId, showProjectLoadError])
+
+  useEffect(() => {
+    if (!activeProjectId || activeProjectId in completedMeetingsByProject) return
+
+    let isSubscribed = true
+    void loadCompletedMeetings(activeProjectId)
+      .then((meetings) => {
+        if (!isSubscribed) return
+        setCompletedMeetingsByProject((current) => ({
+          ...current,
+          [activeProjectId]: meetings,
+        }))
+        setMeetingHistoryErrorProjectId((current) =>
+          current === activeProjectId ? undefined : current,
+        )
+      })
+      .catch(() => {
+        if (isSubscribed) setMeetingHistoryErrorProjectId(activeProjectId)
+      })
+
+    return () => {
+      isSubscribed = false
+    }
+  }, [activeProjectId, completedMeetingsByProject, loadCompletedMeetings])
 
   const handleCreateProject = () => {
     setIsCreateModalOpen(true)
@@ -269,10 +312,28 @@ export function ProjectMainboardPage({
         user={user}
       />
       <ProjectMainboard
+        meetingHistoryError={
+          activeProjectId === meetingHistoryErrorProjectId
+            ? '회의 기록을 불러오지 못했습니다.'
+            : undefined
+        }
+        meetings={activeProjectId ? completedMeetingsByProject[activeProjectId] : undefined}
         onAddMaterials={handleAddMaterials}
         onCreateProject={handleCreateProject}
         onDeleteMaterial={handleDeleteMaterial}
         onRenameMaterial={handleRenameMaterial}
+        onOpenMeetingSummary={(recordId) =>
+          navigate(`/meetings/${encodeURIComponent(recordId)}/summary`)
+        }
+        onStartMeeting={() => {
+          if (!activeProject) return
+          navigate('/meetings/demo/tutorial', {
+            state: {
+              projectId: activeProject.id,
+              projectTitle: activeProject.name,
+            },
+          })
+        }}
         project={activeProject}
       />
       <ProjectCreateModal

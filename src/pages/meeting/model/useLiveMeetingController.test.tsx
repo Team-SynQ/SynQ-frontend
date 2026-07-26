@@ -37,6 +37,36 @@ describe('useLiveMeetingController async boundaries', () => {
     resetLiveMeetingMockDb()
   })
 
+  it('completes the meeting with the current title, elapsed time, and host', async () => {
+    const { result } = await renderReadyController()
+
+    act(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      result.current.setMeetingTitle('온보딩 개선 회의')
+    })
+
+    let completedMeeting
+    await act(async () => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      completedMeeting = await result.current.completeMeeting({
+        projectId: 'project-1',
+        projectTitle: '서비스 디자인',
+      })
+    })
+
+    expect(completedMeeting).toMatchObject({
+      projectId: 'project-1',
+      projectTitle: '서비스 디자인',
+      meetingTitle: '온보딩 개선 회의',
+      durationSeconds: 373,
+      host: {
+        id: 'you',
+        name: '윤금서',
+        avatarKey: 'you',
+      },
+    })
+  })
+
   it('keeps the AI draft and pinned context while exposing a controlled send error', async () => {
     vi.spyOn(meetingAiMockGateway, 'sendMeetingAiQuestion').mockRejectedValue(
       new Error('AI_SEND_FAILED'),
