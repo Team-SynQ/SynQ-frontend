@@ -18,20 +18,14 @@ const projectDateFormatter = new Intl.DateTimeFormat('ko-KR', {
   day: '2-digit',
 })
 
-export function ProjectCreatedDashboard({
-  project,
-}: ProjectCreatedDashboardProps) {
+export function ProjectCreatedDashboard({ project }: ProjectCreatedDashboardProps) {
   return (
     <div className="flex w-full flex-col gap-l">
       <header className="flex items-start gap-s">
         <div className="flex min-w-0 flex-1 flex-col gap-xs">
-          <h1 className="m-0 truncate typo-heading text-fg-primary">
-            {project.name}
-          </h1>
+          <h1 className="m-0 truncate typo-heading text-fg-primary">{project.name}</h1>
           {project.overview ? (
-            <p className="m-0 typo-body-01 text-fg-secondary">
-              {project.overview}
-            </p>
+            <p className="m-0 typo-body-01 text-fg-secondary">{project.overview}</p>
           ) : null}
           <div className="flex flex-wrap items-center gap-xs">
             <span className="typo-body-01 text-fg-secondary">내 관점 :</span>
@@ -92,9 +86,7 @@ export function ProjectCreatedDashboard({
               />
               <h3 className="m-0 typo-body-01 text-fg-primary">최신 회의 요약</h3>
             </div>
-            <p className="m-auto typo-body-01 text-gray-500">
-              아직 회의 기록이 없습니다
-            </p>
+            <p className="m-auto typo-body-01 text-gray-500">아직 회의 기록이 없습니다</p>
           </section>
 
           <ProjectReferenceMaterials project={project} />
@@ -133,9 +125,7 @@ function ProjectReferenceMaterials({ project }: { project: ProjectSummary }) {
             width="24"
           />
           <h3 className="m-0 typo-body-01 text-fg-primary">AI 참고 자료</h3>
-          <span className="typo-body-02 text-fg-secondary">
-            {project.materials.length}
-          </span>
+          <span className="typo-body-02 text-fg-secondary">{project.materials.length}</span>
           <span className="typo-caption text-gray-500">/ 10</span>
         </div>
         <Button
@@ -200,9 +190,7 @@ function ProjectReferenceMaterials({ project }: { project: ProjectSummary }) {
           ))}
         </ul>
       ) : (
-        <p className="m-auto typo-body-02 text-gray-500">
-          등록된 AI 참고 자료가 없습니다
-        </p>
+        <p className="m-auto typo-body-02 text-gray-500">등록된 AI 참고 자료가 없습니다</p>
       )}
     </section>
   )

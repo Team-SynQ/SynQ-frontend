@@ -36,10 +36,6 @@ describe('Toast', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
     expect(hiddenStatus).toHaveAttribute('aria-live', 'off')
     expect(hiddenStatus.parentElement).toHaveAttribute('aria-hidden', 'true')
-    expect(hiddenStatus.parentElement).toHaveClass(
-      '-translate-y-xs',
-      'opacity-0',
-      'duration-300',
-    )
+    expect(hiddenStatus.parentElement).toHaveClass('-translate-y-xs', 'opacity-0', 'duration-300')
   })
 })

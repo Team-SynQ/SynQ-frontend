@@ -12,12 +12,7 @@ import chevronLeftIcon from '../../../shared/assets/icons/chevron-left.svg'
 import closeIcon from '../../../shared/assets/icons/close.svg'
 import uploadIcon from '../../../shared/assets/icons/upload.svg'
 import { useTransientVisibility } from '../../../shared/lib/useTransientVisibility'
-import {
-  Button,
-  Segment,
-  SegmentItem,
-  Toast,
-} from '../../../shared/ui'
+import { Button, Segment, SegmentItem, Toast } from '../../../shared/ui'
 
 import {
   getProjectMaterialFileError,
@@ -31,10 +26,7 @@ import {
 } from '../model/projectMaterialUpload.config'
 import { projectCreationFailureMessage } from '../model/projectCreation.messages'
 import type { ProjectMaterialDraft } from '../model/projectCreate.types'
-import {
-  ProjectMaterialList,
-  type ProjectMaterialListItemModel,
-} from './ProjectMaterialList'
+import { ProjectMaterialList, type ProjectMaterialListItemModel } from './ProjectMaterialList'
 
 type MaterialSource = 'file' | 'link'
 
@@ -42,13 +34,9 @@ type UploadFileItem = ProjectMaterialListItemModel & {
   file: File
 }
 
-export type ProjectMaterialUploadHandler = (
-  files: File[],
-) => Promise<void> | void
+export type ProjectMaterialUploadHandler = (files: File[]) => Promise<void> | void
 
-export type ProjectCreationHandler = (
-  materials: ProjectMaterialDraft,
-) => Promise<void> | void
+export type ProjectCreationHandler = (materials: ProjectMaterialDraft) => Promise<void> | void
 
 type ProjectMaterialUploadFormProps = {
   titleId: string
@@ -82,8 +70,7 @@ export function ProjectMaterialUploadForm({
   const [linkValue, setLinkValue] = useState('')
   const [isDragging, setIsDragging] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
-  const [errorCode, setErrorCode] =
-    useState<ProjectMaterialUploadErrorCode>('upload-failed')
+  const [errorCode, setErrorCode] = useState<ProjectMaterialUploadErrorCode>('upload-failed')
   const uploadErrorToast = useTransientVisibility()
   const creationErrorToast = useTransientVisibility()
 
@@ -103,9 +90,8 @@ export function ProjectMaterialUploadForm({
     }
 
     const uniqueFiles = nextFiles.filter(
-      (file) => !fileItems.some(
-        (item) => item.file.name === file.name && item.file.size === file.size,
-      ),
+      (file) =>
+        !fileItems.some((item) => item.file.name === file.name && item.file.size === file.size),
     )
     if (uniqueFiles.length === 0) return
     if (fileItems.length + uniqueFiles.length > PROJECT_MATERIAL_MAX_FILES_PER_UPLOAD) {
@@ -124,18 +110,12 @@ export function ProjectMaterialUploadForm({
 
     try {
       await onUploadFiles?.(uniqueFiles)
-      setFileItems((current) => current.map((item) => (
-        pendingIds.has(item.id)
-          ? { ...item, status: 'complete' }
-          : item
-      )))
+      setFileItems((current) =>
+        current.map((item) => (pendingIds.has(item.id) ? { ...item, status: 'complete' } : item)),
+      )
     } catch (error) {
       setFileItems((current) => current.filter((item) => !pendingIds.has(item.id)))
-      showUploadError(
-        error instanceof ProjectMaterialUploadError
-          ? error.code
-          : 'upload-failed',
-      )
+      showUploadError(error instanceof ProjectMaterialUploadError ? error.code : 'upload-failed')
     }
   }
 
@@ -166,7 +146,7 @@ export function ProjectMaterialUploadForm({
     const normalizedLink = getNormalizedLink()
     if (!normalizedLink) return
 
-    setLinkItems((current) => (
+    setLinkItems((current) =>
       current.some((item) => item.name === normalizedLink)
         ? current
         : [
@@ -176,8 +156,8 @@ export function ProjectMaterialUploadForm({
               name: normalizedLink,
               status: 'complete',
             },
-          ]
-    ))
+          ],
+    )
     setLinkValue('')
   }
 
@@ -314,12 +294,7 @@ export function ProjectMaterialUploadForm({
                     type="url"
                     value={linkValue}
                   />
-                  <Button
-                    aria-label="링크 추가"
-                    onClick={addLink}
-                    size="small"
-                    variant="basic"
-                  >
+                  <Button aria-label="링크 추가" onClick={addLink} size="small" variant="basic">
                     추가
                   </Button>
                 </div>
@@ -329,9 +304,7 @@ export function ProjectMaterialUploadForm({
 
           <section className="flex min-h-0 flex-1 flex-col gap-xs">
             <div className="px-xs">
-              <h3 className="m-0 typo-body-01 text-fg-primary">
-                업로드 된 AI 참고 자료
-              </h3>
+              <h3 className="m-0 typo-body-01 text-fg-primary">업로드 된 AI 참고 자료</h3>
               <p className="m-0 typo-caption text-fg-secondary">
                 PDF, DOCX, PPTX, TXT 파일 또는 Notion / Google Drive 링크 지원
               </p>

@@ -105,20 +105,14 @@ export const projectMockDb = {
     return createdReferences.map(cloneReference)
   },
 
-  setReferenceStatus(
-    projectId: number,
-    referenceIds: number[],
-    status: ProjectReferenceStatus,
-  ) {
+  setReferenceStatus(projectId: number, referenceIds: number[], status: ProjectReferenceStatus) {
     const referenceIdSet = new Set(referenceIds)
     const record = records.get(projectId)
     if (!record) return
 
-    record.references = record.references.map((reference) => (
-      referenceIdSet.has(reference.referenceId)
-        ? { ...reference, status }
-        : reference
-    ))
+    record.references = record.references.map((reference) =>
+      referenceIdSet.has(reference.referenceId) ? { ...reference, status } : reference,
+    )
   },
 
   deleteReference(projectId: number, referenceId: number): boolean {

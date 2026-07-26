@@ -2,12 +2,7 @@ import { useId, useState, type FormEvent } from 'react'
 
 import closeIcon from '../../../shared/assets/icons/close.svg'
 import { useTransientVisibility } from '../../../shared/lib/useTransientVisibility'
-import {
-  Button,
-  InputBox,
-  OverlayDialog,
-  Toast,
-} from '../../../shared/ui'
+import { Button, InputBox, OverlayDialog, Toast } from '../../../shared/ui'
 
 import {
   projectFocusOptions,
@@ -34,10 +29,7 @@ export type ProjectCreateModalProps = {
   perspectiveOptions?: ProjectPerspectiveOption[]
   onAddPerspective?: (draft: ProjectRolePerspectiveDraft) => void
   onClose: () => void
-  onCreate?: (
-    draft: ProjectCreateDraft,
-    materials: ProjectMaterialDraft,
-  ) => Promise<void> | void
+  onCreate?: (draft: ProjectCreateDraft, materials: ProjectMaterialDraft) => Promise<void> | void
   onNext?: (draft: ProjectCreateDraft) => void
   onUploadFiles?: ProjectMaterialUploadHandler
 }
@@ -209,8 +201,7 @@ function ProjectCreateForm({
 }: ProjectCreateFormProps) {
   const nameInputId = useId()
   const overviewInputId = useId()
-  const canGoNext = draft.name.trim().length > 0
-    && draft.perspectiveId.length > 0
+  const canGoNext = draft.name.trim().length > 0 && draft.perspectiveId.length > 0
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -234,10 +225,7 @@ function ProjectCreateForm({
           <h2 className="m-0 typo-title-02 text-fg-primary" id={titleId}>
             프로젝트 생성
           </h2>
-          <p
-            className="m-0 whitespace-pre-line typo-body-02 text-fg-secondary"
-            id={descriptionId}
-          >
+          <p className="m-0 whitespace-pre-line typo-body-02 text-fg-secondary" id={descriptionId}>
             {'구체적으로 작성할수록,\nSynQ가 회의 맥락을 더 잘 이해해요'}
           </p>
         </div>

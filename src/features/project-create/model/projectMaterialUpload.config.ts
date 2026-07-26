@@ -1,21 +1,11 @@
 export const PROJECT_MATERIAL_MAX_FILE_SIZE_MB = 20
-export const PROJECT_MATERIAL_MAX_FILE_SIZE_BYTES =
-  PROJECT_MATERIAL_MAX_FILE_SIZE_MB * 1024 * 1024
+export const PROJECT_MATERIAL_MAX_FILE_SIZE_BYTES = PROJECT_MATERIAL_MAX_FILE_SIZE_MB * 1024 * 1024
 export const PROJECT_MATERIAL_MAX_FILES_PER_UPLOAD = 5
 
-export const projectMaterialAcceptedExtensions = [
-  '.pdf',
-  '.docx',
-  '.pptx',
-  '.txt',
-] as const
+export const projectMaterialAcceptedExtensions = ['.pdf', '.docx', '.pptx', '.txt'] as const
 
 export type ProjectMaterialUploadErrorCode =
-  | 'upload-failed'
-  | 'file-too-large'
-  | 'too-many-files'
-  | 'unsupported-format'
-  | 'invalid-link'
+  'upload-failed' | 'file-too-large' | 'too-many-files' | 'unsupported-format' | 'invalid-link'
 
 export const projectMaterialUploadErrorMessages: Record<
   ProjectMaterialUploadErrorCode,
@@ -56,13 +46,13 @@ export class ProjectMaterialUploadError extends Error {
 export function getProjectMaterialFileError(
   file: Pick<File, 'name' | 'size'>,
 ): ProjectMaterialUploadErrorCode | null {
-  const extension = file.name.includes('.')
-    ? `.${file.name.split('.').pop()?.toLowerCase()}`
-    : ''
+  const extension = file.name.includes('.') ? `.${file.name.split('.').pop()?.toLowerCase()}` : ''
 
-  if (!projectMaterialAcceptedExtensions.includes(
-    extension as (typeof projectMaterialAcceptedExtensions)[number],
-  )) {
+  if (
+    !projectMaterialAcceptedExtensions.includes(
+      extension as (typeof projectMaterialAcceptedExtensions)[number],
+    )
+  ) {
     return 'unsupported-format'
   }
 

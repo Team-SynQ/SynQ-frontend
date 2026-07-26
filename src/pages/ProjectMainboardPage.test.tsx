@@ -28,9 +28,12 @@ describe('ProjectMainboardPage', () => {
   it('shows the project only after creation completes', async () => {
     const user = userEvent.setup()
     let finishCreation: ((project: ProjectSummary) => void) | undefined
-    const onSubmitProject = vi.fn(() => new Promise<ProjectSummary>((resolve) => {
-      finishCreation = resolve
-    }))
+    const onSubmitProject = vi.fn(
+      () =>
+        new Promise<ProjectSummary>((resolve) => {
+          finishCreation = resolve
+        }),
+    )
 
     render(<ProjectMainboardPage onSubmitProject={onSubmitProject} />)
 
@@ -45,12 +48,8 @@ describe('ProjectMainboardPage', () => {
       ),
       '\uC2E0\uADDC \uD504\uB85C\uC81D\uD2B8',
     )
-    await user.click(
-      screen.getByRole('button', { name: '\uB2E4\uC74C' }),
-    )
-    await user.click(
-      screen.getByRole('button', { name: '\uC0DD\uC131\uD558\uAE30' }),
-    )
+    await user.click(screen.getByRole('button', { name: '\uB2E4\uC74C' }))
+    await user.click(screen.getByRole('button', { name: '\uC0DD\uC131\uD558\uAE30' }))
 
     expect(onSubmitProject).toHaveBeenCalledTimes(1)
 
@@ -71,7 +70,8 @@ describe('ProjectMainboardPage', () => {
         name: '\uC2E0\uADDC \uD504\uB85C\uC81D\uD2B8',
         overview: '',
         perspectiveLabel: 'PM',
-        perspectiveDescription: '\uC77C\uC815, \uBC94\uC704, \uC758\uC0AC\uACB0\uC815 \uC601\uD5A5 \uC911\uC2EC',
+        perspectiveDescription:
+          '\uC77C\uC815, \uBC94\uC704, \uC758\uC0AC\uACB0\uC815 \uC601\uD5A5 \uC911\uC2EC',
         materials: [],
       })
     })
@@ -107,7 +107,8 @@ describe('ProjectMainboardPage', () => {
         name: draft.name,
         overview: draft.overview,
         perspectiveLabel: 'PM',
-        perspectiveDescription: '\uC77C\uC815, \uBC94\uC704, \uC758\uC0AC\uACB0\uC815 \uC601\uD5A5 \uC911\uC2EC',
+        perspectiveDescription:
+          '\uC77C\uC815, \uBC94\uC704, \uC758\uC0AC\uACB0\uC815 \uC601\uD5A5 \uC911\uC2EC',
         materials: [],
       }
     })
@@ -126,12 +127,8 @@ describe('ProjectMainboardPage', () => {
         ),
         name,
       )
-      await user.click(
-        screen.getByRole('button', { name: '\uB2E4\uC74C' }),
-      )
-      await user.click(
-        screen.getByRole('button', { name: '\uC0DD\uC131\uD558\uAE30' }),
-      )
+      await user.click(screen.getByRole('button', { name: '\uB2E4\uC74C' }))
+      await user.click(screen.getByRole('button', { name: '\uC0DD\uC131\uD558\uAE30' }))
       await screen.findByRole('heading', { name })
     }
 
@@ -146,9 +143,9 @@ describe('ProjectMainboardPage', () => {
     })
 
     expect(onSubmitProject).toHaveBeenCalledTimes(2)
-    expect(
-      secondProjectButton.compareDocumentPosition(firstProjectButton),
-    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+    expect(secondProjectButton.compareDocumentPosition(firstProjectButton)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    )
     expect(
       screen.getByRole('button', {
         name: '\uCCAB \uBC88\uC9F8 \uD504\uB85C\uC81D\uD2B8',
@@ -181,9 +178,12 @@ describe('ProjectMainboardPage', () => {
   it('keeps a newly created project above a delayed initial response', async () => {
     const user = userEvent.setup()
     let finishInitialLoad: ((projects: ProjectSummary[]) => void) | undefined
-    const loadProjects = vi.fn(() => new Promise<ProjectSummary[]>((resolve) => {
-      finishInitialLoad = resolve
-    }))
+    const loadProjects = vi.fn(
+      () =>
+        new Promise<ProjectSummary[]>((resolve) => {
+          finishInitialLoad = resolve
+        }),
+    )
     const onSubmitProject = vi.fn((draft: ProjectCreateDraft) => ({
       id: 'latest-project',
       name: draft.name,
@@ -193,12 +193,7 @@ describe('ProjectMainboardPage', () => {
       materials: [],
     }))
 
-    render(
-      <ProjectMainboardPage
-        loadProjects={loadProjects}
-        onSubmitProject={onSubmitProject}
-      />,
-    )
+    render(<ProjectMainboardPage loadProjects={loadProjects} onSubmitProject={onSubmitProject} />)
 
     await user.click(
       screen.getByRole('button', {
@@ -212,9 +207,7 @@ describe('ProjectMainboardPage', () => {
       'latest project',
     )
     await user.click(screen.getByRole('button', { name: '\uB2E4\uC74C' }))
-    await user.click(
-      screen.getByRole('button', { name: '\uC0DD\uC131\uD558\uAE30' }),
-    )
+    await user.click(screen.getByRole('button', { name: '\uC0DD\uC131\uD558\uAE30' }))
     await screen.findByRole('heading', { name: 'latest project' })
 
     await act(async () => {
@@ -237,9 +230,9 @@ describe('ProjectMainboardPage', () => {
       name: 'fetched project',
     })
 
-    expect(
-      latestProjectButton.compareDocumentPosition(fetchedProjectButton),
-    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+    expect(latestProjectButton.compareDocumentPosition(fetchedProjectButton)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    )
     expect(latestProjectButton).toHaveAttribute('aria-current', 'page')
   })
 

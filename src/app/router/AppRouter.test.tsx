@@ -93,9 +93,7 @@ describe('AppRouter', () => {
   it('opens the empty project mainboard directly', () => {
     renderAppAt('/projects')
 
-    expect(
-      screen.getByRole('button', { name: '프로젝트 생성하기' }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '프로젝트 생성하기' })).toBeInTheDocument()
     expect(window.location.pathname).toBe('/projects')
     expect(screen.getByText(projectMockActorFixture.name)).toBeInTheDocument()
     expect(screen.getByText(projectMockActorFixture.email)).toBeInTheDocument()

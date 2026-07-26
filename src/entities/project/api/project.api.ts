@@ -16,10 +16,7 @@ export type ProjectApi = {
   getProject(projectId: number): Promise<ProjectResponse>
   deleteProject(projectId: number): Promise<void>
   getProjectReferences(projectId: number): Promise<ProjectReferenceListResponse>
-  registerProjectFiles(
-    projectId: number,
-    files: File[],
-  ): Promise<RegisterProjectFilesResponse>
+  registerProjectFiles(projectId: number, files: File[]): Promise<RegisterProjectFilesResponse>
   registerProjectLink(
     projectId: number,
     request: RegisterProjectLinkRequest,
@@ -39,9 +36,7 @@ export async function listProjectSummaries(): Promise<ProjectSummary[]> {
 
   return Promise.all(
     projects.map(async (project) => {
-      const { references } = await projectApi.getProjectReferences(
-        project.projectId,
-      )
+      const { references } = await projectApi.getProjectReferences(project.projectId)
 
       return {
         id: String(project.projectId),
@@ -51,7 +46,7 @@ export async function listProjectSummaries(): Promise<ProjectSummary[]> {
         perspectiveDescription: defaultProjectPerspective.description,
         materials: references.map((reference) => ({
           id: String(reference.referenceId),
-          kind: reference.type === 'FILE' ? 'file' as const : 'link' as const,
+          kind: reference.type === 'FILE' ? ('file' as const) : ('link' as const),
           name: reference.name,
           createdAt: reference.createdAt,
         })),

@@ -5,10 +5,7 @@ import closeIcon from '../../../shared/assets/icons/close.svg'
 import { cn } from '../../../shared/lib/cn'
 import { Button, Checkbox } from '../../../shared/ui'
 
-import {
-  projectFocusOptions,
-  projectRoleOptions,
-} from '../model/projectPerspective.config'
+import { projectFocusOptions, projectRoleOptions } from '../model/projectPerspective.config'
 import type { ProjectRolePerspectiveDraft } from '../model/projectCreate.types'
 
 const DETAIL_ROLE_MAX_LENGTH = 30
@@ -34,8 +31,7 @@ export function ProjectRolePerspectiveForm({
   const [detailRole, setDetailRole] = useState('')
   const [selectedFocusIds, setSelectedFocusIds] = useState<string[]>([])
   const isDetailRequired = selectedRoleId === 'etc'
-  const canSubmit = selectedRoleId.length > 0
-    && (!isDetailRequired || detailRole.trim().length > 0)
+  const canSubmit = selectedRoleId.length > 0 && (!isDetailRequired || detailRole.trim().length > 0)
 
   const handleToggleFocus = (focusId: string) => {
     setSelectedFocusIds((current) => {
@@ -93,9 +89,7 @@ export function ProjectRolePerspectiveForm({
                     aria-pressed={isSelected}
                     className={cn(
                       'flex h-[86px] w-[91px] flex-col items-center gap-xs rounded-m border-stroke-md bg-surface-default p-xs transition-colors',
-                      isSelected
-                        ? 'border-brand-primary shadow-floating'
-                        : 'border-line-default',
+                      isSelected ? 'border-brand-primary shadow-floating' : 'border-line-default',
                     )}
                     key={role.id}
                     onClick={() => setSelectedRoleId(role.id)}
@@ -124,7 +118,9 @@ export function ProjectRolePerspectiveForm({
                 세부 역할
               </label>
               {isDetailRequired ? (
-                <span aria-label="필수" className="typo-body-02 text-brand-primary">*</span>
+                <span aria-label="필수" className="typo-body-02 text-brand-primary">
+                  *
+                </span>
               ) : (
                 <span className="typo-body-02 text-fg-secondary">선택</span>
               )}
@@ -156,8 +152,7 @@ export function ProjectRolePerspectiveForm({
             <div className="grid grid-cols-2 gap-s">
               {projectFocusOptions.map((focus) => {
                 const isChecked = selectedFocusIds.includes(focus.id)
-                const isDisabled = !isChecked
-                  && selectedFocusIds.length >= MAX_FOCUS_COUNT
+                const isDisabled = !isChecked && selectedFocusIds.length >= MAX_FOCUS_COUNT
 
                 return (
                   <Checkbox

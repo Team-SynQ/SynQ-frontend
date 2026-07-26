@@ -11,10 +11,7 @@ import {
 import { useTransientVisibility } from '../shared/lib/useTransientVisibility'
 import { Toast } from '../shared/ui'
 import { ProjectMainboard } from '../widgets/project-mainboard'
-import {
-  ProjectSidebar,
-  type ProjectSidebarUser,
-} from '../widgets/project-sidebar'
+import { ProjectSidebar, type ProjectSidebarUser } from '../widgets/project-sidebar'
 
 type ProjectMainboardPageProps = {
   user?: ProjectSidebarUser
@@ -57,14 +54,11 @@ export function ProjectMainboardPage({
         setProjects((currentProjects) => [
           ...currentProjects,
           ...initialProjects.filter(
-            (initialProject) => !currentProjects.some(
-              (project) => project.id === initialProject.id,
-            ),
+            (initialProject) =>
+              !currentProjects.some((project) => project.id === initialProject.id),
           ),
         ])
-        setActiveProjectId(
-          (currentProjectId) => currentProjectId ?? initialProjects[0]?.id,
-        )
+        setActiveProjectId((currentProjectId) => currentProjectId ?? initialProjects[0]?.id)
       })
       .catch(() => {
         if (isSubscribed) showProjectLoadError()
@@ -90,8 +84,7 @@ export function ProjectMainboardPage({
     materials: ProjectMaterialDraft,
   ) => {
     const submittedProject = await onSubmitProject?.(draft, materials)
-    const nextProject = submittedProject
-      ?? await createProjectWithMaterials(draft, materials)
+    const nextProject = submittedProject ?? (await createProjectWithMaterials(draft, materials))
 
     setProjects((currentProjects) => [
       nextProject,
@@ -103,9 +96,7 @@ export function ProjectMainboardPage({
     creationSuccessToast.show()
   }
 
-  const activeProject = projects.find(
-    (project) => project.id === activeProjectId,
-  )
+  const activeProject = projects.find((project) => project.id === activeProjectId)
   const successMessage = latestCreatedProjectName
     ? getProjectCreationSuccessMessage(latestCreatedProjectName)
     : null
@@ -123,10 +114,7 @@ export function ProjectMainboardPage({
         }))}
         user={user}
       />
-      <ProjectMainboard
-        onCreateProject={handleCreateProject}
-        project={activeProject}
-      />
+      <ProjectMainboard onCreateProject={handleCreateProject} project={activeProject} />
       <ProjectCreateModal
         onClose={() => setIsCreateModalOpen(false)}
         onCreate={handleProjectCreated}

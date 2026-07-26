@@ -16,11 +16,10 @@ describe('ProjectMaterialList', () => {
       />,
     )
 
-    const loadingIcon = screen.getByRole('img', { name: '업로드 중' })
-      .querySelector('img')
-    const completeIcon = screen.getByRole('img', { name: '업로드 완료' })
-      .querySelector('img')
-    const deleteIcon = screen.getByRole('button', { name: 'complete.pdf 삭제' })
+    const loadingIcon = screen.getByRole('img', { name: '업로드 중' }).querySelector('img')
+    const completeIcon = screen.getByRole('img', { name: '업로드 완료' }).querySelector('img')
+    const deleteIcon = screen
+      .getByRole('button', { name: 'complete.pdf 삭제' })
       .querySelector('img')
 
     expect(loadingIcon).toHaveAttribute('width', '24')

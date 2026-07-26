@@ -28,9 +28,7 @@ describe('ProjectCreateModal', () => {
 
     await user.click(nextButton)
 
-    expect(
-      screen.getByRole('heading', { name: 'AI 참고 자료 업로드' }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'AI 참고 자료 업로드' })).toBeInTheDocument()
     expect(onNext).toHaveBeenCalledWith({
       name: '서비스디자인',
       perspectiveId: 'planning-operations',
@@ -41,13 +39,7 @@ describe('ProjectCreateModal', () => {
   it('returns to the first step without losing the project draft', async () => {
     const user = userEvent.setup()
 
-    render(
-      <ProjectCreateModal
-        initialValues={{ name: 'SynQ 리뉴얼' }}
-        onClose={vi.fn()}
-        open
-      />,
-    )
+    render(<ProjectCreateModal initialValues={{ name: 'SynQ 리뉴얼' }} onClose={vi.fn()} open />)
 
     await user.click(screen.getByRole('button', { name: '다음' }))
     await user.click(screen.getByRole('button', { name: '이전' }))
@@ -66,28 +58,21 @@ describe('ProjectCreateModal', () => {
     await user.click(screen.getByRole('option', { name: /데이터\/리서치/ }))
 
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /데이터\/리서치.*고객 반응 중심/ }))
-      .toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /데이터\/리서치.*고객 반응 중심/ }),
+    ).toBeInTheDocument()
   })
 
   it('adds a custom role and perspective from the plus action', async () => {
     const user = userEvent.setup()
     const onAddPerspective = vi.fn()
 
-    render(
-      <ProjectCreateModal
-        onAddPerspective={onAddPerspective}
-        onClose={vi.fn()}
-        open
-      />,
-    )
+    render(<ProjectCreateModal onAddPerspective={onAddPerspective} onClose={vi.fn()} open />)
 
     await user.click(screen.getByRole('button', { name: /기획\/운영/ }))
     await user.click(screen.getByRole('button', { name: '관점 추가' }))
 
-    expect(
-      screen.getByRole('heading', { name: '새 역할/관점 추가' }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '새 역할/관점 추가' })).toBeInTheDocument()
     expect(screen.getAllByRole('button', { pressed: false })).toHaveLength(8)
 
     await user.click(screen.getByRole('button', { name: '디자인/콘텐츠' }))
@@ -107,15 +92,9 @@ describe('ProjectCreateModal', () => {
     expect(
       await screen.findByRole('status', { name: /새 역할\/관점 추가 완료/ }),
     ).toBeInTheDocument()
-    expect(
-      screen.getByText('새 역할·관점 설정이 저장됐습니다.'),
-    ).toBeInTheDocument()
-    expect(screen.getByRole('status').parentElement).toHaveClass(
-      'max-w-[380px]',
-      'duration-300',
-    )
-    expect(screen.getByRole('heading', { name: '프로젝트 생성' }))
-      .toBeInTheDocument()
+    expect(screen.getByText('새 역할·관점 설정이 저장됐습니다.')).toBeInTheDocument()
+    expect(screen.getByRole('status').parentElement).toHaveClass('max-w-[380px]', 'duration-300')
+    expect(screen.getByRole('heading', { name: '프로젝트 생성' })).toBeInTheDocument()
     expect(
       screen.getByRole('button', {
         name: /디자인\/콘텐츠.*사용자 경험, 고객 반응/,
@@ -168,15 +147,10 @@ describe('ProjectCreateModal', () => {
 
     render(<ProjectCreateModal onClose={vi.fn()} open />)
 
-    await user.type(
-      screen.getByPlaceholderText('프로젝트 이름을 입력해 주세요'),
-      'SynQ 리뉴얼',
-    )
+    await user.type(screen.getByPlaceholderText('프로젝트 이름을 입력해 주세요'), 'SynQ 리뉴얼')
     await user.click(screen.getByRole('button', { name: /기획\/운영/ }))
     await user.click(screen.getByRole('button', { name: '관점 추가' }))
-    await user.click(
-      screen.getByRole('button', { name: '프로젝트 생성으로 돌아가기' }),
-    )
+    await user.click(screen.getByRole('button', { name: '프로젝트 생성으로 돌아가기' }))
 
     expect(screen.getByDisplayValue('SynQ 리뉴얼')).toBeInTheDocument()
   })

@@ -5,13 +5,9 @@ export {
   getProjectCreationSuccessMessage,
   projectCreationFailureMessage,
 } from './model/projectCreation.messages'
-export {
-  projectPerspectiveOptions,
-} from './model/projectPerspective.config'
+export { projectPerspectiveOptions } from './model/projectPerspective.config'
 export { ProjectMaterialUploadError } from './model/projectMaterialUpload.config'
-export type {
-  ProjectMaterialUploadErrorCode,
-} from './model/projectMaterialUpload.config'
+export type { ProjectMaterialUploadErrorCode } from './model/projectMaterialUpload.config'
 export type {
   ProjectCreationHandler,
   ProjectMaterialUploadHandler,

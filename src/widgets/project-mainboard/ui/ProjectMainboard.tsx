@@ -9,10 +9,7 @@ type ProjectMainboardProps = {
   onCreateProject?: () => void
 }
 
-export function ProjectMainboard({
-  project,
-  onCreateProject,
-}: ProjectMainboardProps) {
+export function ProjectMainboard({ project, onCreateProject }: ProjectMainboardProps) {
   return (
     <section
       className={cn(

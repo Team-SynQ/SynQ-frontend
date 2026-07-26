@@ -18,12 +18,7 @@ const MAX_PROJECT_DESCRIPTION_LENGTH = 500
 const MAX_REFERENCE_COUNT = 10
 const MAX_FILES_PER_REQUEST = 5
 const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024
-const SUPPORTED_FILE_EXTENSIONS = new Set<ProjectFileExtension>([
-  'PDF',
-  'DOCX',
-  'PPTX',
-  'TXT',
-])
+const SUPPORTED_FILE_EXTENSIONS = new Set<ProjectFileExtension>(['PDF', 'DOCX', 'PPTX', 'TXT'])
 
 function requireProject(projectId: number): ProjectResponse {
   const project = projectMockDb.getProject(projectId)
@@ -36,7 +31,7 @@ function requireProject(projectId: number): ProjectResponse {
 function getFileExtension(file: File): ProjectFileExtension | null {
   const extension = file.name.split('.').pop()?.toUpperCase()
   return SUPPORTED_FILE_EXTENSIONS.has(extension as ProjectFileExtension)
-    ? extension as ProjectFileExtension
+    ? (extension as ProjectFileExtension)
     : null
 }
 
@@ -113,7 +108,11 @@ export const projectMockService = {
     requireProject(projectId)
 
     if (files.length === 0 || files.length > MAX_FILES_PER_REQUEST) {
-      throw new MockApiError(400, 'INVALID_FILE_COUNT', '파일은 한 번에 최대 5개까지 등록할 수 있습니다.')
+      throw new MockApiError(
+        400,
+        'INVALID_FILE_COUNT',
+        '파일은 한 번에 최대 5개까지 등록할 수 있습니다.',
+      )
     }
     if (files.some((file) => file.size > MAX_FILE_SIZE_BYTES)) {
       throw new MockApiError(413, 'FILE_TOO_LARGE', '파일은 20MB 이하만 등록할 수 있습니다.')
@@ -125,39 +124,38 @@ export const projectMockService = {
     assertReferenceCapacity(projectId, files.length)
 
     const createdAt = new Date().toISOString()
-    const references = projectMockDb.addReferences(
-      projectId,
-      files.map((file, index) => ({
-        type: 'FILE' as const,
-        name: file.name,
-        url: null,
-        fileSize: file.size,
-        fileExtension: extensions[index] as ProjectFileExtension,
-        status: 'UPLOADING' as const,
-        uploaderId: projectMockActorFixture.userId,
-        uploaderName: projectMockActorFixture.name,
-        canDelete: true,
-        createdAt,
-      })),
-    ) ?? []
+    const references =
+      projectMockDb.addReferences(
+        projectId,
+        files.map((file, index) => ({
+          type: 'FILE' as const,
+          name: file.name,
+          url: null,
+          fileSize: file.size,
+          fileExtension: extensions[index] as ProjectFileExtension,
+          status: 'UPLOADING' as const,
+          uploaderId: projectMockActorFixture.userId,
+          uploaderName: projectMockActorFixture.name,
+          canDelete: true,
+          createdAt,
+        })),
+      ) ?? []
     projectMockDb.setReferenceStatus(
       projectId,
       references.map((reference) => reference.referenceId),
       'AVAILABLE',
     )
-    const responseReferences: ProjectFileReferenceResponse[] = references.map(
-      (reference) => ({
-        referenceId: reference.referenceId,
-        type: 'FILE',
-        name: reference.name,
-        fileSize: reference.fileSize as number,
-        fileExtension: reference.fileExtension as ProjectFileExtension,
-        status: 'AVAILABLE',
-        uploaderId: reference.uploaderId,
-        uploaderName: reference.uploaderName,
-        createdAt: reference.createdAt,
-      }),
-    )
+    const responseReferences: ProjectFileReferenceResponse[] = references.map((reference) => ({
+      referenceId: reference.referenceId,
+      type: 'FILE',
+      name: reference.name,
+      fileSize: reference.fileSize as number,
+      fileExtension: reference.fileExtension as ProjectFileExtension,
+      status: 'AVAILABLE',
+      uploaderId: reference.uploaderId,
+      uploaderName: reference.uploaderName,
+      createdAt: reference.createdAt,
+    }))
     return { references: responseReferences }
   },
 
@@ -181,18 +179,20 @@ export const projectMockService = {
     assertReferenceCapacity(projectId, 1)
 
     const createdAt = new Date().toISOString()
-    const reference = projectMockDb.addReferences(projectId, [{
-      type: 'LINK',
-      name: url.hostname,
-      url: value,
-      fileSize: null,
-      fileExtension: null,
-      status: 'UPLOADING',
-      uploaderId: projectMockActorFixture.userId,
-      uploaderName: projectMockActorFixture.name,
-      canDelete: true,
-      createdAt,
-    }])?.[0]
+    const reference = projectMockDb.addReferences(projectId, [
+      {
+        type: 'LINK',
+        name: url.hostname,
+        url: value,
+        fileSize: null,
+        fileExtension: null,
+        status: 'UPLOADING',
+        uploaderId: projectMockActorFixture.userId,
+        uploaderName: projectMockActorFixture.name,
+        canDelete: true,
+        createdAt,
+      },
+    ])?.[0]
     if (!reference) {
       throw new MockApiError(500, 'REFERENCE_CREATE_FAILED', '참고자료 등록에 실패했습니다.')
     }

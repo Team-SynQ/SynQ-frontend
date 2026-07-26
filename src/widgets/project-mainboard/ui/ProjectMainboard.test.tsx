@@ -24,17 +24,13 @@ describe('ProjectMainboard', () => {
   it('renders the empty state when no project exists', () => {
     render(<ProjectMainboard onCreateProject={vi.fn()} />)
 
-    expect(
-      screen.getByRole('button', { name: '프로젝트 생성하기' }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '프로젝트 생성하기' })).toBeInTheDocument()
   })
 
   it('renders the created project dashboard from project data', () => {
     render(<ProjectMainboard project={project} />)
 
-    expect(
-      screen.getByRole('heading', { name: '서비스 디자인' }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '서비스 디자인' })).toBeInTheDocument()
     expect(screen.getByText('answer-guide.docx')).toBeInTheDocument()
 
     const microphoneIcon = screen
@@ -61,9 +57,7 @@ describe('ProjectMainboard', () => {
     expect(clipboardIcon).toHaveAttribute('height', '24')
     expect(clipboardIcon).toHaveAttribute('width', '24')
 
-    const fileIcon = screen
-      .getByText('answer-guide.docx')
-      .parentElement?.querySelector('img')
+    const fileIcon = screen.getByText('answer-guide.docx').parentElement?.querySelector('img')
     expect(fileIcon).toHaveAttribute('height', '24')
     expect(fileIcon).toHaveAttribute('width', '24')
     expect(screen.getByText('아직 회의 기록이 없습니다')).toBeInTheDocument()

@@ -59,10 +59,7 @@ export function ProjectPerspectiveSelect({
         <img
           alt=""
           aria-hidden="true"
-          className={cn(
-            'size-[28px] shrink-0 transition-transform',
-            isOpen && 'rotate-180',
-          )}
+          className={cn('size-[28px] shrink-0 transition-transform', isOpen && 'rotate-180')}
           src={chevronDownIcon}
         />
       </button>
@@ -85,9 +82,7 @@ export function ProjectPerspectiveSelect({
               role="option"
               type="button"
             >
-              <span className="shrink-0 typo-body-02 text-fg-primary">
-                {option.label}
-              </span>
+              <span className="shrink-0 typo-body-02 text-fg-primary">{option.label}</span>
               <span className="min-w-0 flex-1 truncate typo-body-02 text-fg-secondary">
                 {option.description}
               </span>

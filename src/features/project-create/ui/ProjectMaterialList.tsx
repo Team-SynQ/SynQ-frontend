@@ -15,10 +15,7 @@ type ProjectMaterialListProps = {
   onRemove: (id: string) => void
 }
 
-export function ProjectMaterialList({
-  items,
-  onRemove,
-}: ProjectMaterialListProps) {
+export function ProjectMaterialList({ items, onRemove }: ProjectMaterialListProps) {
   return (
     <ul className="m-0 flex list-none flex-col p-0">
       {items.map((item) => (
@@ -34,19 +31,17 @@ export function ProjectMaterialList({
             <img
               alt=""
               aria-hidden="true"
-              className={item.status === 'uploading'
-                ? 'size-[24px] animate-spin motion-reduce:animate-none'
-                : 'h-[11px] w-[15px]'}
+              className={
+                item.status === 'uploading'
+                  ? 'size-[24px] animate-spin motion-reduce:animate-none'
+                  : 'h-[11px] w-[15px]'
+              }
               height={item.status === 'uploading' ? 24 : 11}
-              src={item.status === 'uploading'
-                ? uploadLoadingIcon
-                : uploadCompleteIcon}
+              src={item.status === 'uploading' ? uploadLoadingIcon : uploadCompleteIcon}
               width={item.status === 'uploading' ? 24 : 15}
             />
           </span>
-          <span className="min-w-0 flex-1 truncate typo-body-02 text-fg-primary">
-            {item.name}
-          </span>
+          <span className="min-w-0 flex-1 truncate typo-body-02 text-fg-primary">{item.name}</span>
           <Button
             aria-label={`${item.name} 삭제`}
             className="size-[32px] px-0"

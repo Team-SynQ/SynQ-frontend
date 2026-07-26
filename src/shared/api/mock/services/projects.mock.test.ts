@@ -35,14 +35,10 @@ describe('projectMockService', () => {
       type: 'application/pdf',
     })
 
-    const fileResponse = await projectMockService.registerProjectFiles(
-      project.projectId,
-      [file],
-    )
-    const linkResponse = await projectMockService.registerProjectLink(
-      project.projectId,
-      { url: 'https://www.notion.so/example' },
-    )
+    const fileResponse = await projectMockService.registerProjectFiles(project.projectId, [file])
+    const linkResponse = await projectMockService.registerProjectLink(project.projectId, {
+      url: 'https://www.notion.so/example',
+    })
     const references = await projectMockService.getProjectReferences(project.projectId)
 
     expect(fileResponse.references[0]?.status).toBe('AVAILABLE')
@@ -63,20 +59,17 @@ describe('projectMockService', () => {
       url: 'https://example.com/document',
     })
 
-    await projectMockService.deleteProjectReference(
-      project.projectId,
-      link.referenceId,
-    )
+    await projectMockService.deleteProjectReference(project.projectId, link.referenceId)
 
-    await expect(
-      projectMockService.getProjectReferences(project.projectId),
-    ).resolves.toMatchObject({ currentCount: 0, references: [] })
+    await expect(projectMockService.getProjectReferences(project.projectId)).resolves.toMatchObject(
+      { currentCount: 0, references: [] },
+    )
   })
 
   it('rejects invalid project and reference requests with HTTP-like errors', async () => {
-    await expect(
-      projectMockService.createProject({ title: '' }),
-    ).rejects.toMatchObject({ status: 400 })
+    await expect(projectMockService.createProject({ title: '' })).rejects.toMatchObject({
+      status: 400,
+    })
 
     const project = await projectMockService.createProject({ title: 'SynQ' })
     const unsupportedFile = new File(['image'], 'image.png', { type: 'image/png' })
@@ -94,8 +87,8 @@ describe('projectMockService', () => {
     await projectMockService.deleteProject(project.projectId)
 
     await expect(projectMockService.listProjects()).resolves.toEqual([])
-    await expect(
-      projectMockService.getProjectReferences(project.projectId),
-    ).rejects.toMatchObject({ status: 404 })
+    await expect(projectMockService.getProjectReferences(project.projectId)).rejects.toMatchObject({
+      status: 404,
+    })
   })
 })

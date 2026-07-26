@@ -7,9 +7,7 @@ type ProjectEmptyStateProps = {
   onCreateProject?: () => void
 }
 
-export function ProjectEmptyState({
-  onCreateProject,
-}: ProjectEmptyStateProps) {
+export function ProjectEmptyState({ onCreateProject }: ProjectEmptyStateProps) {
   return (
     <section className="flex flex-col items-center gap-xl text-center">
       <div className="flex flex-col items-center gap-s">
@@ -23,8 +21,7 @@ export function ProjectEmptyState({
         />
         <p className="typo-title-02 text-fg-secondary">
           아직 생성한 프로젝트가 없습니다.
-          <br />
-          새 프로젝트를 만들어보세요.
+          <br />새 프로젝트를 만들어보세요.
         </p>
       </div>
       <Button

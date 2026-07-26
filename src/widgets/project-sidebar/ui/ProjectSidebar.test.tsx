@@ -9,9 +9,7 @@ describe('ProjectSidebar', () => {
   it('collapses and expands with the sidebar toggle', async () => {
     const user = userEvent.setup()
     const onToggleSidebar = vi.fn()
-    const { container } = render(
-      <ProjectSidebar onToggleSidebar={onToggleSidebar} />,
-    )
+    const { container } = render(<ProjectSidebar onToggleSidebar={onToggleSidebar} />)
 
     const panel = container.querySelector('aside')
     const collapseButton = screen.getByRole('button', {

@@ -1,10 +1,7 @@
 import { projectApi, type ProjectSummary } from '../../../entities/project'
 
 import { projectPerspectiveOptions } from '../model/projectPerspective.config'
-import type {
-  ProjectCreateDraft,
-  ProjectMaterialDraft,
-} from '../model/projectCreate.types'
+import type { ProjectCreateDraft, ProjectMaterialDraft } from '../model/projectCreate.types'
 
 export async function createProjectWithMaterials(
   draft: ProjectCreateDraft,
@@ -17,19 +14,14 @@ export async function createProjectWithMaterials(
 
   try {
     if (materials.files.length > 0) {
-      await projectApi.registerProjectFiles(
-        createdProject.projectId,
-        materials.files,
-      )
+      await projectApi.registerProjectFiles(createdProject.projectId, materials.files)
     }
 
     for (const link of materials.links) {
       await projectApi.registerProjectLink(createdProject.projectId, { url: link })
     }
 
-    const { references } = await projectApi.getProjectReferences(
-      createdProject.projectId,
-    )
+    const { references } = await projectApi.getProjectReferences(createdProject.projectId)
     const perspective = projectPerspectiveOptions.find(
       (option) => option.id === draft.perspectiveId,
     )
@@ -39,8 +31,7 @@ export async function createProjectWithMaterials(
       name: createdProject.title,
       overview: createdProject.description ?? '',
       perspectiveLabel: perspective?.label ?? '직접 설정',
-      perspectiveDescription:
-        perspective?.selectedDescription ?? '사용자 설정 관점',
+      perspectiveDescription: perspective?.selectedDescription ?? '사용자 설정 관점',
       materials: references.map((reference) => ({
         id: String(reference.referenceId),
         kind: reference.type === 'FILE' ? 'file' : 'link',
