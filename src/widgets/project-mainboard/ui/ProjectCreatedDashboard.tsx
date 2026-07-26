@@ -15,12 +15,12 @@ import {
   ProjectReferenceEditDialog,
   ProjectReferenceMenu,
 } from '../../../features/project-reference-actions'
+import { ProjectSettingsMenu } from '../../../features/project-settings'
 import burgerIcon from '../../../shared/assets/icons/burger.svg'
 import clipboardIcon from '../assets/clipboard.svg'
 import fileIcon from '../assets/file.svg'
 import folderIcon from '../assets/folder.svg'
 import microphoneIcon from '../assets/microphone.svg'
-import moreVerticalIcon from '../../../shared/assets/icons/more-vertical.svg'
 import plusIcon from '../../../shared/assets/icons/plus.svg'
 import { useTransientVisibility } from '../../../shared/lib/useTransientVisibility'
 import { Badge, Button, OverlayDialog, Toast } from '../../../shared/ui'
@@ -60,21 +60,7 @@ export function ProjectCreatedDashboard({
             <Badge size="extraSmall">{project.perspectiveDescription}</Badge>
           </div>
         </div>
-        <Button
-          aria-label="프로젝트 더보기"
-          className="size-[52px] px-0"
-          size="large"
-          variant="fillGray100"
-        >
-          <img
-            alt=""
-            aria-hidden="true"
-            className="size-[28px]"
-            height="28"
-            src={moreVerticalIcon}
-            width="28"
-          />
-        </Button>
+        <ProjectSettingsMenu />
       </header>
 
       <section className="flex flex-col gap-s">

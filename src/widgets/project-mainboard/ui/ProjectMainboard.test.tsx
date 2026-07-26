@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
@@ -65,6 +65,54 @@ describe('ProjectMainboard', () => {
 
     expect(screen.getByRole('heading', { name: '서비스 디자인' })).toBeInTheDocument()
     expect(screen.getByText('answer-guide.docx')).toBeInTheDocument()
+
+    const projectMoreButton = screen.getByRole('button', { name: '프로젝트 더보기' })
+    const projectMoreIcon = projectMoreButton.querySelector('img')
+    expect(projectMoreButton).toHaveAttribute('aria-expanded', 'false')
+    expect(projectMoreButton).toHaveAttribute('aria-haspopup', 'dialog')
+    expect(projectMoreIcon).toHaveAttribute('height', '28')
+    expect(projectMoreIcon).toHaveAttribute('width', '28')
+
+    await user.click(projectMoreButton)
+
+    expect(projectMoreButton).toHaveAttribute('aria-expanded', 'true')
+    const projectOptions = screen.getByRole('dialog', {
+      name: '프로젝트 설정 및 멤버 관리',
+    })
+    const options = within(projectOptions)
+    expect(projectOptions).toHaveClass('right-0', 'top-0', 'w-[340px]', 'gap-l', 'rounded-l', 'p-m')
+    expect(options.getByRole('heading', { name: '멤버' })).toBeInTheDocument()
+    expect(options.getAllByText('10')).toHaveLength(2)
+    expect(options.getByText('윤금서/Design (you)')).toBeInTheDocument()
+    expect(options.getByText('소유자')).toBeInTheDocument()
+    expect(options.getAllByRole('listitem')).toHaveLength(10)
+    expect(options.getAllByText('애쉬/딜러')).toHaveLength(4)
+    expect(options.getByText('도로롱')).toBeInTheDocument()
+    expect(options.getByRole('button', { name: '초대' })).toBeInTheDocument()
+    expect(options.getByRole('button', { name: '멤버 관리' })).toBeInTheDocument()
+    expect(options.getByRole('button', { name: '프로젝트 정보 수정하기' })).toBeInTheDocument()
+    expect(options.getByRole('button', { name: '프로젝트 삭제하기' })).toBeInTheDocument()
+
+    const membersIcon = options.getByTestId('project-members-icon')
+    const inviteIcon = options.getByTestId('project-invite-icon')
+    const customAvatar = options.getByTestId('project-member-avatar-member-current')
+    const defaultAvatar = options.getByTestId('project-member-avatar-member-cassidy-1')
+    expect(membersIcon).toHaveClass('size-[28px]')
+    expect(membersIcon.querySelectorAll('img')).toHaveLength(2)
+    expect(inviteIcon).toHaveClass('size-[24px]')
+    expect(inviteIcon.querySelector('img')).toHaveAttribute('height', '16.2')
+    expect(inviteIcon.querySelector('img')).toHaveAttribute('width', '15.2625')
+    expect(customAvatar).toHaveAttribute('height', '24')
+    expect(customAvatar).toHaveAttribute('width', '24')
+    expect(defaultAvatar).toHaveClass('size-[24px]')
+    expect(defaultAvatar.querySelectorAll('img')).toHaveLength(2)
+
+    await user.click(options.getByRole('button', { name: '프로젝트 설정 및 멤버 관리 닫기' }))
+
+    expect(
+      screen.queryByRole('dialog', { name: '프로젝트 설정 및 멤버 관리' }),
+    ).not.toBeInTheDocument()
+    await waitFor(() => expect(projectMoreButton).toHaveFocus())
 
     const microphoneIcon = screen
       .getByRole('button', { name: '\uC0C8 \uD68C\uC758 \uC2DC\uC791' })
@@ -253,6 +301,318 @@ describe('ProjectMainboard', () => {
       await screen.findByRole('status', { name: '참고자료 최대 개수 초과' }),
     ).toHaveTextContent(
       `참고자료는 프로젝트당 최대 ${PROJECT_REFERENCE_MAX_MATERIALS}개까지 등록할 수 있어요.`,
+    )
+  })
+
+  it('copies the mock invite link and shows the Figma success toast', async () => {
+    const user = userEvent.setup()
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    })
+
+    render(
+      <MemoryRouter>
+        <ProjectMainboard project={project} />
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole('button', { name: '프로젝트 더보기' }))
+    await user.click(
+      within(screen.getByRole('dialog', { name: '프로젝트 설정 및 멤버 관리' })).getByRole(
+        'button',
+        { name: '초대' },
+      ),
+    )
+
+    expect(writeText).toHaveBeenCalledWith('https://synq.kr/invite/project-demo')
+    expect(await screen.findByRole('status', { name: '초대 링크 복사 완료' })).toHaveTextContent(
+      '링크를 복사 완료했습니다.',
+    )
+  })
+
+  it.each([
+    ['Clipboard API unavailable', undefined],
+    [
+      'clipboard permission rejected',
+      { writeText: vi.fn().mockRejectedValue(new Error('permission denied')) },
+    ],
+  ])('shows an error toast when %s', async (_case, clipboard) => {
+    const user = userEvent.setup()
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: clipboard,
+    })
+
+    render(
+      <MemoryRouter>
+        <ProjectMainboard project={project} />
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole('button', { name: '프로젝트 더보기' }))
+    await user.click(
+      within(screen.getByRole('dialog', { name: '프로젝트 설정 및 멤버 관리' })).getByRole(
+        'button',
+        { name: '초대' },
+      ),
+    )
+
+    expect(await screen.findByRole('status', { name: '초대 링크 복사 실패' })).toHaveTextContent(
+      '링크를 복사하지 못했습니다. 다시 시도해 주세요.',
+    )
+  })
+
+  it('closes the project popover when actions without handlers are selected', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter>
+        <ProjectMainboard project={project} />
+      </MemoryRouter>,
+    )
+
+    const projectMoreButton = screen.getByRole('button', { name: '프로젝트 더보기' })
+    await user.click(projectMoreButton)
+    await user.click(screen.getByRole('button', { name: '프로젝트 정보 수정하기' }))
+
+    expect(
+      screen.queryByRole('dialog', { name: '프로젝트 설정 및 멤버 관리' }),
+    ).not.toBeInTheDocument()
+    await waitFor(() => expect(projectMoreButton).toHaveFocus())
+
+    await user.click(projectMoreButton)
+    await user.click(screen.getByRole('button', { name: '프로젝트 삭제하기' }))
+
+    expect(
+      screen.queryByRole('dialog', { name: '프로젝트 설정 및 멤버 관리' }),
+    ).not.toBeInTheDocument()
+    await waitFor(() => expect(projectMoreButton).toHaveFocus())
+  })
+
+  it('renders multiple join requests and handles approval failure and member capacity', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter>
+        <ProjectMainboard project={project} />
+      </MemoryRouter>,
+    )
+
+    const projectMoreButton = screen.getByRole('button', { name: '프로젝트 더보기' })
+    await user.click(projectMoreButton)
+    await user.click(
+      within(screen.getByRole('dialog', { name: '프로젝트 설정 및 멤버 관리' })).getByRole(
+        'button',
+        { name: '멤버 관리' },
+      ),
+    )
+
+    const managementDialog = screen.getByRole('dialog', { name: '멤버 관리' })
+    const management = within(managementDialog)
+    expect(managementDialog).toHaveClass('h-[680px]', 'max-w-[460px]!', 'gap-m', 'py-l')
+    expect(management.getAllByText('솜브라/딜러')).toHaveLength(3)
+    expect(management.getByText('윈스턴/탱커')).toBeInTheDocument()
+    expect(management.getAllByText('26.07.20 12:24')).toHaveLength(3)
+    expect(management.getByText('26.07.20 18:24')).toBeInTheDocument()
+    expect(management.getByText('4')).toBeInTheDocument()
+    expect(management.getByText('9')).toBeInTheDocument()
+    expect(
+      management.getByTestId('project-join-request-join-request-sombra-approve-failure')
+        .parentElement,
+    ).toHaveClass('max-h-[172px]', 'overflow-y-auto')
+
+    const failingApproval = within(
+      management.getByTestId('project-join-request-join-request-sombra-approve-failure'),
+    )
+    await user.click(failingApproval.getByRole('button', { name: '승인' }))
+
+    expect(await screen.findByRole('status', { name: '참여 요청 승인 실패' })).toHaveTextContent(
+      '참여 요청을 승인하지 못했습니다. 다시 시도해 주세요.',
+    )
+    expect(
+      management.getByTestId('project-join-request-join-request-sombra-approve-failure'),
+    ).toBeInTheDocument()
+    expect(management.getByText('9')).toBeInTheDocument()
+
+    const successfulApproval = within(
+      management.getByTestId('project-join-request-join-request-winston'),
+    )
+    await user.click(successfulApproval.getByRole('button', { name: '승인' }))
+
+    expect(
+      management.queryByTestId('project-join-request-join-request-winston'),
+    ).not.toBeInTheDocument()
+    expect(management.getByText('윈스턴/탱커')).toBeInTheDocument()
+    expect(management.getAllByText('10')).toHaveLength(2)
+    expect(await screen.findByRole('status', { name: '멤버 승인 완료' })).toHaveTextContent(
+      '참여 요청을 승인했습니다.',
+    )
+
+    const capacityApproval = within(
+      management.getByTestId('project-join-request-join-request-sombra-capacity'),
+    )
+    await user.click(capacityApproval.getByRole('button', { name: '승인' }))
+
+    expect(
+      await screen.findByRole('status', { name: '프로젝트 최대 인원 도달' }),
+    ).toHaveTextContent('프로젝트 최대 인원에 도달해 요청을 승인할 수 없습니다.')
+    expect(
+      management.getByTestId('project-join-request-join-request-sombra-capacity'),
+    ).toBeInTheDocument()
+    expect(management.getAllByText('10')).toHaveLength(2)
+
+    await user.click(management.getByRole('button', { name: '멤버 관리 닫기' }))
+    expect(screen.queryByRole('dialog', { name: '멤버 관리' })).not.toBeInTheDocument()
+    await waitFor(() => expect(projectMoreButton).toHaveFocus())
+  })
+
+  it('keeps failed rejection requests and removes successfully rejected requests', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter>
+        <ProjectMainboard project={project} />
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole('button', { name: '프로젝트 더보기' }))
+    await user.click(
+      within(screen.getByRole('dialog', { name: '프로젝트 설정 및 멤버 관리' })).getByRole(
+        'button',
+        { name: '멤버 관리' },
+      ),
+    )
+
+    const management = within(screen.getByRole('dialog', { name: '멤버 관리' }))
+    const successfulRejection = within(
+      management.getByTestId('project-join-request-join-request-sombra-capacity'),
+    )
+    await user.click(successfulRejection.getByRole('button', { name: '거절' }))
+
+    expect(management.getByText('9')).toBeInTheDocument()
+    expect(
+      management.queryByTestId('project-join-request-join-request-sombra-capacity'),
+    ).not.toBeInTheDocument()
+    expect(await screen.findByRole('status', { name: '멤버 거절 완료' })).toHaveTextContent(
+      '참여 요청을 거절했습니다.',
+    )
+
+    const failingRejection = within(
+      management.getByTestId('project-join-request-join-request-sombra-reject-failure'),
+    )
+    await user.click(failingRejection.getByRole('button', { name: '거절' }))
+
+    expect(await screen.findByRole('status', { name: '참여 요청 거절 실패' })).toHaveTextContent(
+      '참여 요청을 거절하지 못했습니다. 다시 시도해 주세요.',
+    )
+    expect(
+      management.getByTestId('project-join-request-join-request-sombra-reject-failure'),
+    ).toBeInTheDocument()
+    expect(management.getByText('9')).toBeInTheDocument()
+  })
+
+  it('opens the reusable member menu and confirms exporting a member', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter>
+        <ProjectMainboard project={project} />
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole('button', { name: '프로젝트 더보기' }))
+    await user.click(
+      within(screen.getByRole('dialog', { name: '프로젝트 설정 및 멤버 관리' })).getByRole(
+        'button',
+        { name: '멤버 관리' },
+      ),
+    )
+
+    let management = within(screen.getByRole('dialog', { name: '멤버 관리' }))
+    const memberRow = within(management.getByTestId('project-member-row-member-cassidy-1'))
+    await user.click(memberRow.getByRole('button', { name: '캐서디 멤버 관리' }))
+
+    const memberMenu = await screen.findByRole('menu', { name: '캐서디 멤버 메뉴' })
+    expect(memberMenu).toHaveClass('h-[58px]', 'w-[164px]', 'rounded-[16px]')
+    expect(memberMenu.querySelector('img')).toHaveAttribute('height', '16')
+    expect(memberMenu.querySelector('img')).toHaveAttribute('width', '14')
+    const exportMenuItem = within(memberMenu).getByRole('menuitem', { name: '멤버 내보내기' })
+    await waitFor(() => expect(exportMenuItem).toHaveFocus())
+    await user.click(exportMenuItem)
+
+    expect(screen.queryByRole('dialog', { name: '멤버 관리' })).not.toBeInTheDocument()
+    let exportDialog = screen.getByRole('dialog', {
+      name: '‘캐서디’ 멤버를 내보내시겠습니까?',
+    })
+    expect(exportDialog).toHaveClass('max-w-[440px]!', 'gap-l')
+    expect(exportDialog).toHaveTextContent('나간 이후에도 초대장을 통해 다시 돌아올 수 있습니다.')
+
+    await user.click(within(exportDialog).getByRole('button', { name: '취소' }))
+    management = within(await screen.findByRole('dialog', { name: '멤버 관리' }))
+    expect(management.getByTestId('project-member-row-member-cassidy-1')).toBeInTheDocument()
+
+    await user.click(
+      within(management.getByTestId('project-member-row-member-cassidy-1')).getByRole('button', {
+        name: '캐서디 멤버 관리',
+      }),
+    )
+    await user.click(
+      within(await screen.findByRole('menu', { name: '캐서디 멤버 메뉴' })).getByRole('menuitem', {
+        name: '멤버 내보내기',
+      }),
+    )
+
+    exportDialog = screen.getByRole('dialog', {
+      name: '‘캐서디’ 멤버를 내보내시겠습니까?',
+    })
+    await user.click(within(exportDialog).getByRole('button', { name: '내보내기' }))
+
+    management = within(await screen.findByRole('dialog', { name: '멤버 관리' }))
+    expect(management.queryByTestId('project-member-row-member-cassidy-1')).not.toBeInTheDocument()
+    expect(management.getByText('8')).toBeInTheDocument()
+    expect(await screen.findByRole('status', { name: '멤버 삭제 성공' })).toHaveTextContent(
+      '멤버를 성공적으로 내보냈습니다.',
+    )
+  })
+
+  it('keeps the member and shows the Figma error toast when export fails', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter>
+        <ProjectMainboard project={project} />
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole('button', { name: '프로젝트 더보기' }))
+    await user.click(
+      within(screen.getByRole('dialog', { name: '프로젝트 설정 및 멤버 관리' })).getByRole(
+        'button',
+        { name: '멤버 관리' },
+      ),
+    )
+
+    let management = within(screen.getByRole('dialog', { name: '멤버 관리' }))
+    const failingMemberRow = within(management.getByTestId('project-member-row-member-ashe-1'))
+    await user.click(failingMemberRow.getByRole('button', { name: '애쉬 멤버 관리' }))
+    await user.click(
+      within(await screen.findByRole('menu', { name: '애쉬 멤버 메뉴' })).getByRole('menuitem', {
+        name: '멤버 내보내기',
+      }),
+    )
+
+    const exportDialog = screen.getByRole('dialog', {
+      name: '‘애쉬’ 멤버를 내보내시겠습니까?',
+    })
+    await user.click(within(exportDialog).getByRole('button', { name: '내보내기' }))
+
+    management = within(await screen.findByRole('dialog', { name: '멤버 관리' }))
+    expect(management.getByTestId('project-member-row-member-ashe-1')).toBeInTheDocument()
+    expect(management.getByText('9')).toBeInTheDocument()
+    expect(await screen.findByRole('status', { name: '멤버 삭제 실패' })).toHaveTextContent(
+      '멤버를 삭제하지 못했습니다. 다시 시도해 주세요.',
     )
   })
 })
