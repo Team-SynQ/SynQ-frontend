@@ -309,6 +309,11 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
     actions: {
       onAskAi: askAi,
       onCancelEdit: () => setEditState({ status: 'idle' }),
+      onCollapseHint: (transcriptId) => {
+        if (hintState.status === 'idle' || hintState.transcriptId !== transcriptId) return
+        hintRequestSequenceRef.current += 1
+        setHintState({ status: 'idle' })
+      },
       onEditDraftChange: (value) =>
         setEditState((current) =>
           current.status === 'editing'

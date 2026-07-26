@@ -169,6 +169,21 @@ describe('MeetingPage controls', () => {
     expect(screen.getByRole('textbox', { name: 'AI Chat 질문' })).toHaveFocus()
   })
 
+  it('collapses a SynQ hint and restores it from cache when the transcript is selected again', async () => {
+    const user = userEvent.setup()
+    await renderMeetingPage()
+
+    const transcript = await screen.findByText(/지난주 유저 인터뷰 결과/)
+    await user.click(transcript)
+    expect(await screen.findByRole('article', { name: 'SynQ 힌트' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'SynQ 힌트 접기' }))
+    expect(screen.queryByRole('article', { name: 'SynQ 힌트' })).not.toBeInTheDocument()
+
+    await user.click(transcript)
+    expect(await screen.findByRole('article', { name: 'SynQ 힌트' })).toBeInTheDocument()
+  })
+
   it('commits a successful transcript edit and shows the edited marker', async () => {
     const user = userEvent.setup()
     await renderMeetingPage()
