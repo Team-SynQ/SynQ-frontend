@@ -1,5 +1,6 @@
 import type { HTMLAttributes } from 'react'
 
+import synqLogo from '../../assets/logos/synq-logo.svg'
 import { cn } from '../../lib/cn'
 
 export type LogoVariant = 'wordmark' | 'symbol'
@@ -10,6 +11,19 @@ type LogoProps = HTMLAttributes<HTMLDivElement> & {
 
 export function Logo({ variant = 'wordmark', className, ...props }: LogoProps) {
   const isSymbol = variant === 'symbol'
+
+  if (!isSymbol) {
+    return (
+      <div
+        aria-label="SynQ"
+        className={cn('inline-flex h-[30px] w-[79px] items-center', className)}
+        role="img"
+        {...props}
+      >
+        <img alt="" aria-hidden="true" className="h-[30px] w-[79px]" src={synqLogo} />
+      </div>
+    )
+  }
 
   return (
     <div
@@ -23,7 +37,6 @@ export function Logo({ variant = 'wordmark', className, ...props }: LogoProps) {
       {...props}
     >
       <LogoMark />
-      {isSymbol ? null : <span className="typo-title-02 leading-none text-fg-primary">SynQ</span>}
     </div>
   )
 }

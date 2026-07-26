@@ -121,7 +121,7 @@ export function UserSetupPreviewRoute() {
           ...roleData,
           perspectives,
         })
-        window.alert('온보딩 설정이 완료되었습니다!')
+        navigate('/projects')
       }}
     />
   )

@@ -1,15 +1,20 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Toast } from '../shared/ui/Toast'
 
 const LoginPage: React.FC = () => {
+  const navigate = useNavigate()
   const [showToast, setShowToast] = useState(false)
   const [toastOpacity, setToastOpacity] = useState(0)
-  const [toastCycle, setToastCycle] = useState(0)
+  const [toastCycle] = useState(0)
 
   const handleSocialLogin = () => {
-    setToastOpacity(0)
-    setShowToast(true)
-    setToastCycle((value) => value + 1)
+    // TODO: 실제 소셜 로그인 연동 시 실패 피드백 처리를 다시 활성화합니다.
+    // setToastOpacity(0);
+    // setShowToast(true);
+    // setToastCycle(value => value + 1);
+
+    navigate('/setup/role')
   }
 
   useEffect(() => {

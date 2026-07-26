@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import App from '../../App'
+import { projectMockActorFixture } from '../../shared/api/mock/fixtures/projects.fixture'
 
 function renderAppAt(path: string) {
   window.history.pushState({}, '', path)
@@ -49,14 +50,13 @@ describe('AppRouter', () => {
     expect(window.location.pathname).toBe('/login')
   })
 
-  it('keeps social login on the login route and shows failure feedback', async () => {
+  it('bypasses social login and opens role setup', async () => {
     const user = userEvent.setup()
     renderAppAt('/login')
 
     await user.click(screen.getByRole('button', { name: '카카오로 계속하기' }))
 
-    expect(screen.getByText('소셜 인증 실패')).toBeInTheDocument()
-    expect(window.location.pathname).toBe('/login')
+    expect(window.location.pathname).toBe('/setup/role')
   })
 
   it('redirects the setup index route to role selection', () => {
@@ -84,6 +84,19 @@ describe('AppRouter', () => {
     expect(screen.getByRole('heading', { name: '선택 결과 미리보기' })).toBeInTheDocument()
     expect(screen.getByText('개발/기술')).toBeInTheDocument()
     expect(screen.getByText('일정')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '설정 완료' }))
+
+    expect(window.location.pathname).toBe('/projects')
+  })
+
+  it('opens the empty project mainboard directly', () => {
+    renderAppAt('/projects')
+
+    expect(screen.getByRole('button', { name: '프로젝트 생성하기' })).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/projects')
+    expect(screen.getByText(projectMockActorFixture.name)).toBeInTheDocument()
+    expect(screen.getByText(projectMockActorFixture.email)).toBeInTheDocument()
   })
 
   it('opens the existing live meeting page directly', () => {

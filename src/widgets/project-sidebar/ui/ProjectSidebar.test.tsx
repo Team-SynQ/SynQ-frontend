@@ -1,0 +1,72 @@
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { describe, expect, it, vi } from 'vitest'
+
+import plusIcon from '../../../shared/assets/icons/plus.svg'
+import { ProjectSidebar } from './ProjectSidebar'
+
+describe('ProjectSidebar', () => {
+  it('collapses and expands with the sidebar toggle', async () => {
+    const user = userEvent.setup()
+    const onToggleSidebar = vi.fn()
+    const { container } = render(<ProjectSidebar onToggleSidebar={onToggleSidebar} />)
+
+    const panel = container.querySelector('aside')
+    const collapseButton = screen.getByRole('button', {
+      name: '사이드바 접기',
+    })
+
+    expect(panel).toHaveClass('w-[220px]')
+    expect(collapseButton).toHaveAttribute('aria-expanded', 'true')
+
+    await user.click(collapseButton)
+
+    const expandButton = screen.getByRole('button', {
+      name: '사이드바 펼치기',
+    })
+    expect(panel).toHaveClass('w-[72px]')
+    expect(expandButton).toHaveAttribute('aria-expanded', 'false')
+
+    await user.click(expandButton)
+
+    expect(panel).toHaveClass('w-[220px]')
+    expect(onToggleSidebar).toHaveBeenCalledTimes(2)
+  })
+
+  it('renders the active project with the shared menu item', () => {
+    render(
+      <ProjectSidebar
+        activeProjectId="project-1"
+        projects={[{ id: 'project-1', name: '서비스 디자인' }]}
+      />,
+    )
+
+    expect(screen.getByRole('button', { name: '서비스 디자인' })).toHaveClass(
+      'bg-surface-muted',
+      'text-fg-primary',
+    )
+  })
+  it('opens project creation from the Figma-sized add button', async () => {
+    const user = userEvent.setup()
+    const onAddProject = vi.fn()
+
+    render(<ProjectSidebar onAddProject={onAddProject} />)
+
+    const addButton = screen.getByRole('button', {
+      name: '\uD504\uB85C\uC81D\uD2B8 \uCD94\uAC00',
+    })
+    const addIcon = addButton.firstElementChild as HTMLElement
+
+    expect(addButton).toHaveClass('h-[32px]', 'bg-transparent')
+    expect(addButton).not.toHaveClass('bg-surface-muted!', 'border-line-default')
+    expect(addIcon.parentElement).toBe(addButton)
+    expect(addIcon.tagName).toBe('SPAN')
+    expect(addIcon).toHaveClass('block', 'size-[24px]', 'bg-current')
+    expect(addIcon.style.maskImage).toBe(`url("${plusIcon}")`)
+    expect(addIcon.style.webkitMaskImage).toBe(`url("${plusIcon}")`)
+
+    await user.click(addButton)
+
+    expect(onAddProject).toHaveBeenCalledTimes(1)
+  })
+})
