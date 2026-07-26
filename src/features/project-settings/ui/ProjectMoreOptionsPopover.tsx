@@ -53,9 +53,13 @@ export function ProjectMoreOptionsPopover({
   }
 
   const runAction = (action?: () => void) => {
-    if (!action) return
     onClose()
-    action()
+    if (action) {
+      action()
+      return
+    }
+
+    window.setTimeout(() => triggerRef?.current?.focus(), 0)
   }
 
   return (

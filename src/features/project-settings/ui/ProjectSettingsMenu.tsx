@@ -3,6 +3,7 @@ import { useId, useRef, useState } from 'react'
 import {
   PROJECT_INVITE_LINK,
   PROJECT_JOIN_REQUEST_MOCK_FAILURE_IDS,
+  PROJECT_MEMBER_EXPORT_MOCK_FAILURE_ID,
   PROJECT_MEMBER_LIMIT,
   projectJoinRequests,
   projectManagementMembers,
@@ -41,11 +42,18 @@ export function ProjectSettingsMenu() {
 
   const handleCopyInviteLink = async () => {
     try {
-      await navigator.clipboard?.writeText(PROJECT_INVITE_LINK)
-    } finally {
+      if (!navigator.clipboard) throw new Error('Clipboard API is unavailable')
+
+      await navigator.clipboard.writeText(PROJECT_INVITE_LINK)
       showToast({
         title: '초대 링크 복사 완료',
         description: '링크를 복사 완료했습니다.',
+      })
+    } catch {
+      showToast({
+        title: '초대 링크 복사 실패',
+        description: '링크를 복사하지 못했습니다. 다시 시도해 주세요.',
+        type: 'error',
       })
     }
   }
@@ -124,9 +132,24 @@ export function ProjectSettingsMenu() {
   const handleConfirmMemberExport = () => {
     if (!exportCandidate) return
 
+    if (exportCandidate.id === PROJECT_MEMBER_EXPORT_MOCK_FAILURE_ID) {
+      setExportCandidate(undefined)
+      setIsManagementOpen(true)
+      showToast({
+        title: '멤버 삭제 실패',
+        description: '멤버를 삭제하지 못했습니다. 다시 시도해 주세요.',
+        type: 'error',
+      })
+      return
+    }
+
     setManagementMembers((current) => current.filter((member) => member.id !== exportCandidate.id))
     setExportCandidate(undefined)
     setIsManagementOpen(true)
+    showToast({
+      title: '멤버 삭제 성공',
+      description: '멤버를 성공적으로 내보냈습니다.',
+    })
   }
 
   return (

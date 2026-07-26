@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState, type RefObject } from 'react'
+import { useLayoutEffect, useRef, useState, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 
 import trashIcon from '../../../shared/assets/icons/trash.svg'
@@ -32,6 +32,7 @@ export function ProjectMemberActionMenu({
   triggerRef,
 }: ProjectMemberActionMenuProps) {
   const [position, setPosition] = useState<MenuPosition>()
+  const menuItemRef = useRef<HTMLButtonElement>(null)
   const menuRef = useDismissableLayer<HTMLDivElement>({
     open,
     onDismiss: onClose,
@@ -69,6 +70,10 @@ export function ProjectMemberActionMenu({
     }
   }, [open, triggerRef])
 
+  useLayoutEffect(() => {
+    if (open && position) menuItemRef.current?.focus()
+  }, [open, position])
+
   if (!open || !position) return null
 
   return createPortal(
@@ -86,6 +91,7 @@ export function ProjectMemberActionMenu({
           onClose()
           onExport()
         }}
+        ref={menuItemRef}
         role="menuitem"
         type="button"
       >

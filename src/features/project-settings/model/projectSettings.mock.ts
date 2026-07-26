@@ -22,6 +22,8 @@ export const PROJECT_JOIN_REQUEST_MOCK_FAILURE_IDS = {
   reject: 'join-request-sombra-reject-failure',
 } as const
 
+export const PROJECT_MEMBER_EXPORT_MOCK_FAILURE_ID = 'member-ashe-1'
+
 export const projectPopoverMembers: ProjectMember[] = [
   {
     id: 'member-current',
