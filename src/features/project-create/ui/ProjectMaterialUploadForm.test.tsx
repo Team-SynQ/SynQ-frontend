@@ -33,7 +33,7 @@ describe('ProjectMaterialUploadForm', () => {
     expect(screen.getByText('brief.pdf')).toBeInTheDocument()
   })
 
-  it('shows the unsupported format toast', () => {
+  it('shows the unsupported format toast', async () => {
     render(<ProjectMaterialUploadForm {...defaultProps} />)
 
     fireEvent.change(screen.getByLabelText('AI 참고 자료 파일 선택'), {
@@ -43,7 +43,7 @@ describe('ProjectMaterialUploadForm', () => {
     })
 
     expect(
-      screen.getByRole('status', { name: '지원하지 않는 파일 형식' }),
+      await screen.findByRole('status', { name: '지원하지 않는 파일 형식' }),
     ).toBeInTheDocument()
     expect(
       screen.getByText('PDF, DOCX, PPTX, TXT 파일만 업로드할 수 있어요'),
@@ -61,14 +61,14 @@ describe('ProjectMaterialUploadForm', () => {
     await user.upload(screen.getByLabelText('AI 참고 자료 파일 선택'), file)
 
     expect(
-      screen.getByRole('status', { name: '파일 용량 초과' }),
+      await screen.findByRole('status', { name: '파일 용량 초과' }),
     ).toBeInTheDocument()
     expect(
       screen.getByText('파일은 20MB 이하로 업로드해 주세요'),
     ).toBeInTheDocument()
   })
 
-  it('limits a file batch to five items before calling the upload adapter', () => {
+  it('limits a file batch to five items before calling the upload adapter', async () => {
     const onUploadFiles = vi.fn()
     render(
       <ProjectMaterialUploadForm
@@ -86,7 +86,7 @@ describe('ProjectMaterialUploadForm', () => {
     )
 
     expect(onUploadFiles).not.toHaveBeenCalled()
-    expect(screen.getByRole('status')).toBeInTheDocument()
+    expect(await screen.findByRole('status')).toBeInTheDocument()
   })
   it('maps upload adapter errors to the matching toast', async () => {
     const user = userEvent.setup()
@@ -148,7 +148,7 @@ describe('ProjectMaterialUploadForm', () => {
     await user.click(screen.getByRole('button', { name: '링크 추가' }))
 
     expect(
-      screen.getByRole('status', { name: '링크 업로드 실패' }),
+      await screen.findByRole('status', { name: '링크 업로드 실패' }),
     ).toBeInTheDocument()
     expect(screen.getByText('올바른 링크를 입력해 주세요')).toBeInTheDocument()
   })

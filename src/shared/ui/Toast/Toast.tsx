@@ -69,6 +69,7 @@ export function Toast({
 }: ToastProps) {
   return (
     <div
+      aria-hidden={!visible}
       className={cn(
         'fixed z-50 flex w-[calc(100%-32px)]',
         positionClasses[position],
@@ -82,7 +83,7 @@ export function Toast({
     >
       <section
         aria-label={title}
-        aria-live={type === 'error' ? 'assertive' : 'polite'}
+        aria-live={visible ? (type === 'error' ? 'assertive' : 'polite') : 'off'}
         className={cn(
           'flex items-center rounded-[20px] border-stroke-md bg-surface-default',
           typeClasses[type],

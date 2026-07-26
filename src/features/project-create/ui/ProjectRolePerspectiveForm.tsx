@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useId, useState, type FormEvent } from 'react'
 
 import chevronLeftIcon from '../../../shared/assets/icons/chevron-left.svg'
 import closeIcon from '../../../shared/assets/icons/close.svg'
@@ -29,6 +29,7 @@ export function ProjectRolePerspectiveForm({
   onClose,
   onSubmit,
 }: ProjectRolePerspectiveFormProps) {
+  const detailRoleInputId = useId()
   const [selectedRoleId, setSelectedRoleId] = useState('')
   const [detailRole, setDetailRole] = useState('')
   const [selectedFocusIds, setSelectedFocusIds] = useState<string[]>([])
@@ -119,7 +120,7 @@ export function ProjectRolePerspectiveForm({
 
           <div className="flex flex-col gap-xs">
             <div className="flex items-center gap-xs px-xs">
-              <label className="typo-body-01 text-fg-primary" htmlFor="project-detail-role">
+              <label className="typo-body-01 text-fg-primary" htmlFor={detailRoleInputId}>
                 세부 역할
               </label>
               {isDetailRequired ? (
@@ -130,11 +131,13 @@ export function ProjectRolePerspectiveForm({
             </div>
             <div className="flex h-[102px] flex-col rounded-m border-stroke-md border-line-default bg-surface-default px-s py-xs transition-colors focus-within:border-brand-primary">
               <textarea
+                aria-required={isDetailRequired}
                 className="min-h-0 flex-1 resize-none bg-transparent typo-body-02 text-fg-primary outline-none placeholder:text-fg-secondary"
-                id="project-detail-role"
+                id={detailRoleInputId}
                 maxLength={DETAIL_ROLE_MAX_LENGTH}
                 onChange={(event) => setDetailRole(event.target.value)}
                 placeholder="세부역할이 있다면 입력해 주세요. ex) 제품 기획자"
+                required={isDetailRequired}
                 value={detailRole}
               />
               <span className="text-right typo-body-02 text-gray-500">

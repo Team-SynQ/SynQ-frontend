@@ -81,6 +81,10 @@ export const projectMockDb = {
     return record ? cloneProject(record.project) : undefined
   },
 
+  deleteProject(projectId: number): boolean {
+    return records.delete(projectId)
+  },
+
   getReferences(projectId: number): ProjectReferenceResponse[] | undefined {
     return records.get(projectId)?.references.map(cloneReference)
   },

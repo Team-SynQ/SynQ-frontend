@@ -28,10 +28,15 @@ describe('Toast', () => {
     expect(icon).toHaveAttribute('src', errorIcon)
   })
 
-  it('animates smoothly from a hidden state', () => {
+  it('hides an invisible toast from the accessibility tree', () => {
     render(<Toast title="저장 완료" visible={false} />)
 
-    expect(screen.getByRole('status').parentElement).toHaveClass(
+    const hiddenStatus = screen.getByRole('status', { hidden: true })
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(hiddenStatus).toHaveAttribute('aria-live', 'off')
+    expect(hiddenStatus.parentElement).toHaveAttribute('aria-hidden', 'true')
+    expect(hiddenStatus.parentElement).toHaveClass(
       '-translate-y-xs',
       'opacity-0',
       'duration-300',

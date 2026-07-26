@@ -98,20 +98,21 @@ export function ProjectSidebar({
         </span>
         <Button
           aria-label="프로젝트 추가"
-          className="aspect-square border border-line-default bg-surface-muted! px-0"
+          className="aspect-square px-0"
+          leftIcon={(
+            <span
+              aria-hidden="true"
+              className="block size-[24px] shrink-0 bg-current [mask-position:center] [mask-repeat:no-repeat] [mask-size:contain]"
+              style={{
+                maskImage: `url("${plusIcon}")`,
+                WebkitMaskImage: `url("${plusIcon}")`,
+              }}
+            />
+          )}
           onClick={onAddProject}
           size="small"
           variant="basic"
-        >
-          <img
-            alt=""
-            aria-hidden="true"
-            className="size-[24px]"
-            height="24"
-            src={plusIcon}
-            width="24"
-          />
-        </Button>
+        />
       </div>
       {!isCollapsed && projects.length > 0 ? (
         <div className="flex w-full flex-col gap-xs">

@@ -14,6 +14,7 @@ export type ProjectApi = {
   createProject(request: CreateProjectRequest): Promise<ProjectResponse>
   listProjects(): Promise<ProjectListItemResponse[]>
   getProject(projectId: number): Promise<ProjectResponse>
+  deleteProject(projectId: number): Promise<void>
   getProjectReferences(projectId: number): Promise<ProjectReferenceListResponse>
   registerProjectFiles(
     projectId: number,

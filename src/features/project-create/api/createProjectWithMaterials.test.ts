@@ -36,4 +36,26 @@ describe('createProjectWithMaterials', () => {
       currentCount: 2,
     })
   })
+
+  it('rolls back the project when material registration fails', async () => {
+    const unsupportedFile = new File(['image'], 'image.png', {
+      type: 'image/png',
+    })
+
+    await expect(
+      createProjectWithMaterials(
+        {
+          name: '롤백 프로젝트',
+          overview: '',
+          perspectiveId: 'planning-operations',
+        },
+        {
+          files: [unsupportedFile],
+          links: [],
+        },
+      ),
+    ).rejects.toMatchObject({ status: 415 })
+
+    await expect(projectApi.listProjects()).resolves.toEqual([])
+  })
 })

@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
+import plusIcon from '../../../shared/assets/icons/plus.svg'
 import { ProjectSidebar } from './ProjectSidebar'
 
 describe('ProjectSidebar', () => {
@@ -56,12 +57,15 @@ describe('ProjectSidebar', () => {
     const addButton = screen.getByRole('button', {
       name: '\uD504\uB85C\uC81D\uD2B8 \uCD94\uAC00',
     })
-    const addIcon = addButton.querySelector('img')
+    const addIcon = addButton.firstElementChild as HTMLElement
 
-    expect(addButton).toHaveClass('h-[32px]')
-    expect(addButton).toHaveClass('bg-surface-muted!', 'border-line-default')
-    expect(addIcon).toHaveAttribute('height', '24')
-    expect(addIcon).toHaveAttribute('width', '24')
+    expect(addButton).toHaveClass('h-[32px]', 'bg-transparent')
+    expect(addButton).not.toHaveClass('bg-surface-muted!', 'border-line-default')
+    expect(addIcon.parentElement).toBe(addButton)
+    expect(addIcon.tagName).toBe('SPAN')
+    expect(addIcon).toHaveClass('block', 'size-[24px]', 'bg-current')
+    expect(addIcon.style.maskImage).toBe(`url("${plusIcon}")`)
+    expect(addIcon.style.webkitMaskImage).toBe(`url("${plusIcon}")`)
 
     await user.click(addButton)
 

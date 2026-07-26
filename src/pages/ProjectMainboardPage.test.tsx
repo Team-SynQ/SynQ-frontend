@@ -87,7 +87,7 @@ describe('ProjectMainboardPage', () => {
       }),
     ).toHaveAttribute('aria-current', 'page')
 
-    const successToast = screen.getByRole('status', {
+    const successToast = await screen.findByRole('status', {
       name: '\uD504\uB85C\uC81D\uD2B8 \uC0DD\uC131 \uC644\uB8CC',
     })
     expect(successToast).toHaveTextContent(
@@ -176,5 +176,84 @@ describe('ProjectMainboardPage', () => {
         name: '\uCCAB \uBC88\uC9F8 \uD504\uB85C\uC81D\uD2B8',
       }),
     ).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('keeps a newly created project above a delayed initial response', async () => {
+    const user = userEvent.setup()
+    let finishInitialLoad: ((projects: ProjectSummary[]) => void) | undefined
+    const loadProjects = vi.fn(() => new Promise<ProjectSummary[]>((resolve) => {
+      finishInitialLoad = resolve
+    }))
+    const onSubmitProject = vi.fn((draft: ProjectCreateDraft) => ({
+      id: 'latest-project',
+      name: draft.name,
+      overview: draft.overview,
+      perspectiveLabel: 'PM',
+      perspectiveDescription: 'schedule and scope',
+      materials: [],
+    }))
+
+    render(
+      <ProjectMainboardPage
+        loadProjects={loadProjects}
+        onSubmitProject={onSubmitProject}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole('button', {
+        name: '\uD504\uB85C\uC81D\uD2B8 \uCD94\uAC00',
+      }),
+    )
+    await user.type(
+      screen.getByPlaceholderText(
+        '\uD504\uB85C\uC81D\uD2B8 \uC774\uB984\uC744 \uC785\uB825\uD574 \uC8FC\uC138\uC694',
+      ),
+      'latest project',
+    )
+    await user.click(screen.getByRole('button', { name: '\uB2E4\uC74C' }))
+    await user.click(
+      screen.getByRole('button', { name: '\uC0DD\uC131\uD558\uAE30' }),
+    )
+    await screen.findByRole('heading', { name: 'latest project' })
+
+    await act(async () => {
+      finishInitialLoad?.([
+        {
+          id: 'fetched-project',
+          name: 'fetched project',
+          overview: '',
+          perspectiveLabel: 'PM',
+          perspectiveDescription: 'schedule and scope',
+          materials: [],
+        },
+      ])
+    })
+
+    const latestProjectButton = screen.getByRole('button', {
+      name: 'latest project',
+    })
+    const fetchedProjectButton = await screen.findByRole('button', {
+      name: 'fetched project',
+    })
+
+    expect(
+      latestProjectButton.compareDocumentPosition(fetchedProjectButton),
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+    expect(latestProjectButton).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('shows an error toast when the initial project list fails', async () => {
+    const loadProjects = vi.fn(() => Promise.reject(new Error('network error')))
+
+    render(<ProjectMainboardPage loadProjects={loadProjects} />)
+
+    const errorToast = await screen.findByRole('status', {
+      name: '\uD504\uB85C\uC81D\uD2B8 \uBAA9\uB85D\uC744 \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.',
+    })
+
+    expect(errorToast).toHaveTextContent(
+      '\uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.',
+    )
   })
 })

@@ -88,6 +88,12 @@ export const projectMockService = {
     return requireProject(projectId)
   },
 
+  async deleteProject(projectId: number): Promise<void> {
+    await waitForMockApi()
+    requireProject(projectId)
+    projectMockDb.deleteProject(projectId)
+  },
+
   async getProjectReferences(projectId: number): Promise<ProjectReferenceListResponse> {
     await waitForMockApi()
     requireProject(projectId)
@@ -134,6 +140,11 @@ export const projectMockService = {
         createdAt,
       })),
     ) ?? []
+    projectMockDb.setReferenceStatus(
+      projectId,
+      references.map((reference) => reference.referenceId),
+      'AVAILABLE',
+    )
     const responseReferences: ProjectFileReferenceResponse[] = references.map(
       (reference) => ({
         referenceId: reference.referenceId,
@@ -141,16 +152,11 @@ export const projectMockService = {
         name: reference.name,
         fileSize: reference.fileSize as number,
         fileExtension: reference.fileExtension as ProjectFileExtension,
-        status: 'UPLOADING',
+        status: 'AVAILABLE',
         uploaderId: reference.uploaderId,
         uploaderName: reference.uploaderName,
         createdAt: reference.createdAt,
       }),
-    )
-    projectMockDb.setReferenceStatus(
-      projectId,
-      references.map((reference) => reference.referenceId),
-      'AVAILABLE',
     )
     return { references: responseReferences }
   },
@@ -197,7 +203,7 @@ export const projectMockService = {
       type: 'LINK',
       name: reference.name,
       url: value,
-      status: 'UPLOADING',
+      status: 'AVAILABLE',
       uploaderId: reference.uploaderId,
       uploaderName: reference.uploaderName,
       createdAt: reference.createdAt,

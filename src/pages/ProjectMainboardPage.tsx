@@ -21,6 +21,7 @@ type ProjectMainboardPageProps = {
   onCreateProject?: () => void
   onAddProject?: () => void
   onToggleSidebar?: () => void
+  loadProjects?: () => Promise<ProjectSummary[]>
   onSubmitProject?: (
     draft: ProjectCreateDraft,
     materials: ProjectMaterialDraft,
@@ -32,6 +33,7 @@ export function ProjectMainboardPage({
   onCreateProject,
   onAddProject,
   onToggleSidebar,
+  loadProjects = listProjectSummaries,
   onSubmitProject,
 }: ProjectMainboardPageProps) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -39,32 +41,39 @@ export function ProjectMainboardPage({
   const [activeProjectId, setActiveProjectId] = useState<string>()
   const [latestCreatedProjectName, setLatestCreatedProjectName] = useState<string>()
   const creationSuccessToast = useTransientVisibility()
+  const {
+    isMounted: isProjectLoadErrorMounted,
+    isVisible: isProjectLoadErrorVisible,
+    show: showProjectLoadError,
+  } = useTransientVisibility()
 
   useEffect(() => {
     let isSubscribed = true
 
-    void listProjectSummaries()
+    void loadProjects()
       .then((initialProjects) => {
         if (!isSubscribed) return
 
         setProjects((currentProjects) => [
+          ...currentProjects,
           ...initialProjects.filter(
             (initialProject) => !currentProjects.some(
               (project) => project.id === initialProject.id,
             ),
           ),
-          ...currentProjects,
         ])
         setActiveProjectId(
           (currentProjectId) => currentProjectId ?? initialProjects[0]?.id,
         )
       })
-      .catch(() => undefined)
+      .catch(() => {
+        if (isSubscribed) showProjectLoadError()
+      })
 
     return () => {
       isSubscribed = false
     }
-  }, [])
+  }, [loadProjects, showProjectLoadError])
 
   const handleCreateProject = () => {
     setIsCreateModalOpen(true)
@@ -123,6 +132,15 @@ export function ProjectMainboardPage({
         onCreate={handleProjectCreated}
         open={isCreateModalOpen}
       />
+      {isProjectLoadErrorMounted ? (
+        <Toast
+          description="잠시 후 다시 시도해 주세요."
+          position="topCenter"
+          title="프로젝트 목록을 불러오지 못했습니다."
+          type="error"
+          visible={isProjectLoadErrorVisible}
+        />
+      ) : null}
       {successMessage && creationSuccessToast.isMounted ? (
         <Toast
           className="top-[20px]!"

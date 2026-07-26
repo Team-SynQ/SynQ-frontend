@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import App from '../../App'
+import { projectMockActorFixture } from '../../shared/api/mock/fixtures/projects.fixture'
 
 function renderAppAt(path: string) {
   window.history.pushState({}, '', path)
@@ -100,6 +101,8 @@ describe('AppRouter', () => {
       screen.getByRole('button', { name: '프로젝트 생성하기' }),
     ).toBeInTheDocument()
     expect(window.location.pathname).toBe('/projects')
+    expect(screen.getByText(projectMockActorFixture.name)).toBeInTheDocument()
+    expect(screen.getByText(projectMockActorFixture.email)).toBeInTheDocument()
   })
 
   it('opens the existing live meeting page directly', () => {

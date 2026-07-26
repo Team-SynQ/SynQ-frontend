@@ -15,36 +15,46 @@ export async function createProjectWithMaterials(
     description: draft.overview || null,
   })
 
-  if (materials.files.length > 0) {
-    await projectApi.registerProjectFiles(
+  try {
+    if (materials.files.length > 0) {
+      await projectApi.registerProjectFiles(
+        createdProject.projectId,
+        materials.files,
+      )
+    }
+
+    for (const link of materials.links) {
+      await projectApi.registerProjectLink(createdProject.projectId, { url: link })
+    }
+
+    const { references } = await projectApi.getProjectReferences(
       createdProject.projectId,
-      materials.files,
     )
-  }
+    const perspective = projectPerspectiveOptions.find(
+      (option) => option.id === draft.perspectiveId,
+    )
 
-  for (const link of materials.links) {
-    await projectApi.registerProjectLink(createdProject.projectId, { url: link })
-  }
+    return {
+      id: String(createdProject.projectId),
+      name: createdProject.title,
+      overview: createdProject.description ?? '',
+      perspectiveLabel: perspective?.label ?? '직접 설정',
+      perspectiveDescription:
+        perspective?.selectedDescription ?? '사용자 설정 관점',
+      materials: references.map((reference) => ({
+        id: String(reference.referenceId),
+        kind: reference.type === 'FILE' ? 'file' : 'link',
+        name: reference.name,
+        createdAt: reference.createdAt,
+      })),
+    }
+  } catch (error) {
+    try {
+      await projectApi.deleteProject(createdProject.projectId)
+    } catch {
+      // Preserve the material registration error if rollback also fails.
+    }
 
-  const { references } = await projectApi.getProjectReferences(
-    createdProject.projectId,
-  )
-  const perspective = projectPerspectiveOptions.find(
-    (option) => option.id === draft.perspectiveId,
-  )
-
-  return {
-    id: String(createdProject.projectId),
-    name: createdProject.title,
-    overview: createdProject.description ?? '',
-    perspectiveLabel: perspective?.label ?? '직접 설정',
-    perspectiveDescription:
-      perspective?.selectedDescription ?? '사용자 설정 관점',
-    materials: references.map((reference) => ({
-      id: String(reference.referenceId),
-      kind: reference.type === 'FILE' ? 'file' : 'link',
-      name: reference.name,
-      createdAt: reference.createdAt,
-    })),
+    throw error
   }
 }

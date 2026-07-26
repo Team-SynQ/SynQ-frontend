@@ -10,6 +10,7 @@ import { MeetingPage } from '../../pages/MeetingPage'
 import { MeetingStartPage } from '../../pages/MeetingStartPage'
 import { MeetingTutorialPage } from '../../pages/MeetingTutorialPage'
 import { ProjectMainboardPage } from '../../pages/ProjectMainboardPage'
+import { projectMockActorFixture } from '../../shared/api/mock/fixtures/projects.fixture'
 import { LandingRoute, OnboardingRoute } from './EntryFlowRoutes'
 import {
   UserPerspectiveSetupRoute,
@@ -24,7 +25,10 @@ export function AppRoutes() {
       <Route element={<LandingRoute />} path="/" />
       <Route element={<OnboardingRoute />} path="/onboarding" />
       <Route element={<LoginPage />} path="/login" />
-      <Route element={<ProjectMainboardPage />} path="/projects" />
+      <Route
+        element={<ProjectMainboardPage user={projectMockActorFixture} />}
+        path="/projects"
+      />
       <Route element={<UserSetupFlow />} path="/setup">
         <Route index element={<Navigate replace to="role" />} />
         <Route element={<UserRoleSetupRoute />} path="role" />

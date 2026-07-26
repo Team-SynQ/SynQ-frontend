@@ -105,7 +105,7 @@ describe('ProjectCreateModal', () => {
       focusIds: ['ux', 'customer-feedback'],
     })
     expect(
-      screen.getByRole('status', { name: /새 역할\/관점 추가 완료/ }),
+      await screen.findByRole('status', { name: /새 역할\/관점 추가 완료/ }),
     ).toBeInTheDocument()
     expect(
       screen.getByText('새 역할·관점 설정이 저장됐습니다.'),
@@ -135,6 +135,10 @@ describe('ProjectCreateModal', () => {
     const addButton = screen.getByRole('button', { name: '새 역할/관점 추가' })
     expect(addButton).toBeDisabled()
     expect(screen.getByLabelText('필수')).toBeInTheDocument()
+
+    const detailRoleInput = screen.getByLabelText('세부 역할')
+    expect(detailRoleInput).toHaveAttribute('aria-required', 'true')
+    expect(detailRoleInput).toBeRequired()
 
     await user.type(
       screen.getByPlaceholderText('세부역할이 있다면 입력해 주세요. ex) 제품 기획자'),

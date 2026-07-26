@@ -45,8 +45,8 @@ describe('projectMockService', () => {
     )
     const references = await projectMockService.getProjectReferences(project.projectId)
 
-    expect(fileResponse.references[0]?.status).toBe('UPLOADING')
-    expect(linkResponse.status).toBe('UPLOADING')
+    expect(fileResponse.references[0]?.status).toBe('AVAILABLE')
+    expect(linkResponse.status).toBe('AVAILABLE')
     expect(references).toMatchObject({
       currentCount: 2,
       maxCount: 10,
@@ -83,5 +83,19 @@ describe('projectMockService', () => {
     await expect(
       projectMockService.registerProjectFiles(project.projectId, [unsupportedFile]),
     ).rejects.toMatchObject({ status: 415 })
+  })
+
+  it('deletes a project and its registered references', async () => {
+    const project = await projectMockService.createProject({ title: 'SynQ' })
+    await projectMockService.registerProjectLink(project.projectId, {
+      url: 'https://example.com/document',
+    })
+
+    await projectMockService.deleteProject(project.projectId)
+
+    await expect(projectMockService.listProjects()).resolves.toEqual([])
+    await expect(
+      projectMockService.getProjectReferences(project.projectId),
+    ).rejects.toMatchObject({ status: 404 })
   })
 })
