@@ -1,5 +1,7 @@
 import { useId, useRef, useState } from 'react'
 
+import type { ProjectSummary } from '../../../entities/project'
+
 import {
   PROJECT_INVITE_LINK,
   PROJECT_JOIN_REQUEST_MOCK_FAILURE_IDS,
@@ -14,6 +16,12 @@ import {
 import moreVerticalIcon from '../../../shared/assets/icons/more-vertical.svg'
 import { useTransientVisibility } from '../../../shared/lib/useTransientVisibility'
 import { Button, Toast, type ToastType } from '../../../shared/ui'
+import type {
+  ProjectInformationDraft,
+  ProjectInformationPerspective,
+} from '../model/projectInformation.types'
+import { ProjectInformationEditDialog } from './ProjectInformationEditDialog'
+import { ProjectDeleteDialog } from './ProjectDeleteDialog'
 import { ProjectMemberExportDialog } from './ProjectMemberExportDialog'
 import { ProjectMemberManagementDialog } from './ProjectMemberManagementDialog'
 import { ProjectMoreOptionsPopover } from './ProjectMoreOptionsPopover'
@@ -24,10 +32,27 @@ type SettingsToast = {
   type?: ToastType
 }
 
-export function ProjectSettingsMenu() {
+type ProjectSettingsMenuProps = {
+  project: ProjectSummary
+  perspectiveOptions?: ProjectInformationPerspective[]
+  onLoadProject?: () => Promise<ProjectSummary | void> | ProjectSummary | void
+  onUpdateProject?: (draft: ProjectInformationDraft) => Promise<void> | void
+  onDeleteProject?: () => Promise<void> | void
+}
+
+export function ProjectSettingsMenu({
+  project,
+  perspectiveOptions = [],
+  onLoadProject,
+  onUpdateProject,
+  onDeleteProject,
+}: ProjectSettingsMenuProps) {
   const managementTitleId = useId()
   const triggerRef = useRef<HTMLButtonElement>(null)
   const [isPopoverOpen, setIsPopoverOpen] = useState(false)
+  const [isInformationOpen, setIsInformationOpen] = useState(false)
+  const [informationProject, setInformationProject] = useState<ProjectSummary>()
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [isManagementOpen, setIsManagementOpen] = useState(false)
   const [joinRequests, setJoinRequests] = useState(projectJoinRequests)
   const [managementMembers, setManagementMembers] = useState(projectManagementMembers)
@@ -61,6 +86,53 @@ export function ProjectSettingsMenu() {
   const handleOpenManagement = () => {
     setIsPopoverOpen(false)
     setIsManagementOpen(true)
+  }
+
+  const handleOpenInformation = async () => {
+    setIsPopoverOpen(false)
+    try {
+      const loadedProject = await onLoadProject?.()
+      setInformationProject(loadedProject ?? project)
+      setIsInformationOpen(true)
+    } catch {
+      showToast({
+        title: '프로젝트 설정 조회 실패',
+        description: '프로젝트 설정을 불러오지 못했습니다. 다시 시도해 주세요.',
+        type: 'error',
+      })
+    }
+  }
+
+  const handleCloseInformation = () => {
+    setIsInformationOpen(false)
+    window.setTimeout(() => triggerRef.current?.focus(), 0)
+  }
+
+  const handleUpdateProject = async (draft: ProjectInformationDraft) => {
+    try {
+      await onUpdateProject?.(draft)
+      showToast({
+        title: '프로젝트 설정 저장 완료',
+        description: '프로젝트 설정이 저장 되었습니다.',
+      })
+    } catch (error) {
+      showToast({
+        title: '프로젝트 정보 저장 실패',
+        description: '프로젝트 정보를 저장하지 못했습니다. 다시 시도해 주세요.',
+        type: 'error',
+      })
+      throw error
+    }
+  }
+
+  const handleOpenDelete = () => {
+    setIsPopoverOpen(false)
+    setIsDeleteOpen(true)
+  }
+
+  const handleCloseDelete = () => {
+    setIsDeleteOpen(false)
+    window.setTimeout(() => triggerRef.current?.focus(), 0)
   }
 
   const handleCloseManagement = () => {
@@ -182,10 +254,26 @@ export function ProjectSettingsMenu() {
           onClose={() => setIsPopoverOpen(false)}
           onInviteMembers={() => void handleCopyInviteLink()}
           onManageMembers={handleOpenManagement}
+          onEditProject={() => void handleOpenInformation()}
+          onDeleteProject={handleOpenDelete}
           open={isPopoverOpen}
           triggerRef={triggerRef}
         />
       </div>
+
+      <ProjectInformationEditDialog
+        onClose={handleCloseInformation}
+        onSave={handleUpdateProject}
+        open={isInformationOpen}
+        perspectiveOptions={perspectiveOptions}
+        project={informationProject ?? project}
+      />
+
+      <ProjectDeleteDialog
+        onClose={handleCloseDelete}
+        onDelete={() => onDeleteProject?.()}
+        open={isDeleteOpen}
+      />
 
       <ProjectMemberManagementDialog
         joinRequests={joinRequests}

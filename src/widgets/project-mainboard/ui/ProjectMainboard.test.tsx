@@ -364,12 +364,13 @@ describe('ProjectMainboard', () => {
     )
   })
 
-  it('closes the project popover when actions without handlers are selected', async () => {
+  it('opens the Figma project settings modal and submits edited information', async () => {
     const user = userEvent.setup()
+    const onUpdateProject = vi.fn()
 
     render(
       <MemoryRouter>
-        <ProjectMainboard project={project} />
+        <ProjectMainboard onUpdateProject={onUpdateProject} project={project} />
       </MemoryRouter>,
     )
 
@@ -377,20 +378,90 @@ describe('ProjectMainboard', () => {
     await user.click(projectMoreButton)
     await user.click(screen.getByRole('button', { name: '프로젝트 정보 수정하기' }))
 
-    expect(
-      screen.queryByRole('dialog', { name: '프로젝트 설정 및 멤버 관리' }),
-    ).not.toBeInTheDocument()
-    await waitFor(() => expect(projectMoreButton).toHaveFocus())
+    const settingsDialog = screen.getByRole('dialog', { name: '프로젝트 설정' })
+    expect(settingsDialog).toHaveClass('h-[680px]', 'max-w-[460px]', 'gap-m', 'py-l')
+    expect(settingsDialog).toHaveTextContent(
+      '변경된 내용은 AI 힌트, AI Chat 추천 질문, 회의 후 개별 정리에 우선 반영됩니다.',
+    )
 
-    await user.click(projectMoreButton)
-    await user.click(screen.getByRole('button', { name: '프로젝트 삭제하기' }))
+    const nameInput = within(settingsDialog).getByRole('textbox', { name: '이름' })
+    const overviewInput = within(settingsDialog).getByRole('textbox', { name: '프로젝트 개요' })
+    await user.clear(nameInput)
+    await user.type(nameInput, '수정된 서비스 디자인')
+    await user.clear(overviewInput)
+    await user.type(overviewInput, '수정된 프로젝트 개요')
+    await user.click(within(settingsDialog).getByRole('button', { name: /PM/ }))
+    expect(within(settingsDialog).getByRole('listbox')).toBeInTheDocument()
+    await user.click(overviewInput)
+    expect(within(settingsDialog).queryByRole('listbox')).not.toBeInTheDocument()
+    await user.click(within(settingsDialog).getByRole('button', { name: /PM/ }))
+    await user.click(within(settingsDialog).getByRole('button', { name: '관점 추가' }))
 
+    const perspectiveDialog = screen.getByRole('dialog', { name: '새 역할/관점 추가' })
+    await user.click(within(perspectiveDialog).getByRole('button', { name: '기획/운영' }))
+    await user.click(within(perspectiveDialog).getByRole('checkbox', { name: '일정' }))
+    await user.click(within(perspectiveDialog).getByRole('button', { name: '새 역할/관점 추가' }))
+
+    await user.click(
+      within(screen.getByRole('dialog', { name: '프로젝트 설정' })).getByRole('button', {
+        name: '저장하기',
+      }),
+    )
+
+    expect(onUpdateProject).toHaveBeenCalledWith({
+      name: '수정된 서비스 디자인',
+      overview: '수정된 프로젝트 개요',
+      perspectiveLabel: '기획/운영',
+      perspectiveDescription: '일정',
+    })
+    expect(screen.queryByRole('dialog', { name: '프로젝트 설정' })).not.toBeInTheDocument()
     expect(
-      screen.queryByRole('dialog', { name: '프로젝트 설정 및 멤버 관리' }),
-    ).not.toBeInTheDocument()
+      await screen.findByRole('status', { name: '프로젝트 설정 저장 완료' }),
+    ).toHaveTextContent('프로젝트 설정이 저장 되었습니다.')
     await waitFor(() => expect(projectMoreButton).toHaveFocus())
   })
 
+  it('keeps the settings modal open and shows the Figma toast when saving fails', async () => {
+    const user = userEvent.setup()
+    const onUpdateProject = vi.fn().mockRejectedValue(new Error('save failed'))
+
+    render(
+      <MemoryRouter>
+        <ProjectMainboard onUpdateProject={onUpdateProject} project={project} />
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole('button', { name: '프로젝트 더보기' }))
+    await user.click(screen.getByRole('button', { name: '프로젝트 정보 수정하기' }))
+    await user.click(
+      within(screen.getByRole('dialog', { name: '프로젝트 설정' })).getByRole('button', {
+        name: '저장하기',
+      }),
+    )
+
+    expect(screen.getByRole('dialog', { name: '프로젝트 설정' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('status', { name: '프로젝트 정보 저장 실패' }),
+    ).toHaveTextContent('프로젝트 정보를 저장하지 못했습니다. 다시 시도해 주세요.')
+  })
+  it('shows only the Figma toast when project settings lookup fails', async () => {
+    const user = userEvent.setup()
+    const onLoadProject = vi.fn().mockRejectedValue(new Error('lookup failed'))
+
+    render(
+      <MemoryRouter>
+        <ProjectMainboard onLoadProject={onLoadProject} project={project} />
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole('button', { name: '프로젝트 더보기' }))
+    await user.click(screen.getByRole('button', { name: '프로젝트 정보 수정하기' }))
+
+    expect(screen.queryByRole('dialog', { name: '프로젝트 설정' })).not.toBeInTheDocument()
+    expect(
+      await screen.findByRole('status', { name: '프로젝트 설정 조회 실패' }),
+    ).toHaveTextContent('프로젝트 설정을 불러오지 못했습니다. 다시 시도해 주세요.')
+  })
   it('renders multiple join requests and handles approval failure and member capacity', async () => {
     const user = userEvent.setup()
 

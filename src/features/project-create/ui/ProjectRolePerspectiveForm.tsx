@@ -14,6 +14,8 @@ const MAX_FOCUS_COUNT = 3
 type ProjectRolePerspectiveFormProps = {
   titleId: string
   descriptionId: string
+  backLabel?: string
+  closeLabel?: string
   onBack: () => void
   onClose: () => void
   onSubmit: (draft: ProjectRolePerspectiveDraft) => void
@@ -22,6 +24,8 @@ type ProjectRolePerspectiveFormProps = {
 export function ProjectRolePerspectiveForm({
   titleId,
   descriptionId,
+  backLabel = '프로젝트 생성으로 돌아가기',
+  closeLabel = '프로젝트 생성 닫기',
   onBack,
   onClose,
   onSubmit,
@@ -58,7 +62,7 @@ export function ProjectRolePerspectiveForm({
     <form className="flex min-h-0 flex-1 flex-col gap-m" onSubmit={handleSubmit}>
       <header className="flex h-[42px] shrink-0 items-center justify-between">
         <Button
-          aria-label="프로젝트 생성으로 돌아가기"
+          aria-label={backLabel}
           className="size-[42px] px-0"
           onClick={onBack}
           size="medium"
@@ -175,7 +179,7 @@ export function ProjectRolePerspectiveForm({
       </Button>
 
       <Button
-        aria-label="프로젝트 생성 닫기"
+        aria-label={closeLabel}
         className="absolute right-[15px] top-[15px] size-[42px] px-0"
         onClick={onClose}
         size="medium"
