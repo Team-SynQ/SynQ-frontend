@@ -45,6 +45,7 @@ export class ProjectMaterialUploadError extends Error {
 
 export function getProjectMaterialFileError(
   file: Pick<File, 'name' | 'size'>,
+  maxFileSizeBytes = PROJECT_MATERIAL_MAX_FILE_SIZE_BYTES,
 ): ProjectMaterialUploadErrorCode | null {
   const extension = file.name.includes('.') ? `.${file.name.split('.').pop()?.toLowerCase()}` : ''
 
@@ -56,7 +57,7 @@ export function getProjectMaterialFileError(
     return 'unsupported-format'
   }
 
-  if (file.size > PROJECT_MATERIAL_MAX_FILE_SIZE_BYTES) {
+  if (file.size > maxFileSizeBytes) {
     return 'file-too-large'
   }
 

@@ -1,3 +1,5 @@
+export const PROJECT_REFERENCE_MAX_MATERIALS = 10
+
 export type ProjectReferenceMaterial = {
   id: string
   kind: 'file' | 'link'

@@ -1,14 +1,24 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import type { ComponentProps } from 'react'
+import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 
 import type { ProjectSummary } from '../entities/project'
 import type { ProjectCreateDraft } from '../features/project-create'
 import { ProjectMainboardPage } from './ProjectMainboardPage'
 
+function renderProjectMainboardPage(props: ComponentProps<typeof ProjectMainboardPage> = {}) {
+  return render(
+    <MemoryRouter>
+      <ProjectMainboardPage {...props} />
+    </MemoryRouter>,
+  )
+}
+
 describe('ProjectMainboardPage', () => {
   it('keeps the empty dashboard until a project is created', async () => {
-    render(<ProjectMainboardPage />)
+    renderProjectMainboardPage()
 
     expect(
       screen.getByRole('button', {
@@ -35,7 +45,7 @@ describe('ProjectMainboardPage', () => {
         }),
     )
 
-    render(<ProjectMainboardPage onSubmitProject={onSubmitProject} />)
+    renderProjectMainboardPage({ onSubmitProject })
 
     await user.click(
       screen.getByRole('button', {
@@ -113,7 +123,7 @@ describe('ProjectMainboardPage', () => {
       }
     })
 
-    render(<ProjectMainboardPage onSubmitProject={onSubmitProject} />)
+    renderProjectMainboardPage({ onSubmitProject })
 
     const createProject = async (name: string) => {
       await user.click(
@@ -193,7 +203,7 @@ describe('ProjectMainboardPage', () => {
       materials: [],
     }))
 
-    render(<ProjectMainboardPage loadProjects={loadProjects} onSubmitProject={onSubmitProject} />)
+    renderProjectMainboardPage({ loadProjects, onSubmitProject })
 
     await user.click(
       screen.getByRole('button', {
@@ -236,10 +246,160 @@ describe('ProjectMainboardPage', () => {
     expect(latestProjectButton).toHaveAttribute('aria-current', 'page')
   })
 
+  it('renames and deletes a project reference from its action menu', async () => {
+    const user = userEvent.setup()
+    const loadProjects = vi.fn(() =>
+      Promise.resolve<ProjectSummary[]>([
+        {
+          id: 'project-1',
+          name: '서비스 디자인',
+          overview: '',
+          perspectiveLabel: 'PM',
+          perspectiveDescription: '일정, 범위, 의사결정 영향 중심',
+          materials: [
+            {
+              id: 'material-1',
+              kind: 'file',
+              name: 'answer-guide.docx',
+              createdAt: '2026-05-01T00:00:00.000Z',
+            },
+          ],
+        },
+      ]),
+    )
+
+    renderProjectMainboardPage({ loadProjects })
+    await screen.findByText('answer-guide.docx')
+
+    await user.click(screen.getByRole('button', { name: 'answer-guide.docx 더보기' }))
+    await user.click(screen.getByRole('menuitem', { name: '제목 수정하기' }))
+
+    expect(screen.getByRole('dialog', { name: '자료 제목 수정' })).toBeInTheDocument()
+
+    const titleInput = screen.getByRole('textbox', { name: '자료 제목' })
+    await user.clear(titleInput)
+    await user.type(titleInput, 'revised-guide.docx')
+    await user.click(screen.getByRole('button', { name: '제목 변경하기' }))
+
+    expect(screen.getByText('revised-guide.docx')).toBeInTheDocument()
+    expect(await screen.findByRole('status', { name: '자료 제목 수정 완료' })).toHaveTextContent(
+      '자료 제목이 수정되었습니다.',
+    )
+
+    await user.click(screen.getByRole('button', { name: 'revised-guide.docx 더보기' }))
+    await user.click(screen.getByRole('menuitem', { name: '삭제하기' }))
+
+    expect(
+      screen.getByRole('dialog', {
+        name: /‘revised-guide\.docx’\s+자료를 지우시겠습니까\?/,
+      }),
+    ).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '지우기' }))
+
+    expect(screen.queryByText('revised-guide.docx')).not.toBeInTheDocument()
+    expect(screen.getByText('등록된 AI 참고 자료가 없습니다')).toBeInTheDocument()
+    expect(await screen.findByRole('status', { name: '자료 삭제 완료' })).toHaveTextContent(
+      '“revised-guide.docx” 자료가 삭제되었습니다.',
+    )
+  })
+
+  it('adds a reference to the active project from the Figma upload modal', async () => {
+    const user = userEvent.setup()
+    const loadProjects = vi.fn(() =>
+      Promise.resolve<ProjectSummary[]>([
+        {
+          id: 'project-1',
+          name: '서비스 디자인',
+          overview: '',
+          perspectiveLabel: 'PM',
+          perspectiveDescription: '일정, 범위, 의사결정 영향 중심',
+          materials: [],
+        },
+      ]),
+    )
+    const addedMaterial = {
+      id: 'material-added',
+      kind: 'file' as const,
+      name: 'roadmap.pdf',
+      createdAt: '2026-07-26T00:00:00.000Z',
+    }
+    const addProjectReferences = vi.fn(() => Promise.resolve([addedMaterial]))
+    const file = new File(['content'], 'roadmap.pdf', { type: 'application/pdf' })
+
+    renderProjectMainboardPage({ addProjectReferences, loadProjects })
+    await screen.findByRole('heading', { name: '서비스 디자인' })
+
+    await user.click(screen.getByRole('button', { name: 'AI 참고 자료 추가' }))
+    expect(screen.getByRole('dialog', { name: 'AI 참고 자료 업로드' })).toBeInTheDocument()
+    await user.upload(screen.getByLabelText('AI 참고 자료 파일 선택'), file)
+    await waitFor(() => expect(screen.getByRole('button', { name: '추가하기' })).toBeEnabled())
+    await user.click(screen.getByRole('button', { name: '추가하기' }))
+
+    expect(addProjectReferences).toHaveBeenCalledWith('project-1', {
+      files: [file],
+      links: [],
+    })
+    expect(await screen.findByText('roadmap.pdf')).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'AI 참고 자료 업로드' })).not.toBeInTheDocument()
+  })
+
+  it('keeps project reference data and shows the Figma error toasts when mutations fail', async () => {
+    const user = userEvent.setup()
+    const loadProjects = vi.fn(() =>
+      Promise.resolve<ProjectSummary[]>([
+        {
+          id: 'project-1',
+          name: '서비스 디자인',
+          overview: '',
+          perspectiveLabel: 'PM',
+          perspectiveDescription: '일정, 범위, 의사결정 영향 중심',
+          materials: [
+            {
+              id: 'material-1',
+              kind: 'file',
+              name: 'answer-guide.docx',
+              createdAt: '2026-05-01T00:00:00.000Z',
+            },
+          ],
+        },
+      ]),
+    )
+    const renameProjectReference = vi.fn(() => Promise.reject(new Error('rename failed')))
+    const deleteProjectReference = vi.fn(() => Promise.reject(new Error('delete failed')))
+
+    renderProjectMainboardPage({
+      deleteProjectReference,
+      loadProjects,
+      renameProjectReference,
+    })
+    await screen.findByText('answer-guide.docx')
+
+    await user.click(screen.getByRole('button', { name: 'answer-guide.docx 더보기' }))
+    await user.click(screen.getByRole('menuitem', { name: '제목 수정하기' }))
+    const titleInput = screen.getByRole('textbox', { name: '자료 제목' })
+    await user.clear(titleInput)
+    await user.type(titleInput, 'revised-guide.docx')
+    await user.click(screen.getByRole('button', { name: '제목 변경하기' }))
+
+    expect(await screen.findByRole('status', { name: '자료 제목 수정 실패' })).toHaveTextContent(
+      '자료 제목을 수정하지 못했습니다. 다시 시도해 주세요.',
+    )
+    expect(screen.getByText('answer-guide.docx')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'answer-guide.docx 더보기' }))
+    await user.click(screen.getByRole('menuitem', { name: '삭제하기' }))
+    await user.click(screen.getByRole('button', { name: '지우기' }))
+
+    expect(await screen.findByRole('status', { name: '자료 삭제 실패' })).toHaveTextContent(
+      '참고자료를 삭제하지 못했습니다. 다시 시도해 주세요.',
+    )
+    expect(screen.getByText('answer-guide.docx')).toBeInTheDocument()
+  })
+
   it('shows an error toast when the initial project list fails', async () => {
     const loadProjects = vi.fn(() => Promise.reject(new Error('network error')))
 
-    render(<ProjectMainboardPage loadProjects={loadProjects} />)
+    renderProjectMainboardPage({ loadProjects })
 
     const errorToast = await screen.findByRole('status', {
       name: '\uD504\uB85C\uC81D\uD2B8 \uBAA9\uB85D\uC744 \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.',

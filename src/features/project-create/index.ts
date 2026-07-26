@@ -1,5 +1,6 @@
 export { createProjectWithMaterials } from './api/createProjectWithMaterials'
 export { ProjectCreateModal } from './ui/ProjectCreateModal'
+export { ProjectMaterialUploadForm } from './ui/ProjectMaterialUploadForm'
 export type { ProjectCreateModalProps } from './ui/ProjectCreateModal'
 export {
   getProjectCreationSuccessMessage,
@@ -11,6 +12,7 @@ export type { ProjectMaterialUploadErrorCode } from './model/projectMaterialUplo
 export type {
   ProjectCreationHandler,
   ProjectMaterialUploadHandler,
+  ProjectMaterialUploadMode,
 } from './ui/ProjectMaterialUploadForm'
 export type {
   ProjectCreateDraft,
