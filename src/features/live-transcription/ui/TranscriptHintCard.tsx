@@ -88,7 +88,7 @@ export function TranscriptHintCard({ state, onCollapse, onRetry }: TranscriptHin
 function HintRow({ label, description }: { label: string; description: string }) {
   return (
     <div className="flex min-h-[42px] items-center gap-s">
-      <span className="flex w-[81px] shrink-0 items-center justify-center rounded-[var(--radius-s)] bg-surface-elevated px-[12px] py-xs typo-body-01 text-fg-primary">
+      <span className="flex w-[81px] shrink-0 items-center justify-center rounded-[var(--radius-s)] bg-gray-100 px-[12px] py-xs typo-body-01 text-fg-primary">
         {label}
       </span>
       <span className="min-w-0 typo-transcription-body-01 text-fg-primary">{description}</span>

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { meetingAiMockGateway, meetingApi } from '../../../entities/meeting'
 import type {
   MeetingAiChatMessageResponse,
+  TranscriptHintResponse,
   TranscriptSegmentResponse,
 } from '../../../shared/api/contracts/meeting.contracts'
 import { resetLiveMeetingMockDb } from '../../../shared/api/mock/db/liveMeeting.mockDb'
@@ -145,5 +146,82 @@ describe('useLiveMeetingController async boundaries', () => {
     })
 
     await waitFor(() => expect(meetingApi.listTranscripts).toHaveBeenCalledWith('demo'))
+  })
+
+  it('keeps a hint collapsed when an in-flight response arrives later', async () => {
+    const hintRequest = deferred<TranscriptHintResponse>()
+    vi.spyOn(meetingAiMockGateway, 'getTranscriptHint').mockReturnValue(hintRequest.promise)
+    const { result } = await renderReadyController()
+
+    act(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      result.current.transcript.actions.onSelectSegment?.('segment-1')
+    })
+    await waitFor(() => {
+      if (result.current.status !== 'ready' || result.current.transcript.state.kind !== 'active') {
+        throw new Error('transcript is not active')
+      }
+      expect(result.current.transcript.state.hintState?.status).toBe('loading')
+    })
+
+    act(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      result.current.transcript.actions.onCollapseHint?.('segment-1')
+      hintRequest.resolve({
+        transcriptId: 'segment-1',
+        notice: null,
+        meaning: '늦게 도착한 의미',
+        personalImpact: '늦게 도착한 영향',
+        teamQuestion: '늦게 도착한 질문',
+      })
+    })
+
+    await waitFor(() => {
+      if (result.current.status !== 'ready' || result.current.transcript.state.kind !== 'active') {
+        throw new Error('transcript is not active')
+      }
+      expect(result.current.transcript.state.hintState?.status).toBe('idle')
+    })
+  })
+
+  it('restores a collapsed successful hint from cache without another request', async () => {
+    const hint: TranscriptHintResponse = {
+      transcriptId: 'segment-1',
+      notice: null,
+      meaning: '캐시된 의미',
+      personalImpact: '캐시된 영향',
+      teamQuestion: '캐시된 질문',
+    }
+    const hintSpy = vi.spyOn(meetingAiMockGateway, 'getTranscriptHint').mockResolvedValue(hint)
+    const { result } = await renderReadyController()
+
+    act(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      result.current.transcript.actions.onSelectSegment?.('segment-1')
+    })
+    await waitFor(() => {
+      if (result.current.status !== 'ready' || result.current.transcript.state.kind !== 'active') {
+        throw new Error('transcript is not active')
+      }
+      expect(result.current.transcript.state.hintState?.status).toBe('ready')
+    })
+
+    act(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      result.current.transcript.actions.onCollapseHint?.('segment-1')
+      result.current.transcript.actions.onSelectSegment?.('segment-1')
+    })
+
+    await waitFor(() => {
+      if (result.current.status !== 'ready' || result.current.transcript.state.kind !== 'active') {
+        throw new Error('transcript is not active')
+      }
+      expect(result.current.transcript.state.hintState).toEqual({
+        status: 'ready',
+        transcriptId: 'segment-1',
+        hint,
+      })
+    })
+    expect(hintSpy).toHaveBeenCalledOnce()
   })
 })

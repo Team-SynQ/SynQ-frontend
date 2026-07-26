@@ -104,9 +104,9 @@ describe('TranscriptPanel', () => {
     expect(hintSurface).toHaveClass('rounded-m', 'bg-surface-muted', 'p-s')
     expect(hintSurface).not.toHaveClass('mt-xs')
     expect(screen.getByRole('heading', { level: 3 })).toHaveClass('text-gray-800')
-    expect(screen.getByText('의미')).toHaveClass('rounded-[var(--radius-s)]')
-    expect(screen.getByText('내 영향')).toHaveClass('rounded-[var(--radius-s)]')
-    expect(screen.getByText('팀 질문')).toHaveClass('rounded-[var(--radius-s)]')
+    for (const label of ['의미', '내 영향', '팀 질문']) {
+      expect(screen.getByText(label)).toHaveClass('rounded-[var(--radius-s)]', 'bg-gray-100')
+    }
 
     const collapseButton = screen.getByRole('button', { name: 'SynQ 힌트 접기' })
     expect(collapseButton.querySelector('img')?.getAttribute('src')).toContain(
