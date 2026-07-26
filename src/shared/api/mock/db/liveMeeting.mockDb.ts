@@ -1,4 +1,5 @@
 import type {
+  CompletedMeetingSummary,
   LiveMeetingResponse,
   MeetingAiChatMessageResponse,
   TranscriptHintResponse,
@@ -14,6 +15,8 @@ type LiveMeetingRecord = LiveMeetingScenario & {
 }
 
 const records = new Map<string, LiveMeetingRecord>()
+const completedMeetingRecords = new Map<string, CompletedMeetingSummary[]>()
+let completedMeetingSequence = 0
 
 function cloneMeeting(meeting: LiveMeetingResponse): LiveMeetingResponse {
   return structuredClone(meeting)
@@ -29,6 +32,8 @@ function requireRecord(meetingId: string): LiveMeetingRecord | undefined {
 
 export function resetLiveMeetingMockDb() {
   records.clear()
+  completedMeetingRecords.clear()
+  completedMeetingSequence = 0
 
   Object.entries(createLiveMeetingScenarios()).forEach(([meetingId, scenario]) => {
     records.set(meetingId, {
@@ -56,6 +61,7 @@ export const liveMeetingMockDb = {
       aiAnswer: record.aiAnswer,
       hintFailureCount: record.hintFailureCount,
       transcriptEditFails: record.transcriptEditFails,
+      completionFails: record.completionFails,
     }
   },
 
@@ -106,5 +112,22 @@ export const liveMeetingMockDb = {
 
     record.meeting.aiChat.messages.push(...structuredClone(messages))
     return true
+  },
+
+  addCompletedMeeting(record: Omit<CompletedMeetingSummary, 'recordId'>): CompletedMeetingSummary {
+    const completedMeeting = {
+      ...structuredClone(record),
+      recordId: `meeting-record-${++completedMeetingSequence}`,
+    }
+    const projectRecords = completedMeetingRecords.get(record.projectId) ?? []
+    projectRecords.unshift(completedMeeting)
+    completedMeetingRecords.set(record.projectId, projectRecords)
+    return structuredClone(completedMeeting)
+  },
+
+  listCompletedMeetings(projectId: string): CompletedMeetingSummary[] {
+    return structuredClone(completedMeetingRecords.get(projectId) ?? []).sort(
+      (left, right) => new Date(right.completedAt).getTime() - new Date(left.completedAt).getTime(),
+    )
   },
 }

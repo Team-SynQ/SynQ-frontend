@@ -46,6 +46,7 @@ export type MeetingAiChatSuggestionResponse = {
 
 export type LiveMeetingResponse = {
   meetingId: string
+  projectId: string
   projectTitle: string
   meetingTitle: string
   elapsedSeconds: number
@@ -78,3 +79,31 @@ export type SendMeetingAiQuestionRequest = {
   question: string
   context: AiChatPinnedContext | null
 }
+
+export type MeetingProjectContext = {
+  projectId: string
+  projectTitle: string
+}
+
+export type CompletedMeetingSummary = {
+  recordId: string
+  meetingId: string
+  projectId: string
+  projectTitle: string
+  meetingTitle: string
+  durationSeconds: number
+  completedAt: string
+  host: {
+    id: string
+    name: string
+    avatarKey: MeetingAvatarKey
+  }
+  overview: string
+  keywords: string[]
+  decisions: string[]
+}
+
+export type CompleteMeetingRequest = Omit<
+  CompletedMeetingSummary,
+  'recordId' | 'overview' | 'keywords' | 'decisions'
+>

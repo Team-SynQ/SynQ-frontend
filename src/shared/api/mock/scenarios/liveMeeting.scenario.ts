@@ -11,6 +11,7 @@ export type LiveMeetingScenario = {
   aiAnswer: string
   hintFailureCount: number
   transcriptEditFails: boolean
+  completionFails: boolean
 }
 
 function cloneMeeting(meetingId: string): LiveMeetingResponse {
@@ -32,6 +33,7 @@ export function createLiveMeetingScenarios(): Record<string, LiveMeetingScenario
       aiAnswer: liveMeetingAiAnswerFixture,
       hintFailureCount: 0,
       transcriptEditFails: false,
+      completionFails: false,
     },
     'demo-hint-error': {
       meeting: cloneMeeting('demo-hint-error'),
@@ -39,6 +41,7 @@ export function createLiveMeetingScenarios(): Record<string, LiveMeetingScenario
       aiAnswer: liveMeetingAiAnswerFixture,
       hintFailureCount: 1,
       transcriptEditFails: false,
+      completionFails: false,
     },
     'demo-edit-error': {
       meeting: cloneMeeting('demo-edit-error'),
@@ -46,6 +49,15 @@ export function createLiveMeetingScenarios(): Record<string, LiveMeetingScenario
       aiAnswer: liveMeetingAiAnswerFixture,
       hintFailureCount: 0,
       transcriptEditFails: true,
+      completionFails: false,
+    },
+    'demo-save-error': {
+      meeting: cloneMeeting('demo-save-error'),
+      hints: cloneHints(),
+      aiAnswer: liveMeetingAiAnswerFixture,
+      hintFailureCount: 0,
+      transcriptEditFails: false,
+      completionFails: true,
     },
   }
 }

@@ -3,8 +3,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   meetingAiMockGateway,
   meetingApi,
+  type CompletedMeeting,
   type LiveMeeting,
   type LiveMeetingAiPinnedContext,
+  type LiveMeetingProjectContext,
   type LiveMeetingTranscriptHint,
 } from '../../../entities/meeting'
 import type {
@@ -29,6 +31,7 @@ type ReadyController = {
   aiChatDisplayMode: AiChatDisplayMode
   setMeetingTitle: (title: string) => void
   toggleRecording: () => void
+  completeMeeting: (context: LiveMeetingProjectContext) => Promise<CompletedMeeting>
   changeAiChatDisplayMode: (mode: AiChatDisplayMode) => void
 }
 
@@ -314,6 +317,27 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
     }
   }
 
+  const completeMeeting = async (context: LiveMeetingProjectContext): Promise<CompletedMeeting> => {
+    const host = meeting.participants.find((participant) => participant.isHost)
+    if (!host) {
+      throw new Error('회의 진행자 정보를 찾을 수 없습니다.')
+    }
+
+    return meetingApi.completeMeeting({
+      meetingId: meeting.meetingId,
+      projectId: context.projectId,
+      projectTitle: context.projectTitle,
+      meetingTitle,
+      durationSeconds: elapsedSeconds,
+      completedAt: new Date().toISOString(),
+      host: {
+        id: host.id,
+        name: host.name,
+        avatarKey: host.avatarKey,
+      },
+    })
+  }
+
   const transcript: TranscriptPanelProps = {
     actions: {
       onAskAi: askAi,
@@ -406,6 +430,7 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
     setMeetingTitle,
     toggleRecording: () =>
       setRecordingState((current) => (current === 'recording' ? 'paused' : 'recording')),
+    completeMeeting,
     changeAiChatDisplayMode,
   }
 }

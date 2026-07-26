@@ -1,22 +1,134 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ComponentProps } from 'react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 
+import type { CompletedMeeting } from '../entities/meeting'
 import type { ProjectSummary } from '../entities/project'
 import type { ProjectCreateDraft } from '../features/project-create'
 import { ProjectMainboardPage } from './ProjectMainboardPage'
 
-function renderProjectMainboardPage(props: ComponentProps<typeof ProjectMainboardPage> = {}) {
+function NavigationDestination() {
+  const location = useLocation()
+
+  return <p>이동 완료 {JSON.stringify(location.state)}</p>
+}
+
+function renderProjectMainboardPage(
+  props: ComponentProps<typeof ProjectMainboardPage> = {},
+  initialEntry: string | { pathname: string; state: unknown } = '/projects',
+) {
   return render(
-    <MemoryRouter>
-      <ProjectMainboardPage {...props} />
+    <MemoryRouter initialEntries={[initialEntry]}>
+      <Routes>
+        <Route element={<ProjectMainboardPage {...props} />} path="/projects" />
+        <Route element={<NavigationDestination />} path="/meetings/demo/tutorial" />
+        <Route element={<NavigationDestination />} path="/meetings/:meetingRecordId/summary" />
+      </Routes>
     </MemoryRouter>,
   )
 }
 
+const projectOne: ProjectSummary = {
+  id: 'project-1',
+  name: '서비스 디자인',
+  overview: '',
+  perspectiveLabel: 'PM',
+  perspectiveDescription: '일정, 범위, 의사결정 영향 중심',
+  materials: [],
+}
+
+const completedMeeting: CompletedMeeting = {
+  recordId: 'meeting-record-1',
+  meetingId: 'demo',
+  projectId: 'project-1',
+  projectTitle: '서비스 디자인',
+  meetingTitle: '온보딩 개선 회의',
+  durationSeconds: 373,
+  completedAt: new Date(2026, 6, 27, 12, 0).toISOString(),
+  host: {
+    id: 'you',
+    name: '윤금서',
+    avatarKey: 'you',
+  },
+  overview: '온보딩 개선 우선순위와 완료 기준을 중심으로 논의',
+  keywords: ['온보딩 플로우'],
+  decisions: ['온보딩 개선을 우선순위로 확정'],
+}
+
 describe('ProjectMainboardPage', () => {
+  it('loads the active project meeting history and opens the latest summary', async () => {
+    const user = userEvent.setup()
+    const loadCompletedMeetings = vi.fn(() => Promise.resolve([completedMeeting]))
+
+    renderProjectMainboardPage({
+      loadProjects: () => Promise.resolve([projectOne]),
+      loadCompletedMeetings,
+    })
+
+    expect(await screen.findAllByText('온보딩 개선 회의')).toHaveLength(2)
+    expect(loadCompletedMeetings).toHaveBeenCalledWith('project-1')
+
+    await user.click(screen.getByRole('button', { name: '자세히 보기' }))
+    expect(await screen.findByText('이동 완료 null')).toBeInTheDocument()
+  })
+
+  it('prefers the project selected by return navigation state', async () => {
+    const secondProject = { ...projectOne, id: 'project-2', name: '두 번째 프로젝트' }
+    const loadCompletedMeetings = vi.fn(() => Promise.resolve([]))
+
+    renderProjectMainboardPage(
+      {
+        loadProjects: () => Promise.resolve([projectOne, secondProject]),
+        loadCompletedMeetings,
+      },
+      {
+        pathname: '/projects',
+        state: { activeProjectId: 'project-2' },
+      },
+    )
+
+    expect(await screen.findByRole('heading', { name: '두 번째 프로젝트' })).toBeInTheDocument()
+    await waitFor(() => expect(loadCompletedMeetings).toHaveBeenCalledWith('project-2'))
+  })
+
+  it('retries meeting history loading without hiding the project', async () => {
+    const user = userEvent.setup()
+    const loadCompletedMeetings = vi
+      .fn<() => Promise<CompletedMeeting[]>>()
+      .mockRejectedValueOnce(new Error('meeting load failed'))
+      .mockResolvedValueOnce([completedMeeting])
+
+    renderProjectMainboardPage({
+      loadProjects: () => Promise.resolve([projectOne]),
+      loadCompletedMeetings,
+    })
+
+    expect(await screen.findByRole('heading', { name: '서비스 디자인' })).toBeInTheDocument()
+    expect(await screen.findByRole('alert')).toHaveTextContent('회의 기록을 불러오지 못했습니다.')
+
+    await user.click(screen.getByRole('button', { name: '다시 불러오기' }))
+
+    expect(await screen.findAllByText('온보딩 개선 회의')).toHaveLength(2)
+    expect(loadCompletedMeetings).toHaveBeenCalledTimes(2)
+  })
+
+  it('starts a meeting with the active project context', async () => {
+    const user = userEvent.setup()
+    renderProjectMainboardPage({
+      loadProjects: () => Promise.resolve([projectOne]),
+      loadCompletedMeetings: () => Promise.resolve([]),
+    })
+
+    await screen.findByRole('heading', { name: '서비스 디자인' })
+    await user.click(screen.getByRole('button', { name: '새 회의 시작' }))
+
+    expect(await screen.findByText(/이동 완료/)).toHaveTextContent(
+      '{"projectId":"project-1","projectTitle":"서비스 디자인"}',
+    )
+  })
+
   it('keeps the empty dashboard until a project is created', async () => {
     renderProjectMainboardPage()
 

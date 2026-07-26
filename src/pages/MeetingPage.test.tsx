@@ -1,16 +1,29 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { meetingApi } from '../entities/meeting'
 import { resetLiveMeetingMockDb } from '../shared/api/mock/db/liveMeeting.mockDb'
+import { liveMeetingFixture } from '../shared/api/mock/fixtures/liveMeeting.fixture'
 import { MeetingPage } from './MeetingPage'
 
-async function renderMeetingPage(path = '/meetings/demo/live') {
+function ProjectDestination() {
+  const location = useLocation()
+  const state = location.state as { activeProjectId?: string } | null
+
+  return <p>프로젝트 메인 {state?.activeProjectId}</p>
+}
+
+async function renderMeetingPage(
+  path = '/meetings/demo/live',
+  state?: { projectId: string; projectTitle: string },
+) {
   const result = render(
-    <MemoryRouter initialEntries={[path]}>
+    <MemoryRouter initialEntries={[{ pathname: path, state }]}>
       <Routes>
         <Route element={<MeetingPage />} path="/meetings/:meetingId/live" />
+        <Route element={<ProjectDestination />} path="/projects" />
       </Routes>
     </MemoryRouter>,
   )
@@ -21,6 +34,7 @@ async function renderMeetingPage(path = '/meetings/demo/live') {
 
 describe('MeetingPage controls', () => {
   beforeEach(() => {
+    vi.restoreAllMocks()
     resetLiveMeetingMockDb()
   })
 
@@ -79,6 +93,7 @@ describe('MeetingPage controls', () => {
   })
 
   it('moves from end confirmation to the saving dialog', async () => {
+    vi.spyOn(meetingApi, 'completeMeeting').mockReturnValue(new Promise(() => undefined))
     const user = userEvent.setup()
     await renderMeetingPage()
 
@@ -89,6 +104,60 @@ describe('MeetingPage controls', () => {
     expect(
       screen.getByRole('dialog', { name: '회의 내용을 저장하고 있습니다.' }),
     ).toBeInTheDocument()
+  })
+
+  it('shows the saved meeting and returns to the completed project', async () => {
+    const user = userEvent.setup()
+    await renderMeetingPage('/meetings/demo/live', {
+      projectId: 'project-1',
+      projectTitle: '서비스 디자인',
+    })
+
+    await user.click(screen.getByRole('button', { name: '회의 종료' }))
+    await user.click(screen.getByRole('button', { name: '종료하기' }))
+
+    const dialog = await screen.findByRole('dialog', { name: '회의가 종료되었습니다.' })
+    expect(within(dialog).getByText('서비스 디자인')).toBeInTheDocument()
+    expect(within(dialog).getByText('2차 대면회의')).toBeInTheDocument()
+
+    await user.click(within(dialog).getByRole('button', { name: '닫기' }))
+
+    expect(await screen.findByText('프로젝트 메인 project-1')).toBeInTheDocument()
+  })
+
+  it('returns a non-host participant to the project without completing the meeting', async () => {
+    const completeMeeting = vi.spyOn(meetingApi, 'completeMeeting')
+    vi.spyOn(meetingApi, 'joinMeeting').mockResolvedValue({
+      ...structuredClone(liveMeetingFixture),
+      participants: liveMeetingFixture.participants.map((participant) =>
+        participant.isCurrentUser ? { ...participant, isHost: false } : participant,
+      ),
+    })
+    const user = userEvent.setup()
+
+    await renderMeetingPage('/meetings/demo/live', {
+      projectId: 'project-1',
+      projectTitle: '서비스 디자인',
+    })
+
+    await user.click(screen.getByRole('button', { name: '나가기' }))
+    const dialog = screen.getByRole('dialog', { name: '회의를 나가시겠어요?' })
+    await user.click(within(dialog).getByRole('button', { name: '나가기' }))
+
+    expect(completeMeeting).not.toHaveBeenCalled()
+    expect(await screen.findByText('프로젝트 메인 project-1')).toBeInTheDocument()
+  })
+
+  it('shows a retry control when completed meeting storage fails', async () => {
+    const user = userEvent.setup()
+    await renderMeetingPage('/meetings/demo-save-error/live')
+
+    await user.click(screen.getByRole('button', { name: '회의 종료' }))
+    await user.click(screen.getByRole('button', { name: '종료하기' }))
+
+    expect(await screen.findByText('회의 내용을 저장하지 못했습니다.')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '다시 시도하기' }))
+    expect(await screen.findByText('회의 내용을 저장하지 못했습니다.')).toBeInTheDocument()
   })
 
   it('moves between docked and floating while preserving the draft', async () => {
