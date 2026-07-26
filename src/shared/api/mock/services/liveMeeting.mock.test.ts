@@ -166,6 +166,36 @@ describe('liveMeetingMockService', () => {
     ])
   })
 
+  it('orders completed meetings by completion time instead of insertion order', async () => {
+    const baseRequest = {
+      meetingId: 'demo',
+      projectId: 'project-1',
+      projectTitle: '서비스 디자인',
+      durationSeconds: 600,
+      host: {
+        id: 'you',
+        name: '윤금서',
+        avatarKey: 'you' as const,
+      },
+    }
+
+    await liveMeetingMockService.completeMeeting({
+      ...baseRequest,
+      meetingTitle: '최신 회의',
+      completedAt: '2026-07-27T03:00:00.000Z',
+    })
+    await liveMeetingMockService.completeMeeting({
+      ...baseRequest,
+      meetingTitle: '이전 회의',
+      completedAt: '2026-07-27T02:00:00.000Z',
+    })
+
+    await expect(liveMeetingMockService.listCompletedMeetings('project-1')).resolves.toEqual([
+      expect.objectContaining({ meetingTitle: '최신 회의' }),
+      expect.objectContaining({ meetingTitle: '이전 회의' }),
+    ])
+  })
+
   it('isolates completed meetings by project', async () => {
     const baseRequest = {
       meetingId: 'demo',

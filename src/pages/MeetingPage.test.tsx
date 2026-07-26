@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { meetingApi } from '../entities/meeting'
 import { resetLiveMeetingMockDb } from '../shared/api/mock/db/liveMeeting.mockDb'
+import { liveMeetingFixture } from '../shared/api/mock/fixtures/liveMeeting.fixture'
 import { MeetingPage } from './MeetingPage'
 
 function ProjectDestination() {
@@ -121,6 +122,29 @@ describe('MeetingPage controls', () => {
 
     await user.click(within(dialog).getByRole('button', { name: '닫기' }))
 
+    expect(await screen.findByText('프로젝트 메인 project-1')).toBeInTheDocument()
+  })
+
+  it('returns a non-host participant to the project without completing the meeting', async () => {
+    const completeMeeting = vi.spyOn(meetingApi, 'completeMeeting')
+    vi.spyOn(meetingApi, 'joinMeeting').mockResolvedValue({
+      ...structuredClone(liveMeetingFixture),
+      participants: liveMeetingFixture.participants.map((participant) =>
+        participant.isCurrentUser ? { ...participant, isHost: false } : participant,
+      ),
+    })
+    const user = userEvent.setup()
+
+    await renderMeetingPage('/meetings/demo/live', {
+      projectId: 'project-1',
+      projectTitle: '서비스 디자인',
+    })
+
+    await user.click(screen.getByRole('button', { name: '나가기' }))
+    const dialog = screen.getByRole('dialog', { name: '회의를 나가시겠어요?' })
+    await user.click(within(dialog).getByRole('button', { name: '나가기' }))
+
+    expect(completeMeeting).not.toHaveBeenCalled()
     expect(await screen.findByText('프로젝트 메인 project-1')).toBeInTheDocument()
   })
 

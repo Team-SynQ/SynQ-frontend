@@ -9,6 +9,7 @@ import {
 } from '../../../entities/project'
 import {
   ProjectMaterialUploadForm,
+  projectPerspectiveOptions,
   type ProjectMaterialDraft,
 } from '../../../features/project-create'
 import {
@@ -16,7 +17,10 @@ import {
   ProjectReferenceEditDialog,
   ProjectReferenceMenu,
 } from '../../../features/project-reference-actions'
-import { ProjectSettingsMenu } from '../../../features/project-settings'
+import {
+  ProjectSettingsMenu,
+  type ProjectInformationDraft,
+} from '../../../features/project-settings'
 import burgerIcon from '../../../shared/assets/icons/burger.svg'
 import fileIcon from '../assets/file.svg'
 import folderIcon from '../assets/folder.svg'
@@ -34,8 +38,12 @@ type ProjectCreatedDashboardProps = {
   onRenameMaterial?: (materialId: string, nextName: string) => Promise<void> | void
   meetings?: CompletedMeeting[]
   meetingHistoryError?: string
+  onRetryMeetingHistory?: () => void
   onOpenMeetingSummary?: (recordId: string) => void
   onStartMeeting?: () => void
+  onLoadProject?: () => Promise<ProjectSummary | void> | ProjectSummary | void
+  onUpdateProject?: (draft: ProjectInformationDraft) => Promise<void> | void
+  onDeleteProject?: () => Promise<void> | void
 }
 
 const projectDateFormatter = new Intl.DateTimeFormat('ko-KR', {
@@ -51,8 +59,12 @@ export function ProjectCreatedDashboard({
   onRenameMaterial,
   meetings = [],
   meetingHistoryError,
+  onRetryMeetingHistory,
   onOpenMeetingSummary,
   onStartMeeting,
+  onLoadProject,
+  onUpdateProject,
+  onDeleteProject,
 }: ProjectCreatedDashboardProps) {
   const navigate = useNavigate()
 
@@ -70,7 +82,16 @@ export function ProjectCreatedDashboard({
             <Badge size="extraSmall">{project.perspectiveDescription}</Badge>
           </div>
         </div>
-        <ProjectSettingsMenu />
+        <ProjectSettingsMenu
+          onDeleteProject={onDeleteProject}
+          onLoadProject={onLoadProject}
+          onUpdateProject={onUpdateProject}
+          perspectiveOptions={projectPerspectiveOptions.map((option) => ({
+            label: option.label,
+            description: option.selectedDescription,
+          }))}
+          project={project}
+        />
       </header>
 
       <section className="flex flex-col gap-s">
@@ -115,12 +136,14 @@ export function ProjectCreatedDashboard({
       {meetingHistoryError ? (
         <section className="flex flex-col gap-s">
           <h2 className="m-0 typo-title-02 text-fg-primary">회의 기록</h2>
-          <p
-            className="flex h-[200px] items-center justify-center typo-body-01 text-gray-500"
-            role="alert"
-          >
-            {meetingHistoryError}
-          </p>
+          <div className="flex h-[200px] flex-col items-center justify-center gap-s">
+            <p className="m-0 typo-body-01 text-gray-500" role="alert">
+              {meetingHistoryError}
+            </p>
+            <Button onClick={onRetryMeetingHistory} size="medium" variant="fillGray100">
+              다시 불러오기
+            </Button>
+          </div>
         </section>
       ) : (
         <ProjectMeetingHistory meetings={meetings} />

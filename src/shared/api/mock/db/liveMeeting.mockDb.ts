@@ -128,6 +128,9 @@ export const liveMeetingMockDb = {
   },
 
   listCompletedMeetings(projectId: string): CompletedMeetingSummary[] {
-    return structuredClone(completedMeetingRecords.get(projectId) ?? [])
+    return structuredClone(completedMeetingRecords.get(projectId) ?? []).sort(
+      (left, right) =>
+        new Date(right.completedAt).getTime() - new Date(left.completedAt).getTime(),
+    )
   },
 }

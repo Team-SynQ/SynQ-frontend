@@ -91,6 +91,13 @@ export function MeetingPage() {
     projectTitle: locationState?.projectTitle ?? controller.meeting.projectTitle,
   }
 
+  const returnToProject = () => {
+    navigate('/projects', {
+      replace: true,
+      state: { activeProjectId: projectContext.projectId },
+    })
+  }
+
   const saveMeeting = async () => {
     setActiveControl('saving')
     try {
@@ -165,19 +172,20 @@ export function MeetingPage() {
       <MeetingExitDialog
         mode={currentUserIsHost ? 'end' : 'leave'}
         onCancel={() => setActiveControl('idle')}
-        onConfirm={() => void saveMeeting()}
+        onConfirm={() => {
+          if (currentUserIsHost) {
+            void saveMeeting()
+            return
+          }
+          returnToProject()
+        }}
         open={activeControl === 'end-confirm'}
       />
       {activeControl === 'saving' ? <MeetingSaveDialog open state="saving" /> : null}
       {activeControl === 'save-success' && completedMeeting ? (
         <MeetingSaveDialog
           meetingTitle={completedMeeting.meetingTitle}
-          onClose={() =>
-            navigate('/projects', {
-              replace: true,
-              state: { activeProjectId: completedMeeting.projectId },
-            })
-          }
+          onClose={returnToProject}
           open
           projectTitle={completedMeeting.projectTitle}
           state="success"

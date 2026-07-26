@@ -15,6 +15,7 @@ import {
   type ProjectCreateDraft,
   type ProjectMaterialDraft,
 } from '../features/project-create'
+import type { ProjectInformationDraft } from '../features/project-settings'
 import { useTransientVisibility } from '../shared/lib/useTransientVisibility'
 import { Toast } from '../shared/ui'
 import type { ToastType } from '../shared/ui'
@@ -42,6 +43,14 @@ type ProjectMainboardPageProps = {
     nextName: string,
   ) => Promise<void> | void
   loadCompletedMeetings?: (projectId: string) => Promise<CompletedMeeting[]>
+  loadProjectInformation?: (
+    projectId: string,
+  ) => Promise<ProjectSummary | void> | ProjectSummary | void
+  updateProject?: (
+    projectId: string,
+    draft: ProjectInformationDraft,
+  ) => Promise<ProjectSummary | void> | ProjectSummary | void
+  deleteProject?: (projectId: string) => Promise<void> | void
 }
 
 type ProjectReferenceFeedback = {
@@ -51,6 +60,9 @@ type ProjectReferenceFeedback = {
 }
 
 let nextClientReferenceId = 0
+
+const loadCompletedMeetingHistory = (projectId: string) =>
+  meetingApi.listCompletedMeetings(projectId)
 
 function createClientProjectReferences(
   materials: ProjectMaterialDraft,
@@ -87,7 +99,10 @@ export function ProjectMainboardPage({
   addProjectReferences,
   deleteProjectReference,
   renameProjectReference,
-  loadCompletedMeetings = meetingApi.listCompletedMeetings,
+  loadCompletedMeetings = loadCompletedMeetingHistory,
+  loadProjectInformation,
+  updateProject,
+  deleteProject,
 }: ProjectMainboardPageProps) {
   const location = useLocation()
   const navigate = useNavigate()
@@ -99,6 +114,7 @@ export function ProjectMainboardPage({
   >({})
   const [meetingHistoryErrorProjectId, setMeetingHistoryErrorProjectId] =
     useState<string>()
+  const [meetingHistoryReloadKey, setMeetingHistoryReloadKey] = useState(0)
   const [latestCreatedProjectName, setLatestCreatedProjectName] = useState<string>()
   const [projectReferenceFeedback, setProjectReferenceFeedback] =
     useState<ProjectReferenceFeedback>()
@@ -165,7 +181,12 @@ export function ProjectMainboardPage({
     return () => {
       isSubscribed = false
     }
-  }, [activeProjectId, completedMeetingsByProject, loadCompletedMeetings])
+  }, [
+    activeProjectId,
+    completedMeetingsByProject,
+    loadCompletedMeetings,
+    meetingHistoryReloadKey,
+  ])
 
   const handleCreateProject = () => {
     setIsCreateModalOpen(true)
@@ -293,6 +314,52 @@ export function ProjectMainboardPage({
     }
   }
 
+  const handleLoadProjectInformation = async () => {
+    if (!activeProjectId) return
+    return (
+      (await loadProjectInformation?.(activeProjectId)) ??
+      projects.find((project) => project.id === activeProjectId)
+    )
+  }
+
+  const handleUpdateProject = async (draft: ProjectInformationDraft) => {
+    if (!activeProjectId) return
+
+    const submittedProject = await updateProject?.(activeProjectId, draft)
+    setProjects((currentProjects) =>
+      currentProjects.map((project) =>
+        project.id === activeProjectId ? (submittedProject ?? { ...project, ...draft }) : project,
+      ),
+    )
+  }
+
+  const handleDeleteProject = async () => {
+    if (!activeProjectId) return
+    const deletedProject = projects.find((project) => project.id === activeProjectId)
+    if (!deletedProject) return
+
+    try {
+      await deleteProject?.(activeProjectId)
+      const nextProjects = projects.filter((project) => project.id !== activeProjectId)
+      setProjects(nextProjects)
+      setActiveProjectId((currentId) =>
+        currentId === activeProjectId ? nextProjects[0]?.id : currentId,
+      )
+      showProjectReferenceFeedback({
+        title: '프로젝트 삭제 성공',
+        description: `‘${deletedProject.name}’ 프로젝트를 삭제했습니다.`,
+        type: 'success',
+      })
+    } catch (error) {
+      showProjectReferenceFeedback({
+        title: '프로젝트 삭제 실패',
+        description: '프로젝트를 삭제하지 못했습니다. 다시 시도해 주세요.',
+        type: 'error',
+      })
+      throw error
+    }
+  }
+
   const activeProject = projects.find((project) => project.id === activeProjectId)
   const successMessage = latestCreatedProjectName
     ? getProjectCreationSuccessMessage(latestCreatedProjectName)
@@ -320,11 +387,17 @@ export function ProjectMainboardPage({
         meetings={activeProjectId ? completedMeetingsByProject[activeProjectId] : undefined}
         onAddMaterials={handleAddMaterials}
         onCreateProject={handleCreateProject}
+        onDeleteProject={handleDeleteProject}
+        onLoadProject={handleLoadProjectInformation}
         onDeleteMaterial={handleDeleteMaterial}
         onRenameMaterial={handleRenameMaterial}
         onOpenMeetingSummary={(recordId) =>
           navigate(`/meetings/${encodeURIComponent(recordId)}/summary`)
         }
+        onRetryMeetingHistory={() => {
+          setMeetingHistoryErrorProjectId(undefined)
+          setMeetingHistoryReloadKey((current) => current + 1)
+        }}
         onStartMeeting={() => {
           if (!activeProject) return
           navigate('/meetings/demo/tutorial', {
@@ -334,6 +407,7 @@ export function ProjectMainboardPage({
             },
           })
         }}
+        onUpdateProject={handleUpdateProject}
         project={activeProject}
       />
       <ProjectCreateModal

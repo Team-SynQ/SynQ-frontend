@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ComponentProps } from 'react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
@@ -93,16 +93,27 @@ describe('ProjectMainboardPage', () => {
     await waitFor(() => expect(loadCompletedMeetings).toHaveBeenCalledWith('project-2'))
   })
 
-  it('shows meeting history load failure without hiding the project', async () => {
+  it('retries meeting history loading without hiding the project', async () => {
+    const user = userEvent.setup()
+    const loadCompletedMeetings = vi
+      .fn<() => Promise<CompletedMeeting[]>>()
+      .mockRejectedValueOnce(new Error('meeting load failed'))
+      .mockResolvedValueOnce([completedMeeting])
+
     renderProjectMainboardPage({
       loadProjects: () => Promise.resolve([projectOne]),
-      loadCompletedMeetings: () => Promise.reject(new Error('meeting load failed')),
+      loadCompletedMeetings,
     })
 
     expect(await screen.findByRole('heading', { name: '서비스 디자인' })).toBeInTheDocument()
     expect(await screen.findByRole('alert')).toHaveTextContent(
       '회의 기록을 불러오지 못했습니다.',
     )
+
+    await user.click(screen.getByRole('button', { name: '다시 불러오기' }))
+
+    expect(await screen.findAllByText('온보딩 개선 회의')).toHaveLength(2)
+    expect(loadCompletedMeetings).toHaveBeenCalledTimes(2)
   })
 
   it('starts a meeting with the active project context', async () => {
@@ -502,6 +513,95 @@ describe('ProjectMainboardPage', () => {
     expect(screen.getByText('answer-guide.docx')).toBeInTheDocument()
   })
 
+  it('deletes a project through the Figma confirmation dialog and shows the success toast', async () => {
+    const user = userEvent.setup()
+    const project: ProjectSummary = {
+      id: 'project-delete',
+      name: '서비스 디자인',
+      overview: '',
+      perspectiveLabel: 'PM',
+      perspectiveDescription: '일정, 범위, 의사결정 영향 중심',
+      materials: [],
+    }
+    renderProjectMainboardPage({ loadProjects: vi.fn().mockResolvedValue([project]) })
+
+    await screen.findByRole('heading', { name: project.name })
+    await user.click(screen.getByRole('button', { name: '프로젝트 더보기' }))
+    await user.click(screen.getByRole('button', { name: '프로젝트 삭제하기' }))
+
+    const dialog = screen.getByRole('dialog', { name: '프로젝트 삭제' })
+    expect(dialog).toHaveClass('h-[680px]', 'max-w-[460px]', 'gap-m', 'py-l')
+    expect(within(dialog).getByTestId('project-delete-illustration')).toHaveAttribute(
+      'height',
+      '127',
+    )
+    const deleteButton = within(dialog).getByRole('button', { name: '삭제하기' })
+    expect(deleteButton).toBeDisabled()
+    await user.click(within(dialog).getByRole('checkbox', { name: '주의 사항을 확인했습니다.' }))
+    await user.click(deleteButton)
+
+    expect(await screen.findByRole('status', { name: '프로젝트 삭제 성공' })).toHaveTextContent(
+      '‘서비스 디자인’ 프로젝트를 삭제했습니다.',
+    )
+    expect(screen.getByRole('button', { name: '프로젝트 생성하기' })).toBeInTheDocument()
+  })
+
+  it('keeps the delete dialog open and shows the Figma error toast when deletion fails', async () => {
+    const user = userEvent.setup()
+    const project: ProjectSummary = {
+      id: 'project-delete-failure',
+      name: '서비스 디자인',
+      overview: '',
+      perspectiveLabel: 'PM',
+      perspectiveDescription: '일정, 범위, 의사결정 영향 중심',
+      materials: [],
+    }
+    renderProjectMainboardPage({
+      deleteProject: vi.fn().mockRejectedValue(new Error('delete failed')),
+      loadProjects: vi.fn().mockResolvedValue([project]),
+    })
+
+    await screen.findByRole('heading', { name: project.name })
+    await user.click(screen.getByRole('button', { name: '프로젝트 더보기' }))
+    await user.click(screen.getByRole('button', { name: '프로젝트 삭제하기' }))
+    const dialog = screen.getByRole('dialog', { name: '프로젝트 삭제' })
+    await user.click(within(dialog).getByRole('checkbox', { name: '주의 사항을 확인했습니다.' }))
+    await user.click(within(dialog).getByRole('button', { name: '삭제하기' }))
+
+    expect(screen.getByRole('dialog', { name: '프로젝트 삭제' })).toBeInTheDocument()
+    expect(await screen.findByRole('status', { name: '프로젝트 삭제 실패' })).toHaveTextContent(
+      '프로젝트를 삭제하지 못했습니다. 다시 시도해 주세요.',
+    )
+  })
+  it('updates the active project and sidebar from the project settings modal', async () => {
+    const user = userEvent.setup()
+    const project: ProjectSummary = {
+      id: 'project-edit',
+      name: '회의 보조 AI, 씽큐',
+      overview: '기존 프로젝트 개요',
+      perspectiveLabel: 'PM',
+      perspectiveDescription: '일정, 범위, 의사결정 영향 중심',
+      materials: [],
+    }
+
+    renderProjectMainboardPage({ loadProjects: vi.fn().mockResolvedValue([project]) })
+
+    await screen.findByRole('heading', { name: project.name })
+    await user.click(screen.getByRole('button', { name: '프로젝트 더보기' }))
+    await user.click(screen.getByRole('button', { name: '프로젝트 정보 수정하기' }))
+
+    const dialog = screen.getByRole('dialog', { name: '프로젝트 설정' })
+    const nameInput = within(dialog).getByRole('textbox', { name: '이름' })
+    await user.clear(nameInput)
+    await user.type(nameInput, '수정된 씽큐 프로젝트')
+    await user.click(within(dialog).getByRole('button', { name: '저장하기' }))
+
+    expect(await screen.findByRole('heading', { name: '수정된 씽큐 프로젝트' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '수정된 씽큐 프로젝트' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+  })
   it('shows an error toast when the initial project list fails', async () => {
     const loadProjects = vi.fn(() => Promise.reject(new Error('network error')))
 
