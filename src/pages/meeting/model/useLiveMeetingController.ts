@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import {
+  meetingAiMockGateway,
   meetingApi,
   type LiveMeeting,
   type LiveMeetingAiPinnedContext,
@@ -55,22 +56,33 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
   const [messages, setMessages] = useState<AiChatMessage[]>([])
   const [draft, setDraft] = useState('')
   const [isSending, setIsSending] = useState(false)
+  const [sendError, setSendError] = useState<string | null>(null)
   const [pinnedContext, setPinnedContext] = useState<LiveMeetingAiPinnedContext | null>(null)
   const [aiChatDisplayMode, setAiChatDisplayMode] = useState<AiChatDisplayMode>('docked')
   const hintCacheRef = useRef(new Map<string, LiveMeetingTranscriptHint>())
   const hintRequestSequenceRef = useRef(0)
   const composerInputRef = useRef<HTMLInputElement>(null)
   const lastExpandedAiChatModeRef = useRef<Exclude<AiChatDisplayMode, 'launcher'>>('docked')
+  const meetingSessionRef = useRef({ meetingId, sequence: 0 })
+
+  const isCurrentMeetingSession = useCallback(
+    (requestMeetingId: string, requestSequence: number) =>
+      meetingSessionRef.current.meetingId === requestMeetingId &&
+      meetingSessionRef.current.sequence === requestSequence,
+    [],
+  )
 
   useEffect(() => {
     let active = true
+    const requestSessionSequence = meetingSessionRef.current.sequence + 1
+    meetingSessionRef.current = { meetingId, sequence: requestSessionSequence }
 
     hintRequestSequenceRef.current += 1
 
     void meetingApi
       .joinMeeting(meetingId)
       .then((response) => {
-        if (!active) return
+        if (!active || !isCurrentMeetingSession(meetingId, requestSessionSequence)) return
 
         setMeeting(response)
         setLoadError(null)
@@ -82,6 +94,8 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
         setEditState({ status: 'idle' })
         setPinnedContext(null)
         setDraft('')
+        setIsSending(false)
+        setSendError(null)
         setAiChatDisplayMode('docked')
         hintCacheRef.current.clear()
         setMessages(
@@ -93,7 +107,7 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
         )
       })
       .catch((error: unknown) => {
-        if (!active) return
+        if (!active || !isCurrentMeetingSession(meetingId, requestSessionSequence)) return
         setLoadError({
           meetingId,
           message: getErrorMessage(error, '회의 정보를 불러오지 못했습니다.'),
@@ -103,7 +117,7 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
     return () => {
       active = false
     }
-  }, [meetingId])
+  }, [isCurrentMeetingSession, meetingId])
 
   useEffect(() => {
     if (!meeting) return
@@ -117,6 +131,8 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
 
   const loadHint = useCallback(
     async (transcriptId: string, useCache: boolean) => {
+      const requestMeetingId = meetingId
+      const requestSessionSequence = meetingSessionRef.current.sequence
       const cachedHint = hintCacheRef.current.get(transcriptId)
       if (useCache && cachedHint) {
         setHintState({ status: 'ready', transcriptId, hint: cachedHint })
@@ -127,13 +143,23 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
       setHintState({ status: 'loading', transcriptId })
 
       try {
-        const hint = await meetingApi.getTranscriptHint({ meetingId, transcriptId })
-        if (requestSequence !== hintRequestSequenceRef.current) return
+        const hint = await meetingAiMockGateway.getTranscriptHint({ meetingId, transcriptId })
+        if (
+          requestSequence !== hintRequestSequenceRef.current ||
+          !isCurrentMeetingSession(requestMeetingId, requestSessionSequence)
+        ) {
+          return
+        }
 
         hintCacheRef.current.set(transcriptId, hint)
         setHintState({ status: 'ready', transcriptId, hint })
       } catch (error) {
-        if (requestSequence !== hintRequestSequenceRef.current) return
+        if (
+          requestSequence !== hintRequestSequenceRef.current ||
+          !isCurrentMeetingSession(requestMeetingId, requestSessionSequence)
+        ) {
+          return
+        }
 
         if (getErrorCode(error) === 'TRANSCRIPT_HINT_NOT_FOUND') {
           setHintState({ status: 'idle' })
@@ -146,7 +172,7 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
         })
       }
     },
-    [meetingId],
+    [isCurrentMeetingSession, meetingId],
   )
 
   if (loadError?.meetingId === meetingId) {
@@ -184,6 +210,8 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
     }
 
     const savingState = { ...editState, errorMessage: null, isSaving: true }
+    const requestMeetingId = meetingId
+    const requestSessionSequence = meetingSessionRef.current.sequence
     setEditState(savingState)
 
     try {
@@ -192,8 +220,9 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
         segmentId: savingState.transcriptId,
         text: savingState.draftText,
       })
+      if (!isCurrentMeetingSession(requestMeetingId, requestSessionSequence)) return
       setMeeting((current) =>
-        current
+        current?.meetingId === requestMeetingId
           ? {
               ...current,
               transcript: {
@@ -207,6 +236,7 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
       )
       setEditState({ status: 'idle' })
     } catch (error) {
+      if (!isCurrentMeetingSession(requestMeetingId, requestSessionSequence)) return
       setEditState({
         ...savingState,
         errorMessage: getErrorMessage(error, '전사 내용을 수정하지 못했습니다.'),
@@ -233,13 +263,17 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
     const question = draft.trim()
     if (!question || isSending) return
 
+    const requestMeetingId = meetingId
+    const requestSessionSequence = meetingSessionRef.current.sequence
     setIsSending(true)
+    setSendError(null)
     try {
-      const response = await meetingApi.sendMeetingAiQuestion({
+      const response = await meetingAiMockGateway.sendMeetingAiQuestion({
         meetingId,
         question,
         context: pinnedContext,
       })
+      if (!isCurrentMeetingSession(requestMeetingId, requestSessionSequence)) return
       setMessages((current) => [
         ...current,
         {
@@ -254,8 +288,13 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
         },
       ])
       setDraft('')
+    } catch {
+      if (!isCurrentMeetingSession(requestMeetingId, requestSessionSequence)) return
+      setSendError('AI 답변을 불러오지 못했습니다. 다시 시도해 주세요.')
     } finally {
-      setIsSending(false)
+      if (isCurrentMeetingSession(requestMeetingId, requestSessionSequence)) {
+        setIsSending(false)
+      }
     }
   }
 
@@ -277,16 +316,24 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
             : current,
         ),
       onRefresh: () => {
-        void meetingApi.listTranscripts(meetingId).then((segments) => {
-          setMeeting((current) =>
-            current
-              ? {
-                  ...current,
-                  transcript: { ...current.transcript, segments },
-                }
-              : current,
-          )
-        })
+        const requestMeetingId = meetingId
+        const requestSessionSequence = meetingSessionRef.current.sequence
+        void meetingApi
+          .listTranscripts(meetingId)
+          .then((segments) => {
+            if (!isCurrentMeetingSession(requestMeetingId, requestSessionSequence)) return
+            setMeeting((current) =>
+              current?.meetingId === requestMeetingId
+                ? {
+                    ...current,
+                    transcript: { ...current.transcript, segments },
+                  }
+                : current,
+            )
+          })
+          .catch(() => {
+            // Refresh는 기존 전사를 유지하며 다음 수동 재시도를 허용한다.
+          })
       },
       onRetryHint: (transcriptId) => void loadHint(transcriptId, false),
       onSaveEdit: () => void saveEdit(),
@@ -309,10 +356,16 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
   const aiChat: AiChatContentProps = {
     actions: {
       onClearContext: () => setPinnedContext(null),
-      onDraftChange: setDraft,
+      onDraftChange: (value) => {
+        setDraft(value)
+        setSendError(null)
+      },
       onSelectSuggestion: (suggestionId) => {
         const suggestion = meeting.aiChat.suggestions.find((item) => item.id === suggestionId)
-        if (suggestion) setDraft(suggestion.label)
+        if (suggestion) {
+          setDraft(suggestion.label)
+          setSendError(null)
+        }
       },
       onSend: () => void sendMessage(),
     },
@@ -320,6 +373,7 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
     model: {
       draft,
       isSending,
+      sendError,
       messages,
       pinnedContext,
       suggestions: meeting.aiChat.suggestions,

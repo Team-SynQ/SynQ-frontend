@@ -8,6 +8,7 @@ import { AiChatPanel } from './AiChatPanel'
 const model: AiChatViewModel = {
   draft: '작성 중인 질문',
   isSending: false,
+  sendError: null,
   pinnedContext: null,
   messages: [
     {
@@ -127,5 +128,24 @@ describe('AiChatPanel', () => {
     await user.click(screen.getByRole('button', { name: '전사 컨텍스트 제거' }))
 
     expect(actions.onClearContext).toHaveBeenCalledTimes(1)
+  })
+
+  it('announces a controlled AI send error', () => {
+    render(
+      <AiChatPanel
+        actions={createActions()}
+        model={{
+          ...model,
+          sendError: 'AI 답변을 불러오지 못했습니다. 다시 시도해 주세요.',
+        }}
+        onCollapse={vi.fn()}
+        onMinimize={vi.fn()}
+        variant="docked"
+      />,
+    )
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'AI 답변을 불러오지 못했습니다. 다시 시도해 주세요.',
+    )
   })
 })

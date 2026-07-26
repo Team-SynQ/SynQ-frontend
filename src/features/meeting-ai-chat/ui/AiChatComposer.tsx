@@ -27,6 +27,12 @@ export function AiChatComposer({ model, actions, inputRef }: AiChatComposerProps
         ))}
       </div>
 
+      {model.sendError ? (
+        <p className="m-0 typo-caption-01 text-status-negative" role="alert">
+          {model.sendError}
+        </p>
+      ) : null}
+
       <ChatInput
         aria-label="AI Chat 질문"
         disabled={model.isSending}

@@ -16,6 +16,7 @@ export type AiChatViewModel = {
   suggestions: AiChatSuggestion[]
   draft: string
   isSending: boolean
+  sendError: string | null
   pinnedContext: AiChatPinnedContext | null
 }
 

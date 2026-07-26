@@ -86,6 +86,9 @@ describe('TranscriptPanel', () => {
     expect(screen.getByText('내 영향')).toBeInTheDocument()
     expect(screen.getByText('팀 질문')).toBeInTheDocument()
     expect(screen.getByText(hint.teamQuestion)).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: segment.text })).toHaveClass('bg-surface-muted')
+    expect(screen.getByText(hint.teamQuestion).closest('article')).toHaveClass('bg-surface-muted')
+    expect(screen.getByRole('heading', { level: 3 })).toHaveClass('text-gray-800')
 
     await user.click(screen.getByRole('button', { name: 'SynQ 힌트 접기' }))
 

@@ -69,7 +69,9 @@ export const liveMeetingMockService = {
     }
     return updated
   },
+}
 
+export const liveMeetingAiMockGateway = {
   async getTranscriptHint(request: GetTranscriptHintRequest): Promise<TranscriptHintResponse> {
     await waitForMockApi()
     requireTranscript(request.meetingId, request.transcriptId)

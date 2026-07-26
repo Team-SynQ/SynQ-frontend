@@ -17,6 +17,7 @@ const aiChat: AiChatContentProps = {
   model: {
     draft: '',
     isSending: false,
+    sendError: null,
     messages: [
       {
         id: 'welcome',

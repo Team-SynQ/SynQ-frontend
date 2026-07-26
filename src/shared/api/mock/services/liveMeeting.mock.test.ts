@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { resetLiveMeetingMockDb } from '../db/liveMeeting.mockDb'
-import { liveMeetingMockService } from './liveMeeting.mock'
+import { liveMeetingAiMockGateway, liveMeetingMockService } from './liveMeeting.mock'
 
 describe('liveMeetingMockService', () => {
   beforeEach(() => {
@@ -59,7 +59,7 @@ describe('liveMeetingMockService', () => {
 
   it('fails the first hint request and succeeds when retried', async () => {
     await expect(
-      liveMeetingMockService.getTranscriptHint({
+      liveMeetingAiMockGateway.getTranscriptHint({
         meetingId: 'demo-hint-error',
         transcriptId: 'segment-1',
       }),
@@ -68,7 +68,7 @@ describe('liveMeetingMockService', () => {
     })
 
     await expect(
-      liveMeetingMockService.getTranscriptHint({
+      liveMeetingAiMockGateway.getTranscriptHint({
         meetingId: 'demo-hint-error',
         transcriptId: 'segment-1',
       }),
@@ -81,7 +81,7 @@ describe('liveMeetingMockService', () => {
   })
 
   it('returns an AI response with the supplied transcript snapshot', async () => {
-    const response = await liveMeetingMockService.sendMeetingAiQuestion({
+    const response = await liveMeetingAiMockGateway.sendMeetingAiQuestion({
       meetingId: 'demo',
       question: '이 내용이 왜 중요해?',
       context: {
@@ -97,5 +97,17 @@ describe('liveMeetingMockService', () => {
         text: '질문 시점 문장',
       },
     })
+
+    const rejoinedMeeting = await liveMeetingMockService.joinMeeting('demo')
+    expect(rejoinedMeeting.aiChat.messages.slice(-2)).toEqual([
+      expect.objectContaining({
+        role: 'user',
+        context: response.context,
+      }),
+      expect.objectContaining({
+        role: 'assistant',
+        context: response.context,
+      }),
+    ])
   })
 })
