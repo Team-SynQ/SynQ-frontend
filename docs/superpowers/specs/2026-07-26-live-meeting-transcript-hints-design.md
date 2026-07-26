@@ -37,14 +37,13 @@
 
 ### 제외
 
-- SynQ 힌트가 접힌 상태의 UI와 실제 접기 동작
 - 실제 STT WebSocket 연결과 오디오 송신
 - 실제 백엔드 API 연결
 - 동시 편집 충돌 해결 및 실시간 다중 사용자 동기화
 - 백엔드 명세에 아직 없는 AI 힌트·AI Chat URL 추정
 - 튜토리얼/회의 시작 화면의 고정 문구 및 고정값 이관
 
-힌트 헤더의 접기 아이콘은 키보드와 스크린 리더가 인식할 수 있는 `button`으로 구현하되, 클릭에 따른 시각 변화와 접힌 레이아웃은 디자인 확정 전까지 연결하지 않는다.
+힌트 헤더의 접기 아이콘은 키보드와 스크린 리더가 인식할 수 있는 `button`으로 구현한다. 클릭하면 힌트 카드 전체가 사라지고 선택 전사 카드만 유지된다. 같은 전사 문장을 다시 클릭하면 캐시된 힌트를 다시 표시한다.
 
 ## 3. 디자인 및 API 기준
 
@@ -54,7 +53,12 @@
 - [전사 선택 및 AI 질문](https://www.figma.com/design/FHZ49MS3HLNgs6JOIv13HX/SynQ?node-id=2286-37635)
 - [힌트 1024px](https://www.figma.com/design/FHZ49MS3HLNgs6JOIv13HX/SynQ?node-id=1961-26305)
 - [힌트 상세](https://www.figma.com/design/FHZ49MS3HLNgs6JOIv13HX/SynQ?node-id=1167-12019)
+- [선택 전사·힌트 분리](https://www.figma.com/design/FHZ49MS3HLNgs6JOIv13HX/SynQ?node-id=1167-11727)
 - [힌트 접기 아이콘](https://www.figma.com/design/FHZ49MS3HLNgs6JOIv13HX/SynQ?node-id=2380-37029)
+- [힌트 접힘 결과](https://www.figma.com/design/FHZ49MS3HLNgs6JOIv13HX/SynQ?node-id=603-2134)
+- [힌트 라벨 의미](https://www.figma.com/design/FHZ49MS3HLNgs6JOIv13HX/SynQ?node-id=1167-12029)
+- [힌트 라벨 내 영향](https://www.figma.com/design/FHZ49MS3HLNgs6JOIv13HX/SynQ?node-id=1167-12033)
+- [힌트 라벨 팀 질문](https://www.figma.com/design/FHZ49MS3HLNgs6JOIv13HX/SynQ?node-id=1167-12037)
 - [수정 초기](https://www.figma.com/design/FHZ49MS3HLNgs6JOIv13HX/SynQ?node-id=1089-6058)
 - [수정 후 확인 활성화](https://www.figma.com/design/FHZ49MS3HLNgs6JOIv13HX/SynQ?node-id=2286-37900)
 - [수정 1024px](https://www.figma.com/design/FHZ49MS3HLNgs6JOIv13HX/SynQ?node-id=1961-24389)
@@ -328,6 +332,8 @@ type TranscriptHintState =
 3. 실패하면 같은 위치에 오류 안내와 재시도 버튼을 표시한다.
 4. 재시도는 현재 선택 전사가 같은지 확인한 뒤 다시 요청한다.
 5. 늦게 도착한 이전 전사의 응답은 현재 선택 ID와 다르면 버린다.
+6. 접기 버튼을 누르면 현재 힌트 상태를 `idle`로 되돌리고 진행 중 요청을 무효화해 카드 전체를 숨긴다.
+7. 같은 전사를 다시 선택하면 성공 힌트는 캐시에서 즉시 복원하고, 캐시가 없으면 새로 요청한다.
 
 힌트가 없는 전사는 선택 액션만 노출하고 힌트 카드는 렌더링하지 않는다.
 
@@ -450,7 +456,7 @@ type AiChatPinnedContext = {
 - 의미·개인 영향·팀 질문 항목
 - 접기 아이콘의 버튼 경계
 
-접기 버튼은 현재 `aria-label="SynQ 힌트 접기"`를 제공하되, 디자인 미확정 상태에서 `aria-expanded`를 거짓으로 바꾸거나 콘텐츠를 숨기지 않는다.
+접기 버튼은 `aria-label="SynQ 힌트 접기"`를 제공하고 Figma의 위쪽 화살표 자산을 사용한다. 버튼을 누르면 힌트 카드가 DOM에서 제거된다.
 
 ### `TranscriptFeedback`
 
@@ -470,13 +476,15 @@ type AiChatPinnedContext = {
 
 ### 공통 치수
 
-- 선택 전사 및 힌트 컨테이너: `gray-200`, `padding: 16px`, `border-radius: 12px`
+- 선택 전사와 힌트는 각각 독립된 컨테이너이며 두 컨테이너 사이 간격은 `8px`
+- 선택 전사 컨테이너: `gray-200`, `padding: 16px`, `border-radius: 12px`
+- 힌트 컨테이너: `gray-200`, `padding: 16px`, `border-radius: 12px`
 - 전사 액션 버튼: 높이 `32px`, 좌우 `16px`, `border-radius: 8px`
 - 힌트 헤더 내부 간격: `16px`
 - 힌트 행 간격: `8px`
 - 힌트 라벨과 본문 간격: `16px`
 - 힌트 라벨 너비: `81px`
-- 힌트 라벨: 좌우 `12px`, 상하 `8px`, `gray-100`, `border-radius: 8px`
+- 힌트 라벨: 좌우 `12px`, 상하 `8px`, `gray-100`, 네 모서리 모두 `border-radius: var(--radius-s)` (`8px`)
 - 오류 피드백: 최소 높이 `42px`, 좌우 `16px`, 상하 `8px`, `border-radius: 12px`
 - 수정 textarea: 좌우 `16px`, 상하 `8px`, `gray-100`, `gray-300` border, `border-radius: 12px`
 - AI Chat 고정 컨텍스트: 최소 높이 `100px`, 좌우 `24px`
@@ -561,7 +569,10 @@ Figma의 32px 흰색 원형 컨테이너와 28px 로더 glyph를 사용한다. �
 - AI Chat draft가 비어 있고 input이 포커스됨
 - 컨텍스트 닫기
 - 힌트 로딩·성공·오류·재시도
-- 접기 아이콘이 버튼이지만 콘텐츠를 숨기지 않음
+- 접기 버튼을 누르면 힌트 카드가 사라짐
+- 같은 전사를 다시 누르면 캐시된 힌트가 다시 나타남
+- 선택 전사와 힌트가 `gap-xs`로 구분된 독립 컨테이너로 렌더링됨
+- 힌트 라벨 네 모서리가 모두 `--radius-s`를 사용함
 
 ### 화면 검증
 
@@ -602,7 +613,10 @@ Windows 환경의 기존 CRLF 때문에 전체 `format:check`가 실패할 수 �
 - 실패 초안은 현재 화면에 유지되지만 Mock DB에는 저장되지 않는다.
 - 성공 수정은 Mock DB에 저장되고 모든 컴포넌트가 최신 공용 값을 표시한다.
 - 힌트 로딩·오류·재시도가 동작한다.
-- 접기 아이콘은 버튼 형태이지만 접힌 디자인과 동작은 구현하지 않는다.
+- 힌트 접기 버튼은 위쪽 화살표를 사용하며 클릭하면 카드가 사라진다.
+- 접힌 힌트는 같은 전사를 다시 클릭하면 캐시에서 복원된다.
+- 선택 전사와 힌트 카드는 Figma처럼 8px 간격을 둔 독립된 12px radius 컨테이너다.
+- 힌트 라벨은 공통 `--radius-s` 토큰으로 네 모서리 모두 8px radius를 갖는다.
 - `MeetingPage.tsx`에 있던 회의 진행 샘플 데이터가 Mock 계층으로 이동한다.
 - 튜토리얼 고정값은 이관하지 않는다.
 - 화면과 feature에서 Mock 구현을 직접 import하지 않는다.
