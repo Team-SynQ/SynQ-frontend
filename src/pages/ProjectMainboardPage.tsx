@@ -176,6 +176,11 @@ export function ProjectMainboardPage({
           : project,
       ),
     )
+    showProjectReferenceFeedback({
+      description: 'AI 참고 자료가 추가되었습니다.',
+      title: '자료 추가 완료',
+      type: 'success',
+    })
   }
 
   const handleRenameMaterial = async (materialId: string, nextName: string) => {

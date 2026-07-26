@@ -234,7 +234,7 @@ function ProjectReferenceMaterials({
       {materialLimitToast.isMounted ? (
         <Toast
           className="top-[20px]! z-[70]!"
-          description="참고자료는 프로젝트당 최대 10개까지 등록할 수 있어요."
+          description={`참고자료는 프로젝트당 최대 ${PROJECT_REFERENCE_MAX_MATERIALS}개까지 등록할 수 있어요.`}
           position="topCenter"
           title="참고자료 최대 개수 초과"
           type="error"
@@ -282,6 +282,8 @@ function ProjectReferenceMaterialItem({
     setIsSubmitting(true)
     try {
       await action()
+    } catch {
+      // Mutation feedback is handled by the callback owner.
     } finally {
       setIsSubmitting(false)
       setActiveDialog(undefined)

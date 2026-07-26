@@ -281,10 +281,10 @@ describe('ProjectMainboardPage', () => {
     await user.type(titleInput, 'revised-guide.docx')
     await user.click(screen.getByRole('button', { name: '제목 변경하기' }))
 
-    expect(screen.getByText('revised-guide.docx')).toBeInTheDocument()
     expect(await screen.findByRole('status', { name: '자료 제목 수정 완료' })).toHaveTextContent(
       '자료 제목이 수정되었습니다.',
     )
+    expect(screen.getByText('revised-guide.docx')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'revised-guide.docx 더보기' }))
     await user.click(screen.getByRole('menuitem', { name: '삭제하기' }))
@@ -296,11 +296,11 @@ describe('ProjectMainboardPage', () => {
     ).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '지우기' }))
 
-    expect(screen.queryByText('revised-guide.docx')).not.toBeInTheDocument()
-    expect(screen.getByText('등록된 AI 참고 자료가 없습니다')).toBeInTheDocument()
     expect(await screen.findByRole('status', { name: '자료 삭제 완료' })).toHaveTextContent(
       '“revised-guide.docx” 자료가 삭제되었습니다.',
     )
+    expect(screen.queryByText('revised-guide.docx')).not.toBeInTheDocument()
+    expect(screen.getByText('등록된 AI 참고 자료가 없습니다')).toBeInTheDocument()
   })
 
   it('adds a reference to the active project from the Figma upload modal', async () => {
@@ -339,6 +339,9 @@ describe('ProjectMainboardPage', () => {
       files: [file],
       links: [],
     })
+    expect(await screen.findByRole('status', { name: '자료 추가 완료' })).toHaveTextContent(
+      'AI 참고 자료가 추가되었습니다.',
+    )
     expect(await screen.findByText('roadmap.pdf')).toBeInTheDocument()
     expect(screen.queryByRole('dialog', { name: 'AI 참고 자료 업로드' })).not.toBeInTheDocument()
   })

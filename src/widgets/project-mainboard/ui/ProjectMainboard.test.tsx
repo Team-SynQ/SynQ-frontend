@@ -157,6 +157,48 @@ describe('ProjectMainboard', () => {
     expect(screen.getByText('아직 회의 기록이 없습니다')).toBeInTheDocument()
   })
 
+  it('settles reference dialogs when mutation callbacks reject', async () => {
+    const user = userEvent.setup()
+    const onDeleteMaterial = vi.fn(() => Promise.reject(new Error('delete failed')))
+    const onRenameMaterial = vi.fn(() => Promise.reject(new Error('rename failed')))
+
+    render(
+      <MemoryRouter>
+        <ProjectMainboard
+          onDeleteMaterial={onDeleteMaterial}
+          onRenameMaterial={onRenameMaterial}
+          project={project}
+        />
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'answer-guide.docx 더보기' }))
+    await user.click(screen.getByRole('menuitem', { name: '제목 수정하기' }))
+
+    const titleInput = screen.getByRole('textbox', { name: '자료 제목' })
+    await user.clear(titleInput)
+    await user.type(titleInput, 'revised-guide.docx')
+    await user.click(screen.getByRole('button', { name: '제목 변경하기' }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: '자료 제목 수정' })).not.toBeInTheDocument()
+    })
+    expect(onRenameMaterial).toHaveBeenCalledWith('material-1', 'revised-guide.docx')
+
+    await user.click(screen.getByRole('button', { name: 'answer-guide.docx 더보기' }))
+    await user.click(screen.getByRole('menuitem', { name: '삭제하기' }))
+    await user.click(screen.getByRole('button', { name: '지우기' }))
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('dialog', {
+          name: /‘answer-guide\.docx’\s+자료를 지우시겠습니까\?/,
+        }),
+      ).not.toBeInTheDocument()
+    })
+    expect(onDeleteMaterial).toHaveBeenCalledWith('material-1')
+  })
+
   it('blocks opening the upload dialog and shows the limit toast at 10 materials', async () => {
     const user = userEvent.setup()
 
@@ -177,7 +219,9 @@ describe('ProjectMainboard', () => {
     expect(screen.queryByRole('dialog', { name: 'AI 참고 자료 업로드' })).not.toBeInTheDocument()
     expect(
       await screen.findByRole('status', { name: '참고자료 최대 개수 초과' }),
-    ).toHaveTextContent('참고자료는 프로젝트당 최대 10개까지 등록할 수 있어요.')
+    ).toHaveTextContent(
+      `참고자료는 프로젝트당 최대 ${PROJECT_REFERENCE_MAX_MATERIALS}개까지 등록할 수 있어요.`,
+    )
   })
 
   it('blocks a batch that would exceed 10 materials and keeps the upload dialog open', async () => {
@@ -207,6 +251,8 @@ describe('ProjectMainboard', () => {
     expect(screen.getByRole('dialog', { name: 'AI 참고 자료 업로드' })).toBeInTheDocument()
     expect(
       await screen.findByRole('status', { name: '참고자료 최대 개수 초과' }),
-    ).toHaveTextContent('참고자료는 프로젝트당 최대 10개까지 등록할 수 있어요.')
+    ).toHaveTextContent(
+      `참고자료는 프로젝트당 최대 ${PROJECT_REFERENCE_MAX_MATERIALS}개까지 등록할 수 있어요.`,
+    )
   })
 })
