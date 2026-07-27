@@ -16,9 +16,9 @@ let mockMeetingDetailStore: MeetingDetailResponse = {
   round: '4차 대면 회의',
   completedAt: '2026-05-11T14:00:00Z',
   durationSeconds: 2700,
-  
- 
-  overview: '온보딩 개선을 이번 분기 핵심 과제로 확정하고, 출시 일정과 QA 리소스 확보 방안을 중심으로 논의했습니다.',
+
+  overview:
+    '온보딩 개선을 이번 분기 핵심 과제로 확정하고, 출시 일정과 QA 리소스 확보 방안을 중심으로 논의했습니다.',
   keywords: [
     'MVP 기능 설계',
     '일정 재조율',

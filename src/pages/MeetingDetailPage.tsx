@@ -2,7 +2,10 @@ import React, { useEffect, useState, type Ref } from 'react'
 import { Button, Modal, ChatInput } from '../shared/ui'
 import { ProjectSidebar, type ProjectSidebarUser } from '../widgets/project-sidebar'
 import { fetchMeetingDetail, updateMeetingTitle } from '../shared/api/mock/services/meeting.mock'
-import type { MeetingDetailResponse, AiChatPinnedContext as AiChatPinnedContextModel } from '../shared/api/contracts/meeting.contracts'
+import type {
+  MeetingDetailResponse,
+  AiChatPinnedContext as AiChatPinnedContextModel,
+} from '../shared/api/contracts/meeting.contracts'
 import { MeetingSettingsMenu, type MeetingMember } from '../features/meeting-settings'
 import { cn } from '../shared/lib/cn'
 
@@ -162,7 +165,12 @@ export function AiChatPinnedContext({ context, onClear }: AiChatPinnedContextPro
       aria-label="AI 질문 전사 컨텍스트"
       className="flex min-h-[100px] items-start gap-xs border-b border-line-default bg-surface-elevated px-m py-m typo-transcription-body-01 text-fg-primary"
     >
-      <img alt="pin" aria-hidden="true" className="size-[24px] shrink-0" src="/assets/images/pin.png" />
+      <img
+        alt="pin"
+        aria-hidden="true"
+        className="size-[24px] shrink-0"
+        src="/assets/images/pin.png"
+      />
       <p className="m-0 min-w-0 flex-1">{context.text}</p>
       <Button
         aria-label="전사 컨텍스트 제거"
@@ -184,17 +192,17 @@ export type AiChatPanelProps = {
   onCollapse: () => void
   collapseButtonRef?: Ref<HTMLButtonElement>
 } & (
-    | {
-        variant: 'docked'
-        onMinimize: () => void
-        actionButtonRef?: Ref<HTMLButtonElement>
-      }
-    | {
-        variant: 'floating'
-        onMaximize: () => void
-        actionButtonRef?: Ref<HTMLButtonElement>
-      }
-  )
+  | {
+      variant: 'docked'
+      onMinimize: () => void
+      actionButtonRef?: Ref<HTMLButtonElement>
+    }
+  | {
+      variant: 'floating'
+      onMaximize: () => void
+      actionButtonRef?: Ref<HTMLButtonElement>
+    }
+)
 
 export function AiChatPanel(props: AiChatPanelProps) {
   const {
@@ -216,7 +224,9 @@ export function AiChatPanel(props: AiChatPanelProps) {
       aria-labelledby="meeting-ai-chat-title"
       className={cn(
         'flex flex-col h-full bg-surface-elevated',
-        floating ? 'border border-gray-200 rounded-m shadow-2xl overflow-hidden' : 'border-l border-gray-200',
+        floating
+          ? 'border border-gray-200 rounded-m shadow-2xl overflow-hidden'
+          : 'border-l border-gray-200',
       )}
     >
       <header className="flex h-[52px] shrink-0 items-center justify-between border-b border-gray-200 px-5 bg-white">
@@ -230,7 +240,12 @@ export function AiChatPanel(props: AiChatPanelProps) {
             ref={collapseButtonRef}
             className="p-1 hover:bg-gray-100 rounded transition-colors text-gray-500"
           >
-            <img alt="접기" aria-hidden="true" className="size-4" src="/assets/images/collapse.png" />
+            <img
+              alt="접기"
+              aria-hidden="true"
+              className="size-4"
+              src="/assets/images/collapse.png"
+            />
           </button>
           <button
             aria-label={resizeLabel}
@@ -457,7 +472,8 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
             </div>
 
             <div className="text-sm text-gray-400 mb-8 ml-8">
-              {meetingData.round} &nbsp;|&nbsp; {formatDate(meetingData.completedAt)} &nbsp;|&nbsp; {formatDuration(meetingData.durationSeconds)}
+              {meetingData.round} &nbsp;|&nbsp; {formatDate(meetingData.completedAt)} &nbsp;|&nbsp;{' '}
+              {formatDuration(meetingData.durationSeconds)}
             </div>
 
             <div className="border-b border-gray-200">
@@ -516,7 +532,10 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
                 <h2 className="text-lg font-bold text-gray-900 mb-3">나에게 영향 있는 내용</h2>
                 <ul className="space-y-2">
                   {personalSummary.impacts.map((item, idx) => (
-                    <li key={idx} className="flex items-start text-sm text-gray-700 leading-relaxed">
+                    <li
+                      key={idx}
+                      className="flex items-start text-sm text-gray-700 leading-relaxed"
+                    >
                       <span className="mr-2 text-gray-400">•</span>
                       <span>{item}</span>
                     </li>
@@ -528,7 +547,10 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
                 <h2 className="text-lg font-bold text-gray-900 mb-3">내 액션 아이템</h2>
                 <ul className="space-y-2">
                   {personalSummary.actionItems.map((item, idx) => (
-                    <li key={idx} className="flex items-start text-sm text-gray-700 leading-relaxed">
+                    <li
+                      key={idx}
+                      className="flex items-start text-sm text-gray-700 leading-relaxed"
+                    >
                       <span className="mr-2 text-gray-400">•</span>
                       <span>{item}</span>
                     </li>
@@ -671,8 +693,8 @@ function MeetingAllRecordTab({
     if (!editingText.trim()) return
     setTranscripts((prev) =>
       prev.map((item) =>
-        item.id === id ? { ...item, text: editingText.trim(), isEdited: true } : item
-      )
+        item.id === id ? { ...item, text: editingText.trim(), isEdited: true } : item,
+      ),
     )
     setEditingId(null)
     setEditingText('')
@@ -796,14 +818,18 @@ function MeetingAllRecordTab({
                             <span className="shrink-0 px-2.5 py-1 bg-white border border-gray-200 text-gray-700 font-semibold rounded-md min-w-[56px] text-center">
                               의미
                             </span>
-                            <p className="text-gray-700 pt-0.5 leading-relaxed">{item.hintData.meaning}</p>
+                            <p className="text-gray-700 pt-0.5 leading-relaxed">
+                              {item.hintData.meaning}
+                            </p>
                           </div>
 
                           <div className="flex items-start gap-3 text-xs">
                             <span className="shrink-0 px-2.5 py-1 bg-white border border-gray-200 text-gray-700 font-semibold rounded-md min-w-[56px] text-center">
                               내 영향
                             </span>
-                            <p className="text-gray-700 pt-0.5 leading-relaxed">{item.hintData.myImpact}</p>
+                            <p className="text-gray-700 pt-0.5 leading-relaxed">
+                              {item.hintData.myImpact}
+                            </p>
                           </div>
 
                           <div className="flex items-start gap-3 text-xs">
@@ -994,7 +1020,8 @@ function MeetingAllSummaryTab() {
       <section>
         <h2 className="text-lg font-bold mb-3">한 줄 요약</h2>
         <p className="text-sm text-gray-800 leading-relaxed">
-          온보딩 개선을 이번 분기 핵심 과제로 확정하고, 출시 일정과 QA 리소스 확보 방안을 중심으로 논의했습니다.
+          온보딩 개선을 이번 분기 핵심 과제로 확정하고, 출시 일정과 QA 리소스 확보 방안을 중심으로
+          논의했습니다.
         </p>
       </section>
 
@@ -1006,7 +1033,10 @@ function MeetingAllSummaryTab() {
               <h3 className="text-base font-bold text-gray-900 mb-3">{card.title}</h3>
               <ul className="space-y-2">
                 {card.items.map((item, itemIdx) => (
-                  <li key={itemIdx} className="flex items-start text-xs text-gray-700 leading-relaxed">
+                  <li
+                    key={itemIdx}
+                    className="flex items-start text-xs text-gray-700 leading-relaxed"
+                  >
                     <span className="mr-2 text-gray-400">•</span>
                     <span>{item}</span>
                   </li>
@@ -1032,7 +1062,9 @@ function MeetingAllSummaryTab() {
       <section>
         <div className="flex items-center gap-2 mb-3">
           <h2 className="text-lg font-bold">논의된 방향</h2>
-          <span className="text-xs text-gray-400 font-normal">아직 최종 확정되지 않은 내용입니다.</span>
+          <span className="text-xs text-gray-400 font-normal">
+            아직 최종 확정되지 않은 내용입니다.
+          </span>
         </div>
         <ul className="space-y-2">
           {discussionDirections.map((item, idx) => (
