@@ -1,6 +1,6 @@
 import type { MeetingDetailResponse, MeetingAvatarKey } from '../../contracts/meeting.contracts'
 
-let mockMeetingDetailStore: MeetingDetailResponse = {
+const mockMeetingDetailStore: MeetingDetailResponse = {
   recordId: 'record-1',
   meetingId: 'meeting-1',
   projectId: 'proj-1',
@@ -53,6 +53,7 @@ let mockMeetingDetailStore: MeetingDetailResponse = {
   },
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function fetchMeetingDetail(_meetingId: string): Promise<MeetingDetailResponse> {
   return new Promise((resolve) => {
     setTimeout(() => {
@@ -61,6 +62,7 @@ export async function fetchMeetingDetail(_meetingId: string): Promise<MeetingDet
   })
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function updateMeetingTitle(_meetingId: string, newTitle: string): Promise<boolean> {
   mockMeetingDetailStore.meetingTitle = newTitle
   return true

@@ -295,7 +295,7 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editTitleInput, setEditTitleInput] = useState('')
 
-  // 탭 이동 시에도 데이터 유지를 위한 최상위 State 관리
+  
   const [transcripts, setTranscripts] = useState<TranscriptItem[]>([
     {
       id: 'tr-1',
@@ -465,6 +465,7 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
                   }}
                   onDeleteMeeting={() => {
                     if (confirm('회의를 삭제하시겠습니까?')) {
+                      console.log('회의 삭제 진행') 
                     }
                   }}
                 />
