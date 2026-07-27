@@ -107,3 +107,18 @@ export type CompleteMeetingRequest = Omit<
   CompletedMeetingSummary,
   'recordId' | 'overview' | 'keywords' | 'decisions'
 >
+
+export type PersonalSummary = {
+  roleBadge: string
+  roleSummary: string
+  impacts: string[]
+  actionItems: string[]
+  questions: string[]
+}
+
+export type MeetingDetailResponse = CompletedMeetingSummary & {
+  roleTag: string
+  perspectiveTag: string
+  round: string
+  personalSummary: PersonalSummary
+}
