@@ -295,7 +295,6 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editTitleInput, setEditTitleInput] = useState('')
 
-  
   const [transcripts, setTranscripts] = useState<TranscriptItem[]>([
     {
       id: 'tr-1',
@@ -465,7 +464,7 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
                   }}
                   onDeleteMeeting={() => {
                     if (confirm('회의를 삭제하시겠습니까?')) {
-                      console.log('회의 삭제 진행') 
+                      console.log('회의 삭제 진행')
                     }
                   }}
                 />
