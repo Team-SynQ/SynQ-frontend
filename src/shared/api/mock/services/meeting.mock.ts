@@ -17,7 +17,7 @@ let mockMeetingDetailStore: MeetingDetailResponse = {
   completedAt: '2026-05-11T14:00:00Z',
   durationSeconds: 2700,
   
-  // CompletedMeetingSummary 관련 필수 속성 추가
+ 
   overview: '온보딩 개선을 이번 분기 핵심 과제로 확정하고, 출시 일정과 QA 리소스 확보 방안을 중심으로 논의했습니다.',
   keywords: [
     'MVP 기능 설계',
@@ -53,7 +53,7 @@ let mockMeetingDetailStore: MeetingDetailResponse = {
   },
 }
 
-export async function fetchMeetingDetail(meetingId: string): Promise<MeetingDetailResponse> {
+export async function fetchMeetingDetail(_meetingId: string): Promise<MeetingDetailResponse> {
   return new Promise((resolve) => {
     setTimeout(() => {
       resolve({ ...mockMeetingDetailStore })
@@ -61,7 +61,7 @@ export async function fetchMeetingDetail(meetingId: string): Promise<MeetingDeta
   })
 }
 
-export async function updateMeetingTitle(meetingId: string, newTitle: string): Promise<boolean> {
+export async function updateMeetingTitle(_meetingId: string, newTitle: string): Promise<boolean> {
   mockMeetingDetailStore.meetingTitle = newTitle
   return true
 }
