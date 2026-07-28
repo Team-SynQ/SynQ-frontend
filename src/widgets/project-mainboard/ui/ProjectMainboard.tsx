@@ -1,6 +1,7 @@
 import type { CompletedMeeting } from '../../../entities/meeting'
 import type { ProjectSummary } from '../../../entities/project'
 import type { ProjectMaterialDraft } from '../../../features/project-create'
+import type { MeetingHistoryPresentation } from '../../../features/meeting-processing'
 import type { ProjectInformationDraft } from '../../../features/project-settings'
 import { cn } from '../../../shared/lib/cn'
 
@@ -14,9 +15,11 @@ type ProjectMainboardProps = {
   onDeleteMaterial?: (materialId: string) => Promise<void> | void
   onRenameMaterial?: (materialId: string, nextName: string) => Promise<void> | void
   meetings?: CompletedMeeting[]
+  meetingHistoryPresentation?: MeetingHistoryPresentation
+  meetingProcessingOverlayOpen?: boolean
   meetingHistoryError?: string
   onRetryMeetingHistory?: () => void
-  onOpenMeetingSummary?: (recordId: string) => void
+  onOpenMeetingDetail?: (recordId: string) => void
   onStartMeeting?: () => void
   onLoadProject?: () => Promise<ProjectSummary | void> | ProjectSummary | void
   onUpdateProject?: (draft: ProjectInformationDraft) => Promise<void> | void
@@ -30,9 +33,11 @@ export function ProjectMainboard({
   onDeleteMaterial,
   onRenameMaterial,
   meetings = [],
+  meetingHistoryPresentation,
+  meetingProcessingOverlayOpen,
   meetingHistoryError,
   onRetryMeetingHistory,
-  onOpenMeetingSummary,
+  onOpenMeetingDetail,
   onStartMeeting,
   onLoadProject,
   onUpdateProject,
@@ -51,9 +56,11 @@ export function ProjectMainboard({
           onDeleteMaterial={onDeleteMaterial}
           onRenameMaterial={onRenameMaterial}
           meetings={meetings}
+          meetingHistoryPresentation={meetingHistoryPresentation}
+          meetingProcessingOverlayOpen={meetingProcessingOverlayOpen}
           meetingHistoryError={meetingHistoryError}
           onRetryMeetingHistory={onRetryMeetingHistory}
-          onOpenMeetingSummary={onOpenMeetingSummary}
+          onOpenMeetingDetail={onOpenMeetingDetail}
           onStartMeeting={onStartMeeting}
           onDeleteProject={onDeleteProject}
           onLoadProject={onLoadProject}
