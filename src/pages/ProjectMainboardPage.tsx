@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 
 import { meetingApi, type CompletedMeeting } from '../entities/meeting'
@@ -126,9 +126,14 @@ export function ProjectMainboardPage({
   const projectReferenceFeedbackToast = useTransientVisibility()
   const navigationState = location.state as ProjectNavigationState | null
   const requestedActiveProjectId = navigationState?.activeProjectId
-  const requestedProcessingRecordIdRef = useRef(navigationState?.processingMeetingRecordId)
-  const meetingProcessing = useMeetingProcessingFlow({
-    recordId: requestedProcessingRecordIdRef.current,
+  const [requestedProcessingRecordId] = useState(() => navigationState?.processingMeetingRecordId)
+  const {
+    dismissCompletion,
+    phase: meetingProcessingPhase,
+    processingRecordId,
+    settle: settleMeetingProcessing,
+  } = useMeetingProcessingFlow({
+    recordId: requestedProcessingRecordId,
   })
   const {
     isMounted: isProjectLoadErrorMounted,
@@ -137,13 +142,13 @@ export function ProjectMainboardPage({
   } = useTransientVisibility()
 
   useEffect(() => {
-    if (!requestedProcessingRecordIdRef.current) return
+    if (!requestedProcessingRecordId) return
 
     navigate(location.pathname, {
       replace: true,
       state: { activeProjectId: requestedActiveProjectId } satisfies ProjectNavigationState,
     })
-  }, [location.pathname, navigate, requestedActiveProjectId])
+  }, [location.pathname, navigate, requestedActiveProjectId, requestedProcessingRecordId])
 
   useEffect(() => {
     let isSubscribed = true
@@ -187,10 +192,10 @@ export function ProjectMainboardPage({
           [activeProjectId]: meetings,
         }))
         if (
-          meetingProcessing.processingRecordId &&
-          !meetings.some((meeting) => meeting.recordId === meetingProcessing.processingRecordId)
+          processingRecordId &&
+          !meetings.some((meeting) => meeting.recordId === processingRecordId)
         ) {
-          meetingProcessing.settle()
+          settleMeetingProcessing()
         }
         setMeetingHistoryErrorProjectId((current) =>
           current === activeProjectId ? undefined : current,
@@ -199,7 +204,7 @@ export function ProjectMainboardPage({
       .catch(() => {
         if (!isSubscribed) return
         setMeetingHistoryErrorProjectId(activeProjectId)
-        meetingProcessing.settle()
+        settleMeetingProcessing()
       })
 
     return () => {
@@ -210,8 +215,8 @@ export function ProjectMainboardPage({
     completedMeetingsByProject,
     loadCompletedMeetings,
     meetingHistoryReloadKey,
-    meetingProcessing.processingRecordId,
-    meetingProcessing.settle,
+    processingRecordId,
+    settleMeetingProcessing,
   ])
 
   const handleCreateProject = () => {
@@ -391,18 +396,16 @@ export function ProjectMainboardPage({
     ? (completedMeetingsByProject[activeProjectId] ?? [])
     : []
   const visibleMeetings =
-    meetingProcessing.phase === 'summaryProcessing'
-      ? activeProjectMeetings.filter(
-          (meeting) => meeting.recordId !== meetingProcessing.processingRecordId,
-        )
+    meetingProcessingPhase === 'summaryProcessing'
+      ? activeProjectMeetings.filter((meeting) => meeting.recordId !== processingRecordId)
       : activeProjectMeetings
   const meetingHistoryPresentation: MeetingHistoryPresentation | undefined =
-    meetingProcessing.processingRecordId &&
-    (meetingProcessing.phase === 'historyProcessing' ||
-      meetingProcessing.phase === 'completionVisible')
+    processingRecordId &&
+    (meetingProcessingPhase === 'historyProcessing' ||
+      meetingProcessingPhase === 'completionVisible')
       ? {
-          recordId: meetingProcessing.processingRecordId,
-          status: meetingProcessing.phase === 'historyProcessing' ? 'processing' : 'completed',
+          recordId: processingRecordId,
+          status: meetingProcessingPhase === 'historyProcessing' ? 'processing' : 'completed',
         }
       : undefined
   const successMessage = latestCreatedProjectName
@@ -412,7 +415,7 @@ export function ProjectMainboardPage({
   return (
     <main
       className="flex min-h-screen w-full bg-surface-default"
-      onPointerDownCapture={meetingProcessing.dismissCompletion}
+      onPointerDownCapture={dismissCompletion}
     >
       <ProjectSidebar
         activeProjectId={activeProjectId}
@@ -427,7 +430,7 @@ export function ProjectMainboardPage({
       />
       <ProjectMainboard
         meetingHistoryPresentation={meetingHistoryPresentation}
-        meetingProcessingOverlayOpen={meetingProcessing.phase === 'summaryProcessing'}
+        meetingProcessingOverlayOpen={meetingProcessingPhase === 'summaryProcessing'}
         meetingHistoryError={
           activeProjectId === meetingHistoryErrorProjectId
             ? '회의 기록을 불러오지 못했습니다.'

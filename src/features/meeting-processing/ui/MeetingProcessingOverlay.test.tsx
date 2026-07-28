@@ -8,9 +8,7 @@ describe('meeting processing visuals', () => {
   it('blocks the project view with an accessible loading status only while open', () => {
     const { rerender } = render(<MeetingProcessingOverlay open={false} />)
 
-    expect(
-      screen.queryByRole('status', { name: '회의 불러오는 중' }),
-    ).not.toBeInTheDocument()
+    expect(screen.queryByRole('status', { name: '회의 불러오는 중' })).not.toBeInTheDocument()
 
     rerender(<MeetingProcessingOverlay open />)
 

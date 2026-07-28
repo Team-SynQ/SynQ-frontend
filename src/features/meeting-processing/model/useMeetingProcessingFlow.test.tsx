@@ -70,9 +70,7 @@ describe('useMeetingProcessingFlow', () => {
     expect(result.current.phase).toBe('summaryProcessing')
 
     act(() => {
-      vi.advanceTimersByTime(
-        MEETING_SUMMARY_PROCESSING_MS + MEETING_HISTORY_PROCESSING_MS,
-      )
+      vi.advanceTimersByTime(MEETING_SUMMARY_PROCESSING_MS + MEETING_HISTORY_PROCESSING_MS)
     })
     expect(result.current.phase).toBe('completionVisible')
 
@@ -83,9 +81,7 @@ describe('useMeetingProcessingFlow', () => {
   })
 
   it('settles an active flow immediately when the surrounding page cannot continue it', () => {
-    const { result } = renderHook(() =>
-      useMeetingProcessingFlow({ recordId: 'missing-record' }),
-    )
+    const { result } = renderHook(() => useMeetingProcessingFlow({ recordId: 'missing-record' }))
 
     act(() => {
       result.current.settle()

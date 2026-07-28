@@ -394,7 +394,6 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
 
   useEffect(() => {
     let active = true
-    setMeetingData(null)
 
     void fetchMeetingDetail(meetingRecordId).then((data) => {
       if (!active) return

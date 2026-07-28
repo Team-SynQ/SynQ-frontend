@@ -26,8 +26,9 @@ export function useMeetingProcessingFlow(
   params: UseMeetingProcessingFlowParams,
 ): MeetingProcessingFlow {
   const { recordId } = params
+  const [processingRecordId] = useState(recordId)
   const [phase, setPhase] = useState<MeetingProcessingPhase>(
-    recordId ? 'summaryProcessing' : 'idle',
+    processingRecordId ? 'summaryProcessing' : 'idle',
   )
   const summaryTimerRef = useRef<number | null>(null)
   const historyTimerRef = useRef<number | null>(null)
@@ -46,12 +47,8 @@ export function useMeetingProcessingFlow(
   useEffect(() => {
     clearTimers()
 
-    if (!recordId) {
-      setPhase('idle')
-      return clearTimers
-    }
+    if (!processingRecordId) return clearTimers
 
-    setPhase('summaryProcessing')
     summaryTimerRef.current = window.setTimeout(() => {
       summaryTimerRef.current = null
       setPhase('historyProcessing')
@@ -62,7 +59,7 @@ export function useMeetingProcessingFlow(
     }, MEETING_SUMMARY_PROCESSING_MS)
 
     return clearTimers
-  }, [clearTimers, recordId])
+  }, [clearTimers, processingRecordId])
 
   const dismissCompletion = useCallback(() => {
     setPhase((current) => (current === 'completionVisible' ? 'settled' : current))
@@ -75,7 +72,7 @@ export function useMeetingProcessingFlow(
 
   return {
     phase,
-    processingRecordId: recordId,
+    processingRecordId,
     dismissCompletion,
     settle,
   }
