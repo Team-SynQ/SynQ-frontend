@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 
 import type { CompletedMeeting, LiveMeetingProjectContext } from '../entities/meeting'
 import type { AiChatDisplayMode } from '../features/meeting-ai-chat'
+import type { ProjectNavigationState } from '../features/meeting-processing'
 import {
   MeetingExitDialog,
   MeetingMoreMenu,
@@ -95,6 +96,18 @@ export function MeetingPage() {
     })
   }
 
+  const returnToProjectWithCompletedMeeting = () => {
+    if (!completedMeeting) return
+
+    navigate('/projects', {
+      replace: true,
+      state: {
+        activeProjectId: completedMeeting.projectId,
+        processingMeetingRecordId: completedMeeting.recordId,
+      } satisfies ProjectNavigationState,
+    })
+  }
+
   const saveMeeting = async () => {
     setActiveControl('saving')
     try {
@@ -182,7 +195,7 @@ export function MeetingPage() {
       {activeControl === 'save-success' && completedMeeting ? (
         <MeetingSaveDialog
           meetingTitle={completedMeeting.meetingTitle}
-          onClose={returnToProject}
+          onClose={returnToProjectWithCompletedMeeting}
           open
           projectTitle={completedMeeting.projectTitle}
           state="success"
