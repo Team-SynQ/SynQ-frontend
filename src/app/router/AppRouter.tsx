@@ -3,7 +3,6 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import LoginPage from '../../pages/LoginPage'
 import { MeetingDetailPage } from '../../pages/MeetingDetailPage'
 import { MeetingPage } from '../../pages/MeetingPage'
-import { MeetingSummaryPlaceholderPage } from '../../pages/MeetingSummaryPlaceholderPage'
 import { MeetingStartPage } from '../../pages/MeetingStartPage'
 import { MeetingTutorialPage } from '../../pages/MeetingTutorialPage'
 import { ProjectMainboardPage } from '../../pages/ProjectMainboardPage'
@@ -32,10 +31,6 @@ export function AppRoutes() {
       <Route element={<MeetingStartPage />} path="/meetings/:meetingId/start" />
       <Route element={<MeetingTutorialPage />} path="/meetings/:meetingId/tutorial" />
       <Route element={<MeetingPage />} path="/meetings/:meetingId/live" />
-      <Route
-        element={<MeetingSummaryPlaceholderPage />}
-        path="/meetings/:meetingRecordId/summary"
-      />
       <Route
         element={<MeetingDetailPage user={projectMockActorFixture} />}
         path="/meetings/:meetingRecordId/detail"

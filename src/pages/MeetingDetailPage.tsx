@@ -1,4 +1,5 @@
 import React, { useEffect, useState, type Ref } from 'react'
+import { useParams } from 'react-router-dom'
 import { Button, Modal, ChatInput } from '../shared/ui'
 import { ProjectSidebar, type ProjectSidebarUser } from '../widgets/project-sidebar'
 import { fetchMeetingDetail, updateMeetingTitle } from '../shared/api/mock/services/meeting.mock'
@@ -289,6 +290,7 @@ interface MeetingDetailPageProps {
 }
 
 export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
+  const { meetingRecordId = '' } = useParams()
   const [activeTab, setActiveTab] = useState<'personal' | 'allSummary' | 'allRecord'>('allRecord')
   const [meetingData, setMeetingData] = useState<MeetingDetailResponse | null>(null)
 
@@ -391,13 +393,19 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
   ]
 
   useEffect(() => {
-    fetchMeetingDetail('meeting-1').then((data) => {
+    let active = true
+    setMeetingData(null)
+
+    void fetchMeetingDetail(meetingRecordId).then((data) => {
+      if (!active) return
       setMeetingData(data)
-      if (data) {
-        setEditTitleInput(data.meetingTitle)
-      }
+      setEditTitleInput(data.meetingTitle)
     })
-  }, [])
+
+    return () => {
+      active = false
+    }
+  }, [meetingRecordId])
 
   if (!meetingData) {
     return <div className="flex h-screen items-center justify-center">로딩 중...</div>
