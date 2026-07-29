@@ -16,7 +16,11 @@ import { ProjectMainboardPage } from './ProjectMainboardPage'
 function NavigationDestination() {
   const location = useLocation()
 
-  return <p>이동 완료 {JSON.stringify(location.state)}</p>
+  return (
+    <p>
+      이동 완료 {location.pathname} {JSON.stringify(location.state)}
+    </p>
+  )
 }
 
 function renderProjectMainboardPage(
@@ -70,6 +74,7 @@ const previousMeeting: CompletedMeeting = {
 
 describe('ProjectMainboardPage', () => {
   afterEach(() => {
+    vi.restoreAllMocks()
     vi.useRealTimers()
   })
 
@@ -86,7 +91,9 @@ describe('ProjectMainboardPage', () => {
     expect(loadCompletedMeetings).toHaveBeenCalledWith('project-1')
 
     await user.click(screen.getByRole('button', { name: '자세히 보기' }))
-    expect(await screen.findByText('이동 완료 null')).toBeInTheDocument()
+    expect(
+      await screen.findByText('이동 완료 /meetings/meeting-record-1/detail null'),
+    ).toBeInTheDocument()
   })
 
   it('prefers the project selected by return navigation state', async () => {
@@ -156,6 +163,8 @@ describe('ProjectMainboardPage', () => {
   })
 
   it('ends the processing overlay when meeting history loading fails', async () => {
+    vi.useFakeTimers()
+
     renderProjectMainboardPage(
       {
         loadProjects: () => Promise.resolve([projectOne]),
@@ -170,12 +179,27 @@ describe('ProjectMainboardPage', () => {
       },
     )
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('회의 기록을 불러오지 못했습니다.')
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(screen.getByRole('alert')).toHaveTextContent('회의 기록을 불러오지 못했습니다.')
     expect(screen.queryByRole('status', { name: '회의 불러오는 중' })).not.toBeInTheDocument()
+
+    act(() => {
+      vi.advanceTimersByTime(MEETING_SUMMARY_PROCESSING_MS + MEETING_HISTORY_PROCESSING_MS)
+    })
+
+    expect(screen.queryByRole('status', { name: '회의 기록 정리 중' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('status', { name: '회의 기록 정리 완료' })).not.toBeInTheDocument()
   })
 
   it('cancels meeting processing when initial project loading fails', async () => {
     vi.useFakeTimers()
+    const setTimeoutSpy = vi.spyOn(window, 'setTimeout')
     const clearTimeoutSpy = vi.spyOn(window, 'clearTimeout')
 
     renderProjectMainboardPage(
@@ -197,8 +221,13 @@ describe('ProjectMainboardPage', () => {
       await Promise.resolve()
     })
 
-    expect(clearTimeoutSpy).toHaveBeenCalled()
-    clearTimeoutSpy.mockRestore()
+    const summaryTimerCallIndex = setTimeoutSpy.mock.calls.findIndex(
+      ([, delay]) => delay === MEETING_SUMMARY_PROCESSING_MS,
+    )
+    expect(summaryTimerCallIndex).toBeGreaterThanOrEqual(0)
+
+    const summaryTimerId = setTimeoutSpy.mock.results[summaryTimerCallIndex]?.value
+    expect(clearTimeoutSpy).toHaveBeenCalledWith(summaryTimerId)
   })
 
   it('retries meeting history loading without hiding the project', async () => {
