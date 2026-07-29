@@ -4,15 +4,21 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { meetingApi } from '../entities/meeting'
+import type { ProjectNavigationState } from '../features/meeting-processing'
 import { resetLiveMeetingMockDb } from '../shared/api/mock/db/liveMeeting.mockDb'
 import { liveMeetingFixture } from '../shared/api/mock/fixtures/liveMeeting.fixture'
 import { MeetingPage } from './MeetingPage'
 
 function ProjectDestination() {
   const location = useLocation()
-  const state = location.state as { activeProjectId?: string } | null
+  const state = location.state as ProjectNavigationState | null
 
-  return <p>프로젝트 메인 {state?.activeProjectId}</p>
+  return (
+    <div>
+      <p>프로젝트 메인 {state?.activeProjectId}</p>
+      <p>처리 회의 {state?.processingMeetingRecordId ?? '없음'}</p>
+    </div>
+  )
 }
 
 async function renderMeetingPage(
@@ -123,6 +129,7 @@ describe('MeetingPage controls', () => {
     await user.click(within(dialog).getByRole('button', { name: '닫기' }))
 
     expect(await screen.findByText('프로젝트 메인 project-1')).toBeInTheDocument()
+    expect(screen.getByText('처리 회의 meeting-record-1')).toBeInTheDocument()
   })
 
   it('returns a non-host participant to the project without completing the meeting', async () => {
@@ -146,6 +153,7 @@ describe('MeetingPage controls', () => {
 
     expect(completeMeeting).not.toHaveBeenCalled()
     expect(await screen.findByText('프로젝트 메인 project-1')).toBeInTheDocument()
+    expect(screen.getByText('처리 회의 없음')).toBeInTheDocument()
   })
 
   it('shows a retry control when completed meeting storage fails', async () => {

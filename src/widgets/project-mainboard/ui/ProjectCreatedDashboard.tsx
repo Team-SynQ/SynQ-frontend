@@ -21,6 +21,10 @@ import {
   ProjectSettingsMenu,
   type ProjectInformationDraft,
 } from '../../../features/project-settings'
+import {
+  MeetingProcessingOverlay,
+  type MeetingHistoryPresentation,
+} from '../../../features/meeting-processing'
 import burgerIcon from '../../../shared/assets/icons/burger.svg'
 import fileIcon from '../assets/file.svg'
 import folderIcon from '../assets/folder.svg'
@@ -37,9 +41,11 @@ type ProjectCreatedDashboardProps = {
   onDeleteMaterial?: (materialId: string) => Promise<void> | void
   onRenameMaterial?: (materialId: string, nextName: string) => Promise<void> | void
   meetings?: CompletedMeeting[]
+  meetingHistoryPresentation?: MeetingHistoryPresentation
+  meetingProcessingOverlayOpen?: boolean
   meetingHistoryError?: string
   onRetryMeetingHistory?: () => void
-  onOpenMeetingSummary?: (recordId: string) => void
+  onOpenMeetingDetail?: (recordId: string) => void
   onStartMeeting?: () => void
   onLoadProject?: () => Promise<ProjectSummary | void> | ProjectSummary | void
   onUpdateProject?: (draft: ProjectInformationDraft) => Promise<void> | void
@@ -58,9 +64,11 @@ export function ProjectCreatedDashboard({
   onDeleteMaterial,
   onRenameMaterial,
   meetings = [],
+  meetingHistoryPresentation,
+  meetingProcessingOverlayOpen = false,
   meetingHistoryError,
   onRetryMeetingHistory,
-  onOpenMeetingSummary,
+  onOpenMeetingDetail,
   onStartMeeting,
   onLoadProject,
   onUpdateProject,
@@ -69,7 +77,7 @@ export function ProjectCreatedDashboard({
   const navigate = useNavigate()
 
   return (
-    <div className="flex w-full flex-col gap-l">
+    <div aria-busy={meetingProcessingOverlayOpen} className="flex w-full flex-col gap-l">
       <header className="flex items-start gap-s">
         <div className="flex min-w-0 flex-1 flex-col gap-xs">
           <h1 className="m-0 truncate typo-heading text-fg-primary">{project.name}</h1>
@@ -121,7 +129,7 @@ export function ProjectCreatedDashboard({
         <div className="grid min-h-[300px] grid-cols-[minmax(0,1fr)_472px] gap-s max-[1200px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <ProjectLatestMeetingSummary
             meeting={meetings[0]}
-            onOpenMeetingSummary={onOpenMeetingSummary}
+            onOpenMeetingSummary={onOpenMeetingDetail}
           />
 
           <ProjectReferenceMaterials
@@ -146,8 +154,13 @@ export function ProjectCreatedDashboard({
           </div>
         </section>
       ) : (
-        <ProjectMeetingHistory meetings={meetings} />
+        <ProjectMeetingHistory
+          meetings={meetings}
+          onOpenMeetingDetail={onOpenMeetingDetail}
+          presentation={meetingHistoryPresentation}
+        />
       )}
+      <MeetingProcessingOverlay open={meetingProcessingOverlayOpen} />
     </div>
   )
 }

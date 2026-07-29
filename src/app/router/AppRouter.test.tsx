@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import App from '../../App'
+import * as meetingMockService from '../../shared/api/mock/services/meeting.mock'
 import { projectMockActorFixture } from '../../shared/api/mock/fixtures/projects.fixture'
 
 function renderAppAt(path: string) {
@@ -11,6 +12,7 @@ function renderAppAt(path: string) {
 }
 
 afterEach(() => {
+  vi.restoreAllMocks()
   vi.useRealTimers()
   window.history.pushState({}, '', '/')
 })
@@ -106,16 +108,18 @@ describe('AppRouter', () => {
     expect(window.location.pathname).toBe('/meetings/demo/live')
   })
 
-  it('opens the meeting summary placeholder and returns to projects', async () => {
-    const user = userEvent.setup()
-    renderAppAt('/meetings/meeting-record-1/summary')
+  it('opens the implemented meeting detail using the route record id', async () => {
+    const fetchMeetingDetail = vi.spyOn(meetingMockService, 'fetchMeetingDetail')
 
-    expect(screen.getByRole('heading', { name: '회의 정리' })).toBeInTheDocument()
-    expect(screen.getByText('회의 기록 상세 화면은 준비 중입니다.')).toBeInTheDocument()
+    renderAppAt('/meetings/meeting-record-999/detail')
 
-    await user.click(screen.getByRole('button', { name: '프로젝트로 돌아가기' }))
-
-    expect(window.location.pathname).toBe('/projects')
+    expect(
+      await screen.findByRole('heading', {
+        name: '신규 온보딩 개선 및 출시 일정 논의',
+      }),
+    ).toBeInTheDocument()
+    expect(fetchMeetingDetail).toHaveBeenCalledWith('meeting-record-999')
+    expect(window.location.pathname).toBe('/meetings/meeting-record-999/detail')
   })
 
   it('allows direct access to a setup step without stored selections', () => {

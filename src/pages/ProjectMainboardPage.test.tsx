@@ -1,18 +1,26 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ComponentProps } from 'react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { CompletedMeeting } from '../entities/meeting'
 import type { ProjectSummary } from '../entities/project'
+import {
+  MEETING_HISTORY_PROCESSING_MS,
+  MEETING_SUMMARY_PROCESSING_MS,
+} from '../features/meeting-processing'
 import type { ProjectCreateDraft } from '../features/project-create'
 import { ProjectMainboardPage } from './ProjectMainboardPage'
 
 function NavigationDestination() {
   const location = useLocation()
 
-  return <p>이동 완료 {JSON.stringify(location.state)}</p>
+  return (
+    <p>
+      이동 완료 {location.pathname} {JSON.stringify(location.state)}
+    </p>
+  )
 }
 
 function renderProjectMainboardPage(
@@ -24,7 +32,7 @@ function renderProjectMainboardPage(
       <Routes>
         <Route element={<ProjectMainboardPage {...props} />} path="/projects" />
         <Route element={<NavigationDestination />} path="/meetings/demo/tutorial" />
-        <Route element={<NavigationDestination />} path="/meetings/:meetingRecordId/summary" />
+        <Route element={<NavigationDestination />} path="/meetings/:meetingRecordId/detail" />
       </Routes>
     </MemoryRouter>,
   )
@@ -57,7 +65,19 @@ const completedMeeting: CompletedMeeting = {
   decisions: ['온보딩 개선을 우선순위로 확정'],
 }
 
+const previousMeeting: CompletedMeeting = {
+  ...completedMeeting,
+  recordId: 'meeting-record-previous',
+  meetingTitle: '이전 회의',
+  completedAt: new Date(2026, 6, 26, 12, 0).toISOString(),
+}
+
 describe('ProjectMainboardPage', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.useRealTimers()
+  })
+
   it('loads the active project meeting history and opens the latest summary', async () => {
     const user = userEvent.setup()
     const loadCompletedMeetings = vi.fn(() => Promise.resolve([completedMeeting]))
@@ -71,7 +91,9 @@ describe('ProjectMainboardPage', () => {
     expect(loadCompletedMeetings).toHaveBeenCalledWith('project-1')
 
     await user.click(screen.getByRole('button', { name: '자세히 보기' }))
-    expect(await screen.findByText('이동 완료 null')).toBeInTheDocument()
+    expect(
+      await screen.findByText('이동 완료 /meetings/meeting-record-1/detail null'),
+    ).toBeInTheDocument()
   })
 
   it('prefers the project selected by return navigation state', async () => {
@@ -91,6 +113,121 @@ describe('ProjectMainboardPage', () => {
 
     expect(await screen.findByRole('heading', { name: '두 번째 프로젝트' })).toBeInTheDocument()
     await waitFor(() => expect(loadCompletedMeetings).toHaveBeenCalledWith('project-2'))
+  })
+
+  it('reveals a completed meeting through the summary and history processing phases', async () => {
+    vi.useFakeTimers()
+
+    renderProjectMainboardPage(
+      {
+        loadProjects: () => Promise.resolve([projectOne]),
+        loadCompletedMeetings: () => Promise.resolve([completedMeeting, previousMeeting]),
+      },
+      {
+        pathname: '/projects',
+        state: {
+          activeProjectId: 'project-1',
+          processingMeetingRecordId: 'meeting-record-1',
+        },
+      },
+    )
+
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(screen.getByRole('status', { name: '회의 불러오는 중' })).toBeInTheDocument()
+    expect(screen.queryByText('온보딩 개선 회의')).not.toBeInTheDocument()
+    expect(screen.getAllByText('이전 회의')).toHaveLength(2)
+
+    act(() => {
+      vi.advanceTimersByTime(MEETING_SUMMARY_PROCESSING_MS)
+    })
+
+    expect(screen.queryByRole('status', { name: '회의 불러오는 중' })).not.toBeInTheDocument()
+    expect(screen.getAllByText('온보딩 개선 회의')).toHaveLength(2)
+    expect(screen.getByRole('status', { name: '회의 기록 정리 중' })).toBeInTheDocument()
+
+    act(() => {
+      vi.advanceTimersByTime(MEETING_HISTORY_PROCESSING_MS)
+    })
+
+    expect(screen.getByRole('status', { name: '회의 기록 정리 완료' })).toBeInTheDocument()
+
+    fireEvent.pointerDown(screen.getByRole('main'))
+
+    expect(screen.queryByRole('status', { name: '회의 기록 정리 완료' })).not.toBeInTheDocument()
+    expect(screen.getAllByText('온보딩 개선 회의')).toHaveLength(2)
+  })
+
+  it('ends the processing overlay when meeting history loading fails', async () => {
+    vi.useFakeTimers()
+
+    renderProjectMainboardPage(
+      {
+        loadProjects: () => Promise.resolve([projectOne]),
+        loadCompletedMeetings: () => Promise.reject(new Error('meeting load failed')),
+      },
+      {
+        pathname: '/projects',
+        state: {
+          activeProjectId: 'project-1',
+          processingMeetingRecordId: 'meeting-record-1',
+        },
+      },
+    )
+
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(screen.getByRole('alert')).toHaveTextContent('회의 기록을 불러오지 못했습니다.')
+    expect(screen.queryByRole('status', { name: '회의 불러오는 중' })).not.toBeInTheDocument()
+
+    act(() => {
+      vi.advanceTimersByTime(MEETING_SUMMARY_PROCESSING_MS + MEETING_HISTORY_PROCESSING_MS)
+    })
+
+    expect(screen.queryByRole('status', { name: '회의 기록 정리 중' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('status', { name: '회의 기록 정리 완료' })).not.toBeInTheDocument()
+  })
+
+  it('cancels meeting processing when initial project loading fails', async () => {
+    vi.useFakeTimers()
+    const setTimeoutSpy = vi.spyOn(window, 'setTimeout')
+    const clearTimeoutSpy = vi.spyOn(window, 'clearTimeout')
+
+    renderProjectMainboardPage(
+      {
+        loadProjects: () => Promise.reject(new Error('project load failed')),
+      },
+      {
+        pathname: '/projects',
+        state: {
+          activeProjectId: 'project-1',
+          processingMeetingRecordId: 'meeting-record-1',
+        },
+      },
+    )
+
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    const summaryTimerCallIndex = setTimeoutSpy.mock.calls.findIndex(
+      ([, delay]) => delay === MEETING_SUMMARY_PROCESSING_MS,
+    )
+    expect(summaryTimerCallIndex).toBeGreaterThanOrEqual(0)
+
+    const summaryTimerId = setTimeoutSpy.mock.results[summaryTimerCallIndex]?.value
+    expect(clearTimeoutSpy).toHaveBeenCalledWith(summaryTimerId)
   })
 
   it('retries meeting history loading without hiding the project', async () => {

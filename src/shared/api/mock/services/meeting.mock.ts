@@ -53,8 +53,9 @@ const mockMeetingDetailStore: MeetingDetailResponse = {
   },
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function fetchMeetingDetail(_meetingId: string): Promise<MeetingDetailResponse> {
+export async function fetchMeetingDetail(meetingRecordId: string): Promise<MeetingDetailResponse> {
+  void meetingRecordId
+
   return new Promise((resolve) => {
     setTimeout(() => {
       resolve({ ...mockMeetingDetailStore })
@@ -62,8 +63,11 @@ export async function fetchMeetingDetail(_meetingId: string): Promise<MeetingDet
   })
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function updateMeetingTitle(_meetingId: string, newTitle: string): Promise<boolean> {
+export async function updateMeetingTitle(
+  meetingRecordId: string,
+  newTitle: string,
+): Promise<boolean> {
+  void meetingRecordId
   mockMeetingDetailStore.meetingTitle = newTitle
   return true
 }

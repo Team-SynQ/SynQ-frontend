@@ -15,6 +15,11 @@ import {
   type ProjectCreateDraft,
   type ProjectMaterialDraft,
 } from '../features/project-create'
+import {
+  useMeetingProcessingFlow,
+  type MeetingHistoryPresentation,
+  type ProjectNavigationState,
+} from '../features/meeting-processing'
 import type { ProjectInformationDraft } from '../features/project-settings'
 import { useTransientVisibility } from '../shared/lib/useTransientVisibility'
 import { Toast } from '../shared/ui'
@@ -119,13 +124,31 @@ export function ProjectMainboardPage({
     useState<ProjectReferenceFeedback>()
   const creationSuccessToast = useTransientVisibility()
   const projectReferenceFeedbackToast = useTransientVisibility()
-  const requestedActiveProjectId = (location.state as { activeProjectId?: string } | null)
-    ?.activeProjectId
+  const navigationState = location.state as ProjectNavigationState | null
+  const requestedActiveProjectId = navigationState?.activeProjectId
+  const [requestedProcessingRecordId] = useState(() => navigationState?.processingMeetingRecordId)
+  const {
+    dismissCompletion,
+    phase: meetingProcessingPhase,
+    processingRecordId,
+    settle: settleMeetingProcessing,
+  } = useMeetingProcessingFlow({
+    recordId: requestedProcessingRecordId,
+  })
   const {
     isMounted: isProjectLoadErrorMounted,
     isVisible: isProjectLoadErrorVisible,
     show: showProjectLoadError,
   } = useTransientVisibility()
+
+  useEffect(() => {
+    if (!requestedProcessingRecordId) return
+
+    navigate(location.pathname, {
+      replace: true,
+      state: { activeProjectId: requestedActiveProjectId } satisfies ProjectNavigationState,
+    })
+  }, [location.pathname, navigate, requestedActiveProjectId, requestedProcessingRecordId])
 
   useEffect(() => {
     let isSubscribed = true
@@ -149,13 +172,15 @@ export function ProjectMainboardPage({
         )
       })
       .catch(() => {
-        if (isSubscribed) showProjectLoadError()
+        if (!isSubscribed) return
+        showProjectLoadError()
+        settleMeetingProcessing()
       })
 
     return () => {
       isSubscribed = false
     }
-  }, [loadProjects, requestedActiveProjectId, showProjectLoadError])
+  }, [loadProjects, requestedActiveProjectId, settleMeetingProcessing, showProjectLoadError])
 
   useEffect(() => {
     if (!activeProjectId || activeProjectId in completedMeetingsByProject) return
@@ -168,18 +193,33 @@ export function ProjectMainboardPage({
           ...current,
           [activeProjectId]: meetings,
         }))
+        if (
+          processingRecordId &&
+          !meetings.some((meeting) => meeting.recordId === processingRecordId)
+        ) {
+          settleMeetingProcessing()
+        }
         setMeetingHistoryErrorProjectId((current) =>
           current === activeProjectId ? undefined : current,
         )
       })
       .catch(() => {
-        if (isSubscribed) setMeetingHistoryErrorProjectId(activeProjectId)
+        if (!isSubscribed) return
+        setMeetingHistoryErrorProjectId(activeProjectId)
+        settleMeetingProcessing()
       })
 
     return () => {
       isSubscribed = false
     }
-  }, [activeProjectId, completedMeetingsByProject, loadCompletedMeetings, meetingHistoryReloadKey])
+  }, [
+    activeProjectId,
+    completedMeetingsByProject,
+    loadCompletedMeetings,
+    meetingHistoryReloadKey,
+    processingRecordId,
+    settleMeetingProcessing,
+  ])
 
   const handleCreateProject = () => {
     setIsCreateModalOpen(true)
@@ -354,12 +394,31 @@ export function ProjectMainboardPage({
   }
 
   const activeProject = projects.find((project) => project.id === activeProjectId)
+  const activeProjectMeetings = activeProjectId
+    ? (completedMeetingsByProject[activeProjectId] ?? [])
+    : []
+  const visibleMeetings =
+    meetingProcessingPhase === 'summaryProcessing'
+      ? activeProjectMeetings.filter((meeting) => meeting.recordId !== processingRecordId)
+      : activeProjectMeetings
+  const meetingHistoryPresentation: MeetingHistoryPresentation | undefined =
+    processingRecordId &&
+    (meetingProcessingPhase === 'historyProcessing' ||
+      meetingProcessingPhase === 'completionVisible')
+      ? {
+          recordId: processingRecordId,
+          status: meetingProcessingPhase === 'historyProcessing' ? 'processing' : 'completed',
+        }
+      : undefined
   const successMessage = latestCreatedProjectName
     ? getProjectCreationSuccessMessage(latestCreatedProjectName)
     : null
 
   return (
-    <main className="flex min-h-screen w-full bg-surface-default">
+    <main
+      className="flex min-h-screen w-full bg-surface-default"
+      onPointerDownCapture={dismissCompletion}
+    >
       <ProjectSidebar
         activeProjectId={activeProjectId}
         onAddProject={handleAddProject}
@@ -372,20 +431,22 @@ export function ProjectMainboardPage({
         user={user}
       />
       <ProjectMainboard
+        meetingHistoryPresentation={meetingHistoryPresentation}
+        meetingProcessingOverlayOpen={meetingProcessingPhase === 'summaryProcessing'}
         meetingHistoryError={
           activeProjectId === meetingHistoryErrorProjectId
             ? '회의 기록을 불러오지 못했습니다.'
             : undefined
         }
-        meetings={activeProjectId ? completedMeetingsByProject[activeProjectId] : undefined}
+        meetings={visibleMeetings}
         onAddMaterials={handleAddMaterials}
         onCreateProject={handleCreateProject}
         onDeleteProject={handleDeleteProject}
         onLoadProject={handleLoadProjectInformation}
         onDeleteMaterial={handleDeleteMaterial}
         onRenameMaterial={handleRenameMaterial}
-        onOpenMeetingSummary={(recordId) =>
-          navigate(`/meetings/${encodeURIComponent(recordId)}/summary`)
+        onOpenMeetingDetail={(recordId) =>
+          navigate(`/meetings/${encodeURIComponent(recordId)}/detail`)
         }
         onRetryMeetingHistory={() => {
           setMeetingHistoryErrorProjectId(undefined)

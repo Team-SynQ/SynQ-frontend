@@ -75,4 +75,58 @@ describe('project meeting dashboard', () => {
     expect(within(rows[0]!).getByText('26.07.27')).toBeInTheDocument()
     expect(within(rows[0]!).getByText('윤금서')).toBeInTheDocument()
   })
+
+  it('shows processing and completion status only on the matching meeting row', () => {
+    const { rerender } = render(
+      <ProjectMeetingHistory
+        meetings={meetings}
+        presentation={{
+          recordId: 'meeting-record-2',
+          status: 'processing',
+        }}
+      />,
+    )
+
+    let rows = screen.getAllByRole('listitem')
+    expect(within(rows[0]!).getByRole('status', { name: '회의 기록 정리 중' })).toBeInTheDocument()
+    expect(
+      within(rows[1]!).queryByRole('status', { name: '회의 기록 정리 중' }),
+    ).not.toBeInTheDocument()
+
+    rerender(
+      <ProjectMeetingHistory
+        meetings={meetings}
+        presentation={{
+          recordId: 'meeting-record-2',
+          status: 'completed',
+        }}
+      />,
+    )
+
+    rows = screen.getAllByRole('listitem')
+    expect(
+      within(rows[0]!).getByRole('status', { name: '회의 기록 정리 완료' }),
+    ).toBeInTheDocument()
+    expect(
+      within(rows[1]!).queryByRole('status', { name: '회의 기록 정리 완료' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('opens a meeting from its content but not from the more button', async () => {
+    const user = userEvent.setup()
+    const onOpenMeetingDetail = vi.fn()
+
+    render(<ProjectMeetingHistory meetings={meetings} onOpenMeetingDetail={onOpenMeetingDetail} />)
+
+    await user.click(
+      screen.getByRole('button', {
+        name: '두 번째 회의 회의 기록 열기',
+      }),
+    )
+    expect(onOpenMeetingDetail).toHaveBeenCalledWith('meeting-record-2')
+
+    onOpenMeetingDetail.mockClear()
+    await user.click(screen.getByRole('button', { name: '두 번째 회의 더보기' }))
+    expect(onOpenMeetingDetail).not.toHaveBeenCalled()
+  })
 })
