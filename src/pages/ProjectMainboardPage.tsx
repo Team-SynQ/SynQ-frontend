@@ -172,13 +172,15 @@ export function ProjectMainboardPage({
         )
       })
       .catch(() => {
-        if (isSubscribed) showProjectLoadError()
+        if (!isSubscribed) return
+        showProjectLoadError()
+        settleMeetingProcessing()
       })
 
     return () => {
       isSubscribed = false
     }
-  }, [loadProjects, requestedActiveProjectId, showProjectLoadError])
+  }, [loadProjects, requestedActiveProjectId, settleMeetingProcessing, showProjectLoadError])
 
   useEffect(() => {
     if (!activeProjectId || activeProjectId in completedMeetingsByProject) return

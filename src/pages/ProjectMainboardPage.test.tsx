@@ -174,6 +174,33 @@ describe('ProjectMainboardPage', () => {
     expect(screen.queryByRole('status', { name: '회의 불러오는 중' })).not.toBeInTheDocument()
   })
 
+  it('cancels meeting processing when initial project loading fails', async () => {
+    vi.useFakeTimers()
+    const clearTimeoutSpy = vi.spyOn(window, 'clearTimeout')
+
+    renderProjectMainboardPage(
+      {
+        loadProjects: () => Promise.reject(new Error('project load failed')),
+      },
+      {
+        pathname: '/projects',
+        state: {
+          activeProjectId: 'project-1',
+          processingMeetingRecordId: 'meeting-record-1',
+        },
+      },
+    )
+
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(clearTimeoutSpy).toHaveBeenCalled()
+    clearTimeoutSpy.mockRestore()
+  })
+
   it('retries meeting history loading without hiding the project', async () => {
     const user = userEvent.setup()
     const loadCompletedMeetings = vi
