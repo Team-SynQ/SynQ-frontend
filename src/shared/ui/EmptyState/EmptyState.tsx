@@ -19,14 +19,33 @@ const defaultIcon = (
       strokeLinejoin="round"
       strokeWidth="1.5"
     />
-    <path d="M14.25 4.75V8.5H18" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
-    <path d="M9.75 13h5.5M9.75 16h3.5" stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" />
+    <path
+      d="M14.25 4.75V8.5H18"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.5"
+    />
+    <path
+      d="M9.75 13h5.5M9.75 16h3.5"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeWidth="1.5"
+    />
   </svg>
 )
 
-export function EmptyState({ title, description, action, icon = defaultIcon, className }: EmptyStateProps) {
+export function EmptyState({
+  title,
+  description,
+  action,
+  icon = defaultIcon,
+  className,
+}: EmptyStateProps) {
   return (
-    <section className={cn('flex flex-col items-center justify-center gap-s py-xl text-center', className)}>
+    <section
+      className={cn('flex flex-col items-center justify-center gap-s py-xl text-center', className)}
+    >
       <div className="flex size-[48px] items-center justify-center rounded-full bg-surface-muted text-brand-primary">
         {icon}
       </div>

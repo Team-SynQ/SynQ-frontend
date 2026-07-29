@@ -1,12 +1,15 @@
+import type { Ref } from 'react'
+
 import { Button, ChatInput } from '../../../shared/ui'
 import type { AiChatActions, AiChatViewModel } from '../model/aiChat.types'
 
 export type AiChatComposerProps = {
   model: AiChatViewModel
   actions: AiChatActions
+  inputRef?: Ref<HTMLInputElement>
 }
 
-export function AiChatComposer({ model, actions }: AiChatComposerProps) {
+export function AiChatComposer({ model, actions, inputRef }: AiChatComposerProps) {
   const sendDisabled = model.draft.trim().length === 0 || model.isSending
 
   return (
@@ -24,6 +27,12 @@ export function AiChatComposer({ model, actions }: AiChatComposerProps) {
         ))}
       </div>
 
+      {model.sendError ? (
+        <p className="m-0 typo-caption-01 text-status-negative" role="alert">
+          {model.sendError}
+        </p>
+      ) : null}
+
       <ChatInput
         aria-label="AI Chat 질문"
         disabled={model.isSending}
@@ -31,6 +40,7 @@ export function AiChatComposer({ model, actions }: AiChatComposerProps) {
         onSend={actions.onSend}
         placeholder="프로젝트의 맥락에 대해 질문하세요."
         sendDisabled={sendDisabled}
+        ref={inputRef}
         value={model.draft}
         wrapperClassName="max-w-none"
       />

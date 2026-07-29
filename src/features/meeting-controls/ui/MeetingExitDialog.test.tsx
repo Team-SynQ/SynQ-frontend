@@ -9,14 +9,7 @@ describe('MeetingExitDialog', () => {
     ['leave' as const, '회의를 나가시겠어요?', '나가기'],
     ['end' as const, '회의를 종료할까요?', '종료하기'],
   ])('renders the %s mode copy', (mode, title, confirmLabel) => {
-    render(
-      <MeetingExitDialog
-        mode={mode}
-        onCancel={vi.fn()}
-        onConfirm={vi.fn()}
-        open
-      />,
-    )
+    render(<MeetingExitDialog mode={mode} onCancel={vi.fn()} onConfirm={vi.fn()} open />)
 
     expect(screen.getByRole('heading', { name: title })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: confirmLabel })).toBeInTheDocument()
@@ -29,14 +22,7 @@ describe('MeetingExitDialog', () => {
     const onCancel = vi.fn()
     const onConfirm = vi.fn()
 
-    render(
-      <MeetingExitDialog
-        mode="end"
-        onCancel={onCancel}
-        onConfirm={onConfirm}
-        open
-      />,
-    )
+    render(<MeetingExitDialog mode="end" onCancel={onCancel} onConfirm={onConfirm} open />)
 
     await user.click(screen.getByRole('button', { name: '취소' }))
     await user.click(screen.getByRole('button', { name: '종료하기' }))

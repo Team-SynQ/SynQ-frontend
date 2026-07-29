@@ -14,7 +14,9 @@ function DismissableLayerFixture({ onDismiss }: { onDismiss: () => void }) {
 
   return (
     <>
-      <button ref={triggerRef} type="button">트리거</button>
+      <button ref={triggerRef} type="button">
+        트리거
+      </button>
       <div ref={layerRef}>레이어 내부</div>
       <button type="button">레이어 외부</button>
     </>

@@ -10,13 +10,7 @@ describe('MeetingMoreMenu', () => {
     const onClose = vi.fn()
     const onEditTitle = vi.fn()
 
-    render(
-      <MeetingMoreMenu
-        onClose={onClose}
-        onEditTitle={onEditTitle}
-        open
-      />,
-    )
+    render(<MeetingMoreMenu onClose={onClose} onEditTitle={onEditTitle} open />)
 
     const menu = screen.getByRole('menu', { name: '회의 메뉴' })
     expect(menu).toHaveClass(
@@ -27,12 +21,7 @@ describe('MeetingMoreMenu', () => {
     )
 
     const menuItem = screen.getByRole('menuitem', { name: '제목 수정하기' })
-    expect(menuItem).toHaveClass(
-      'h-[42px]',
-      'px-s',
-      'typo-body-01',
-      'text-fg-secondary',
-    )
+    expect(menuItem).toHaveClass('h-[42px]', 'px-s', 'typo-body-01', 'text-fg-secondary')
     expect(screen.getByTestId('meeting-more-menu-icon')).toHaveClass('size-[24px]')
 
     await user.click(menuItem)

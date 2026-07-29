@@ -6,7 +6,4 @@ export { SecondTutorialMeetingScreen } from './ui/SecondTutorialMeetingScreen'
 export { ThirdTutorialMeetingScreen } from './ui/ThirdTutorialMeetingScreen'
 export { meetingTutorialContent, meetingTutorialSteps } from './model/meetingTutorial.config'
 export type { MeetingTutorialStep } from './model/meetingTutorial.config'
-export {
-  isMeetingTutorialHidden,
-  setMeetingTutorialHidden,
-} from './model/meetingTutorial.storage'
+export { isMeetingTutorialHidden, setMeetingTutorialHidden } from './model/meetingTutorial.storage'

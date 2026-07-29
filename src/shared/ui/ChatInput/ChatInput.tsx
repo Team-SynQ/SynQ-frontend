@@ -1,4 +1,4 @@
-import type { FormEvent, InputHTMLAttributes } from 'react'
+import { forwardRef, type FormEvent, type InputHTMLAttributes } from 'react'
 
 import { cn } from '../../lib/cn'
 
@@ -9,15 +9,18 @@ type ChatInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> & {
   wrapperClassName?: string
 }
 
-export function ChatInput({
-  onSend,
-  sendDisabled = false,
-  sendLabel = '보내기',
-  wrapperClassName,
-  className,
-  disabled,
-  ...props
-}: ChatInputProps) {
+export const ChatInput = forwardRef<HTMLInputElement, ChatInputProps>(function ChatInput(
+  {
+    onSend,
+    sendDisabled = false,
+    sendLabel = '보내기',
+    wrapperClassName,
+    className,
+    disabled,
+    ...props
+  },
+  ref,
+) {
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (disabled || sendDisabled) return
@@ -38,6 +41,7 @@ export function ChatInput({
           className,
         )}
         disabled={disabled}
+        ref={ref}
         type="text"
         {...props}
       />
@@ -51,13 +55,18 @@ export function ChatInput({
       </button>
     </form>
   )
-}
+})
 
 function SendIcon() {
   return (
     <svg aria-hidden="true" className="size-[24px]" fill="none" viewBox="0 0 24 24">
       <circle cx="12" cy="12" fill="#FDFDFD" r="10.5417" stroke="#DBDBDD" strokeWidth="0.916667" />
-      <path d="M8 10L12 6L16 10" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M8 10L12 6L16 10"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
       <path d="M12 6L12 18" stroke="currentColor" strokeLinecap="round" />
     </svg>
   )

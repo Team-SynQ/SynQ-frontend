@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 
 import {
   MeetingTutorialOverlay,
@@ -10,6 +10,7 @@ import {
 } from '../features/meeting-tutorial'
 
 export function MeetingTutorialPage() {
+  const location = useLocation()
   const navigate = useNavigate()
   const { meetingId = 'demo' } = useParams()
   const [dontShowAgain, setDontShowAgain] = useState(false)
@@ -17,7 +18,10 @@ export function MeetingTutorialPage() {
 
   const enterMeeting = () => {
     setMeetingTutorialHidden(dontShowAgain)
-    navigate(`/meetings/${encodeURIComponent(meetingId)}/live`, { replace: true })
+    navigate(`/meetings/${encodeURIComponent(meetingId)}/live`, {
+      replace: true,
+      state: location.state,
+    })
   }
 
   return (

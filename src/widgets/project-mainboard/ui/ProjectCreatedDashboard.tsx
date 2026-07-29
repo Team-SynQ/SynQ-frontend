@@ -1,0 +1,389 @@
+import { useId, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+
+import type { CompletedMeeting } from '../../../entities/meeting'
+import {
+  PROJECT_REFERENCE_MAX_MATERIALS,
+  type ProjectReferenceMaterial,
+  type ProjectSummary,
+} from '../../../entities/project'
+import {
+  ProjectMaterialUploadForm,
+  projectPerspectiveOptions,
+  type ProjectMaterialDraft,
+} from '../../../features/project-create'
+import {
+  ProjectReferenceDeleteDialog,
+  ProjectReferenceEditDialog,
+  ProjectReferenceMenu,
+} from '../../../features/project-reference-actions'
+import {
+  ProjectSettingsMenu,
+  type ProjectInformationDraft,
+} from '../../../features/project-settings'
+import {
+  MeetingProcessingOverlay,
+  type MeetingHistoryPresentation,
+} from '../../../features/meeting-processing'
+import burgerIcon from '../../../shared/assets/icons/burger.svg'
+import fileIcon from '../assets/file.svg'
+import folderIcon from '../assets/folder.svg'
+import microphoneIcon from '../assets/microphone.svg'
+import plusIcon from '../../../shared/assets/icons/plus.svg'
+import { useTransientVisibility } from '../../../shared/lib/useTransientVisibility'
+import { Badge, Button, OverlayDialog, Toast } from '../../../shared/ui'
+import { ProjectLatestMeetingSummary } from './ProjectLatestMeetingSummary'
+import { ProjectMeetingHistory } from './ProjectMeetingHistory'
+
+type ProjectCreatedDashboardProps = {
+  project: ProjectSummary
+  onAddMaterials?: (materials: ProjectMaterialDraft) => Promise<void> | void
+  onDeleteMaterial?: (materialId: string) => Promise<void> | void
+  onRenameMaterial?: (materialId: string, nextName: string) => Promise<void> | void
+  meetings?: CompletedMeeting[]
+  meetingHistoryPresentation?: MeetingHistoryPresentation
+  meetingProcessingOverlayOpen?: boolean
+  meetingHistoryError?: string
+  onRetryMeetingHistory?: () => void
+  onOpenMeetingDetail?: (recordId: string) => void
+  onStartMeeting?: () => void
+  onLoadProject?: () => Promise<ProjectSummary | void> | ProjectSummary | void
+  onUpdateProject?: (draft: ProjectInformationDraft) => Promise<void> | void
+  onDeleteProject?: () => Promise<void> | void
+}
+
+const projectDateFormatter = new Intl.DateTimeFormat('ko-KR', {
+  year: '2-digit',
+  month: '2-digit',
+  day: '2-digit',
+})
+
+export function ProjectCreatedDashboard({
+  project,
+  onAddMaterials,
+  onDeleteMaterial,
+  onRenameMaterial,
+  meetings = [],
+  meetingHistoryPresentation,
+  meetingProcessingOverlayOpen = false,
+  meetingHistoryError,
+  onRetryMeetingHistory,
+  onOpenMeetingDetail,
+  onStartMeeting,
+  onLoadProject,
+  onUpdateProject,
+  onDeleteProject,
+}: ProjectCreatedDashboardProps) {
+  const navigate = useNavigate()
+
+  return (
+    <div aria-busy={meetingProcessingOverlayOpen} className="flex w-full flex-col gap-l">
+      <header className="flex items-start gap-s">
+        <div className="flex min-w-0 flex-1 flex-col gap-xs">
+          <h1 className="m-0 truncate typo-heading text-fg-primary">{project.name}</h1>
+          {project.overview ? (
+            <p className="m-0 typo-body-01 text-fg-secondary">{project.overview}</p>
+          ) : null}
+          <div className="flex flex-wrap items-center gap-xs">
+            <span className="typo-body-01 text-fg-secondary">내 관점 :</span>
+            <Badge size="extraSmall">{project.perspectiveLabel}</Badge>
+            <Badge size="extraSmall">{project.perspectiveDescription}</Badge>
+          </div>
+        </div>
+        <ProjectSettingsMenu
+          onDeleteProject={onDeleteProject}
+          onLoadProject={onLoadProject}
+          onUpdateProject={onUpdateProject}
+          perspectiveOptions={projectPerspectiveOptions.map((option) => ({
+            label: option.label,
+            description: option.selectedDescription,
+          }))}
+          project={project}
+        />
+      </header>
+
+      <section className="flex flex-col gap-s">
+        <div className="flex items-center justify-between gap-s">
+          <h2 className="m-0 typo-title-02 text-fg-primary">프로젝트 허브</h2>
+          <Button
+            className="w-[178px]"
+            leftIcon={
+              <span className="flex size-[28px] items-center justify-center">
+                <img
+                  alt=""
+                  aria-hidden="true"
+                  className="size-[28px]"
+                  height="28"
+                  src={microphoneIcon}
+                  width="28"
+                />
+              </span>
+            }
+            onClick={onStartMeeting ?? (() => navigate('/meetings/demo/tutorial'))}
+            size="large"
+          >
+            새 회의 시작
+          </Button>
+        </div>
+
+        <div className="grid min-h-[300px] grid-cols-[minmax(0,1fr)_472px] gap-s max-[1200px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <ProjectLatestMeetingSummary
+            meeting={meetings[0]}
+            onOpenMeetingSummary={onOpenMeetingDetail}
+          />
+
+          <ProjectReferenceMaterials
+            onAddMaterials={onAddMaterials}
+            onDeleteMaterial={onDeleteMaterial}
+            onRenameMaterial={onRenameMaterial}
+            project={project}
+          />
+        </div>
+      </section>
+
+      {meetingHistoryError ? (
+        <section className="flex flex-col gap-s">
+          <h2 className="m-0 typo-title-02 text-fg-primary">회의 기록</h2>
+          <div className="flex h-[200px] flex-col items-center justify-center gap-s">
+            <p className="m-0 typo-body-01 text-gray-500" role="alert">
+              {meetingHistoryError}
+            </p>
+            <Button onClick={onRetryMeetingHistory} size="medium" variant="fillGray100">
+              다시 불러오기
+            </Button>
+          </div>
+        </section>
+      ) : (
+        <ProjectMeetingHistory
+          meetings={meetings}
+          onOpenMeetingDetail={onOpenMeetingDetail}
+          presentation={meetingHistoryPresentation}
+        />
+      )}
+      <MeetingProcessingOverlay open={meetingProcessingOverlayOpen} />
+    </div>
+  )
+}
+
+type ProjectReferenceMaterialsProps = {
+  project: ProjectSummary
+  onAddMaterials?: (materials: ProjectMaterialDraft) => Promise<void> | void
+  onDeleteMaterial?: (materialId: string) => Promise<void> | void
+  onRenameMaterial?: (materialId: string, nextName: string) => Promise<void> | void
+}
+
+function ProjectReferenceMaterials({
+  project,
+  onAddMaterials,
+  onDeleteMaterial,
+  onRenameMaterial,
+}: ProjectReferenceMaterialsProps) {
+  const uploadTitleId = useId()
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
+  const materialLimitToast = useTransientVisibility()
+
+  const handleAddMaterials = async (materials: ProjectMaterialDraft) => {
+    const nextMaterialCount = materials.files.length + materials.links.length
+    if (project.materials.length + nextMaterialCount > PROJECT_REFERENCE_MAX_MATERIALS) {
+      materialLimitToast.show()
+      return
+    }
+
+    await onAddMaterials?.(materials)
+    setIsUploadModalOpen(false)
+  }
+
+  const handleOpenUploadModal = () => {
+    if (project.materials.length >= PROJECT_REFERENCE_MAX_MATERIALS) {
+      materialLimitToast.show()
+      return
+    }
+
+    setIsUploadModalOpen(true)
+  }
+
+  return (
+    <>
+      <section className="flex min-h-[300px] flex-col gap-s rounded-[16px] bg-surface-muted p-m">
+        <div className="flex items-center gap-xs">
+          <div className="flex min-w-0 flex-1 items-center gap-xs">
+            <img
+              alt=""
+              aria-hidden="true"
+              className="size-[24px]"
+              height="24"
+              src={folderIcon}
+              width="24"
+            />
+            <h3 className="m-0 typo-body-01 text-fg-primary">AI 참고 자료</h3>
+            <span className="typo-body-02 text-fg-secondary">{project.materials.length}</span>
+            <span className="typo-caption text-gray-500">/ {PROJECT_REFERENCE_MAX_MATERIALS}</span>
+          </div>
+          <Button
+            aria-label="AI 참고 자료 추가"
+            className="size-[32px] px-0"
+            onClick={handleOpenUploadModal}
+            size="small"
+            variant="basic"
+          >
+            <img
+              alt=""
+              aria-hidden="true"
+              className="size-[24px]"
+              height="24"
+              src={plusIcon}
+              width="24"
+            />
+          </Button>
+        </div>
+
+        {project.materials.length > 0 ? (
+          <ul className="m-0 flex list-none flex-col p-0">
+            {project.materials.map((material) => (
+              <ProjectReferenceMaterialItem
+                key={material.id}
+                material={material}
+                onDeleteMaterial={onDeleteMaterial}
+                onRenameMaterial={onRenameMaterial}
+              />
+            ))}
+          </ul>
+        ) : (
+          <p className="m-auto typo-body-02 text-gray-500">등록된 AI 참고 자료가 없습니다</p>
+        )}
+      </section>
+      {materialLimitToast.isMounted ? (
+        <Toast
+          className="top-[20px]! z-[70]!"
+          description={`참고자료는 프로젝트당 최대 ${PROJECT_REFERENCE_MAX_MATERIALS}개까지 등록할 수 있어요.`}
+          position="topCenter"
+          title="참고자료 최대 개수 초과"
+          type="error"
+          visible={materialLimitToast.isVisible}
+        />
+      ) : null}
+      <OverlayDialog
+        className="relative h-[680px] max-h-[calc(100dvh-48px)] max-w-[460px]! gap-m px-m py-l shadow-floating"
+        closeOnEscape
+        onClose={() => setIsUploadModalOpen(false)}
+        open={isUploadModalOpen}
+        titleId={uploadTitleId}
+      >
+        {isUploadModalOpen ? (
+          <ProjectMaterialUploadForm
+            mode="project-reference"
+            onClose={() => setIsUploadModalOpen(false)}
+            onCreate={handleAddMaterials}
+            titleId={uploadTitleId}
+          />
+        ) : null}
+      </OverlayDialog>
+    </>
+  )
+}
+
+type ProjectReferenceMaterialItemProps = {
+  material: ProjectReferenceMaterial
+  onDeleteMaterial?: (materialId: string) => Promise<void> | void
+  onRenameMaterial?: (materialId: string, nextName: string) => Promise<void> | void
+}
+
+function ProjectReferenceMaterialItem({
+  material,
+  onDeleteMaterial,
+  onRenameMaterial,
+}: ProjectReferenceMaterialItemProps) {
+  const [activeDialog, setActiveDialog] = useState<'edit' | 'delete'>()
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const menuId = `project-reference-menu-${material.id}`
+
+  const runReferenceAction = async (action: () => Promise<void> | void) => {
+    setIsSubmitting(true)
+    try {
+      await action()
+    } catch {
+      // Mutation feedback is handled by the callback owner.
+    } finally {
+      setIsSubmitting(false)
+      setActiveDialog(undefined)
+    }
+  }
+
+  return (
+    <>
+      <li className="flex h-[42px] items-center gap-xs border-b border-line-default last:border-b-0">
+        <img
+          alt=""
+          aria-hidden="true"
+          className="size-[24px]"
+          height="24"
+          src={fileIcon}
+          width="24"
+        />
+        <span className="min-w-0 flex-1 truncate typo-body-02 text-fg-primary">
+          {material.name}
+        </span>
+        <time
+          className="w-[62px] text-center typo-body-02 text-fg-secondary"
+          dateTime={material.createdAt}
+        >
+          {projectDateFormatter.format(new Date(material.createdAt))}
+        </time>
+        <div className="relative shrink-0">
+          <Button
+            aria-controls={menuId}
+            aria-expanded={isMenuOpen}
+            aria-haspopup="menu"
+            aria-label={`${material.name} 더보기`}
+            className="size-[32px] px-0"
+            leftIcon={
+              <span className="flex size-[24px] items-center justify-center">
+                <img
+                  alt=""
+                  aria-hidden="true"
+                  className="size-[24px]"
+                  height="24"
+                  src={burgerIcon}
+                  width="24"
+                />
+              </span>
+            }
+            onClick={() => setIsMenuOpen((current) => !current)}
+            ref={triggerRef}
+            size="small"
+            variant="basic"
+          />
+          <ProjectReferenceMenu
+            id={menuId}
+            materialName={material.name}
+            onClose={() => setIsMenuOpen(false)}
+            onDelete={() => setActiveDialog('delete')}
+            onEditTitle={() => setActiveDialog('edit')}
+            open={isMenuOpen}
+            triggerRef={triggerRef}
+          />
+        </div>
+      </li>
+      <ProjectReferenceEditDialog
+        currentName={material.name}
+        onCancel={() => setActiveDialog(undefined)}
+        onConfirm={(nextName) => {
+          void runReferenceAction(() => onRenameMaterial?.(material.id, nextName))
+        }}
+        open={activeDialog === 'edit'}
+        pending={isSubmitting}
+      />
+      <ProjectReferenceDeleteDialog
+        materialName={material.name}
+        onCancel={() => setActiveDialog(undefined)}
+        onConfirm={() => {
+          void runReferenceAction(() => onDeleteMaterial?.(material.id))
+        }}
+        open={activeDialog === 'delete'}
+        pending={isSubmitting}
+      />
+    </>
+  )
+}

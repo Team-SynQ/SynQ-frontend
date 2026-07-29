@@ -6,10 +6,7 @@ export type AiChatMessageListProps = {
   variant: 'docked' | 'floating'
 }
 
-export function AiChatMessageList({
-  messages,
-  variant,
-}: AiChatMessageListProps) {
+export function AiChatMessageList({ messages, variant }: AiChatMessageListProps) {
   return (
     <div
       aria-label="AI Chat 메시지"
@@ -30,9 +27,7 @@ export function AiChatMessageList({
             message.role === 'assistant'
               ? cn(
                   'self-start rounded-bl-none border bg-surface-elevated text-gray-700',
-                  variant === 'floating'
-                    ? 'border-line-default'
-                    : 'border-surface-muted',
+                  variant === 'floating' ? 'border-line-default' : 'border-surface-muted',
                 )
               : 'self-end rounded-br-none bg-gray-700 text-fg-inverse',
           )}

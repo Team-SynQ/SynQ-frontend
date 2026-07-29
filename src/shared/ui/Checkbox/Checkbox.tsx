@@ -10,7 +10,11 @@ type CheckboxProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> & {
 export function Checkbox({ label, className, disabled, scale = 1, ...props }: CheckboxProps) {
   return (
     <label
-      className={cn('inline-flex items-center typo-body-02 text-fg-primary', disabled && 'text-fg-secondary', className)}
+      className={cn(
+        'inline-flex items-center typo-body-02 text-fg-primary',
+        disabled && 'text-fg-secondary',
+        className,
+      )}
       style={{
         fontSize: 14 * scale,
         gap: 8 * scale,
@@ -27,8 +31,19 @@ export function Checkbox({ label, className, disabled, scale = 1, ...props }: Ch
         )}
         style={{ borderRadius: 2 * scale, height: 18 * scale, width: 18 * scale }}
       >
-        <svg className="hidden" fill="none" style={{ height: 12 * scale, width: 12 * scale }} viewBox="0 0 12 12">
-          <path d="M2.5 6.2 5 8.5 9.5 3.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
+        <svg
+          className="hidden"
+          fill="none"
+          style={{ height: 12 * scale, width: 12 * scale }}
+          viewBox="0 0 12 12"
+        >
+          <path
+            d="M2.5 6.2 5 8.5 9.5 3.5"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="1.6"
+          />
         </svg>
       </span>
       {label ? <span>{label}</span> : null}

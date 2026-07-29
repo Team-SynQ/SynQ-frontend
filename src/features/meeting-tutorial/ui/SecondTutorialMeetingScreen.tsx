@@ -85,17 +85,17 @@ function TranscriptPanel() {
       <div className="min-h-0 overflow-y-auto px-l pb-m pt-[37px]">
         <div className="flex flex-col">
           <div className="flex flex-col gap-s min-[1440px]:h-[413px]">
-          {transcriptItems.map((item, index) => (
-            <article
-              className="shrink-0 rounded-m p-s"
-              data-tutorial-target={`transcript-${index + 1}`}
-              key={item.time}
-              style={{ minHeight: item.minHeight }}
-            >
-              <p className="m-0 mb-s typo-body-01 text-gray-400">{item.time}</p>
-              <p className="m-0 typo-transcription-body-01">{item.text}</p>
-            </article>
-          ))}
+            {transcriptItems.map((item, index) => (
+              <article
+                className="shrink-0 rounded-m p-s"
+                data-tutorial-target={`transcript-${index + 1}`}
+                key={item.time}
+                style={{ minHeight: item.minHeight }}
+              >
+                <p className="m-0 mb-s typo-body-01 text-gray-400">{item.time}</p>
+                <p className="m-0 typo-transcription-body-01">{item.text}</p>
+              </article>
+            ))}
           </div>
 
           <SelectedUtterance />
@@ -122,7 +122,8 @@ function SelectedUtterance() {
         </div>
       </div>
       <p className="m-0 mt-s typo-transcription-body-01">
-        일정을 조금 타이트하게 잡아봤는데요. 온보딩 개선을 4월 말까지 베타로 제공하고 5월 초 정식 릴리즈를 목표로 하고 있습니다.
+        일정을 조금 타이트하게 잡아봤는데요. 온보딩 개선을 4월 말까지 베타로 제공하고 5월 초 정식
+        릴리즈를 목표로 하고 있습니다.
       </p>
     </article>
   )
@@ -155,9 +156,7 @@ function SynqHint() {
 
 function AiChatPanel() {
   return (
-    <aside
-      className="relative grid min-h-0 grid-rows-[60px_100px_minmax(0,1fr)_224px] overflow-hidden rounded-tl-[16px] bg-surface-elevated"
-    >
+    <aside className="relative grid min-h-0 grid-rows-[60px_100px_minmax(0,1fr)_224px] overflow-hidden rounded-tl-[16px] bg-surface-elevated">
       <div
         className="pointer-events-none absolute inset-x-0 bottom-0 top-[2px] rounded-tl-m"
         data-tutorial-target="ai-chat-panel"
@@ -170,7 +169,8 @@ function AiChatPanel() {
       <div className="flex items-start gap-xs border border-line-default px-m py-m typo-transcription-body-01">
         <img alt="고정된 발화" className="size-[24px] shrink-0" src={pinIcon} />
         <p className="m-0 min-w-0 flex-1">
-          일정을 조금 타이트하게 잡아봤는데요. 온보딩 개선을 4월 말까지 베타로 제공하고 5월 초 정식 릴리즈를 목표로 하고 있습니다.
+          일정을 조금 타이트하게 잡아봤는데요. 온보딩 개선을 4월 말까지 베타로 제공하고 5월 초 정식
+          릴리즈를 목표로 하고 있습니다.
         </p>
         <img alt="닫기" className="size-[24px] shrink-0" src={closeIcon} />
       </div>
@@ -188,7 +188,10 @@ function ChatConversation() {
         현재 일정이 현실적인지 분석해줘
       </div>
 
-      <div className="mt-m w-full max-w-[400px] shrink-0 rounded-br-m rounded-tl-m rounded-tr-m border border-surface-muted bg-surface-elevated p-s typo-transcription-body-01" data-chat-response>
+      <div
+        className="mt-m w-full max-w-[400px] shrink-0 rounded-br-m rounded-tl-m rounded-tr-m border border-surface-muted bg-surface-elevated p-s typo-transcription-body-01"
+        data-chat-response
+      >
         <p className="m-0">현재 일정 기준으로 예상되는 리스크를 분석했습니다.</p>
         <ul className="my-s list-disc pl-m">
           <li>QA 기간이 1주 미만으로 줄어들 가능성이 있습니다.</li>
@@ -200,9 +203,16 @@ function ChatConversation() {
         </p>
       </div>
 
-      <div className="mt-[9px] flex shrink-0 items-center gap-xs typo-transcription-body-01" data-chat-attachments>
-        <span className="flex h-[42px] items-center rounded-s border border-surface-muted bg-surface-elevated px-[12px]">PRD.pdf</span>
-        <span className="flex h-[42px] items-center rounded-s border border-surface-muted bg-surface-elevated px-[12px]">현재 회의 10:04</span>
+      <div
+        className="mt-[9px] flex shrink-0 items-center gap-xs typo-transcription-body-01"
+        data-chat-attachments
+      >
+        <span className="flex h-[42px] items-center rounded-s border border-surface-muted bg-surface-elevated px-[12px]">
+          PRD.pdf
+        </span>
+        <span className="flex h-[42px] items-center rounded-s border border-surface-muted bg-surface-elevated px-[12px]">
+          현재 회의 10:04
+        </span>
       </div>
     </div>
   )
@@ -212,8 +222,12 @@ function ChatComposer() {
   return (
     <div className="flex min-h-0 flex-col justify-between border border-line-default bg-surface-elevated p-m">
       <div className="flex flex-col items-start gap-xs">
-        <Button size="medium" variant="primaryLine">이 일정의 현실성과 리스크를 분석해 줘</Button>
-        <Button size="medium" variant="primaryLine">리소스 부족을 해결할 대안은?</Button>
+        <Button size="medium" variant="primaryLine">
+          이 일정의 현실성과 리스크를 분석해 줘
+        </Button>
+        <Button size="medium" variant="primaryLine">
+          리소스 부족을 해결할 대안은?
+        </Button>
       </div>
       <ChatInput
         className="text-[16px]"

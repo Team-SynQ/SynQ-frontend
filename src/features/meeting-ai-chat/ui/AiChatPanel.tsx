@@ -8,17 +8,18 @@ import { Button } from '../../../shared/ui'
 import type { AiChatActions, AiChatViewModel } from '../model/aiChat.types'
 import { AiChatComposer } from './AiChatComposer'
 import { AiChatMessageList } from './AiChatMessageList'
+import { AiChatPinnedContext } from './AiChatPinnedContext'
 
 export type AiChatContentProps = {
   model: AiChatViewModel
   actions: AiChatActions
+  composerInputRef?: Ref<HTMLInputElement>
 }
 
 export type AiChatPanelProps = AiChatContentProps & {
   onCollapse: () => void
   collapseButtonRef?: Ref<HTMLButtonElement>
-} &
-  (
+} & (
     | {
         variant: 'docked'
         onMinimize: () => void
@@ -38,6 +39,7 @@ export function AiChatPanel(props: AiChatPanelProps) {
     variant,
     actionButtonRef,
     collapseButtonRef,
+    composerInputRef,
     onCollapse,
   } = props
   const floating = variant === 'floating'
@@ -49,7 +51,10 @@ export function AiChatPanel(props: AiChatPanelProps) {
     <aside
       aria-labelledby="meeting-ai-chat-title"
       className={cn(
-        'grid h-full min-h-0 grid-rows-[60px_minmax(0,1fr)_auto] bg-surface-elevated',
+        'grid h-full min-h-0 bg-surface-elevated',
+        model.pinnedContext
+          ? 'grid-rows-[60px_auto_minmax(0,1fr)_auto]'
+          : 'grid-rows-[60px_minmax(0,1fr)_auto]',
         floating && 'overflow-hidden rounded-m',
       )}
     >
@@ -81,8 +86,11 @@ export function AiChatPanel(props: AiChatPanelProps) {
         </div>
       </header>
 
+      {model.pinnedContext ? (
+        <AiChatPinnedContext context={model.pinnedContext} onClear={actions.onClearContext} />
+      ) : null}
       <AiChatMessageList messages={model.messages} variant={variant} />
-      <AiChatComposer actions={actions} model={model} />
+      <AiChatComposer actions={actions} inputRef={composerInputRef} model={model} />
     </aside>
   )
 }

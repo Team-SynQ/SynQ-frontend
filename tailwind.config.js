@@ -18,7 +18,7 @@ const gray = {
   500: '#9e9e9e',
   600: '#767676',
   700: '#424242',
-  800: '#242424',
+  800: '#242426',
   900: '#1a1a1a',
 }
 
@@ -102,8 +102,14 @@ export default {
         'body-01': ['16px', { lineHeight: '1.5', letterSpacing: '0', fontWeight: '500' }],
         'body-02': ['14px', { lineHeight: '1.5', letterSpacing: '0', fontWeight: '500' }],
         caption: ['13px', { lineHeight: '1.5', letterSpacing: '0', fontWeight: '500' }],
-        'transcription-body-01': ['16px', { lineHeight: '1.6', letterSpacing: '0', fontWeight: '400' }],
-        'transcription-body-02': ['14px', { lineHeight: '1.6', letterSpacing: '0', fontWeight: '400' }],
+        'transcription-body-01': [
+          '16px',
+          { lineHeight: '1.6', letterSpacing: '0', fontWeight: '400' },
+        ],
+        'transcription-body-02': [
+          '14px',
+          { lineHeight: '1.6', letterSpacing: '0', fontWeight: '400' },
+        ],
       },
     },
   },

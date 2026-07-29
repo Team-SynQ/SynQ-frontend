@@ -59,9 +59,7 @@ export function MeetingContentLayout({
     <div
       className={cn(
         'relative grid min-h-0 overflow-hidden',
-        mode === 'docked'
-          ? 'grid-cols-[minmax(524px,1fr)_500px]'
-          : 'grid-cols-[minmax(0,1fr)]',
+        mode === 'docked' ? 'grid-cols-[minmax(524px,1fr)_500px]' : 'grid-cols-[minmax(0,1fr)]',
       )}
       data-ai-chat-mode={mode}
     >

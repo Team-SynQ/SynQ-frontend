@@ -25,9 +25,9 @@ const variantClasses: Record<ButtonVariant, string> = {
 }
 
 const sizeClasses: Record<ButtonSize, string> = {
-  large: 'h-[52px] rounded-m px-s typo-title-02',
-  medium: 'h-[42px] rounded-[10px] px-s typo-body-01',
-  small: 'h-[32px] rounded-s px-s typo-body-02',
+  large: 'h-[52px] rounded-m typo-title-02',
+  medium: 'h-[42px] rounded-[10px] typo-body-01',
+  small: 'h-[32px] rounded-[var(--radius-s)] typo-body-02',
 }
 
 const basicSizeClasses: Record<ButtonSize, string> = {
@@ -36,17 +36,24 @@ const basicSizeClasses: Record<ButtonSize, string> = {
   small: 'rounded-xs',
 }
 
-export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button({
-  variant = 'primaryFill',
-  size = 'medium',
-  leftIcon,
-  rightIcon,
-  fullWidth = false,
-  className,
-  children,
-  type = 'button',
-  ...props
-}, ref) {
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  {
+    variant = 'primaryFill',
+    size = 'medium',
+    leftIcon,
+    rightIcon,
+    fullWidth = false,
+    className,
+    children,
+    type = 'button',
+    ...props
+  },
+  ref,
+) {
+  const hasHorizontalPaddingOverride = className
+    ?.split(/\s+/)
+    .some((classToken) => classToken.startsWith('px-'))
+
   return (
     <button
       className={cn(
@@ -54,6 +61,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
         fullWidth && 'w-full',
         variantClasses[variant],
         sizeClasses[size],
+        !hasHorizontalPaddingOverride && 'px-s',
         variant === 'basic' && basicSizeClasses[size],
         className,
       )}

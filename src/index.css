@@ -1,5 +1,5 @@
-@import "tailwindcss";
-@import "./shared/styles/tokens.css";
+@import 'tailwindcss';
+@import './shared/styles/tokens.css';
 
 :root {
   font-family: var(--font-sans);

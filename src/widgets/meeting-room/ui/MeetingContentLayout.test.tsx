@@ -3,22 +3,21 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
-import type {
-  AiChatContentProps,
-  AiChatDisplayMode,
-} from '../../../features/meeting-ai-chat'
+import type { AiChatContentProps, AiChatDisplayMode } from '../../../features/meeting-ai-chat'
 import type { TranscriptPanelProps } from '../../../features/live-transcription'
 import { MeetingContentLayout } from './MeetingContentLayout'
 
 const aiChat: AiChatContentProps = {
   actions: {
     onDraftChange: vi.fn(),
+    onClearContext: vi.fn(),
     onSelectSuggestion: vi.fn(),
     onSend: vi.fn(),
   },
   model: {
     draft: '',
     isSending: false,
+    sendError: null,
     messages: [
       {
         id: 'welcome',
@@ -26,6 +25,7 @@ const aiChat: AiChatContentProps = {
         content: '회의가 시작되었습니다.',
       },
     ],
+    pinnedContext: null,
     suggestions: [],
   },
 }
@@ -77,9 +77,7 @@ describe('MeetingContentLayout', () => {
       'overflow-hidden',
       'rounded-m',
     )
-    expect(
-      screen.getByRole('complementary', { name: 'AI Chat' }).parentElement,
-    ).toHaveClass(
+    expect(screen.getByRole('complementary', { name: 'AI Chat' }).parentElement).toHaveClass(
       'absolute',
       'bottom-m',
       'right-m',
@@ -100,9 +98,7 @@ describe('MeetingContentLayout', () => {
     const { container } = render(<LayoutHarness initialMode="docked" />)
     const root = container.querySelector('[data-ai-chat-mode]')
 
-    await user.click(
-      screen.getByRole('button', { name: 'AI Chat 런처로 축소' }),
-    )
+    await user.click(screen.getByRole('button', { name: 'AI Chat 런처로 축소' }))
 
     expect(root).toHaveAttribute('data-ai-chat-mode', 'launcher')
     const launcher = screen.getByRole('button', { name: 'AI Chat 열기' })
@@ -111,9 +107,7 @@ describe('MeetingContentLayout', () => {
     await user.click(launcher)
 
     expect(root).toHaveAttribute('data-ai-chat-mode', 'docked')
-    expect(
-      screen.getByRole('button', { name: 'AI Chat 런처로 축소' }),
-    ).toHaveFocus()
+    expect(screen.getByRole('button', { name: 'AI Chat 런처로 축소' })).toHaveFocus()
   })
 
   it('returns from launcher to floating when floating was the entry mode', async () => {
@@ -121,9 +115,7 @@ describe('MeetingContentLayout', () => {
     const { container } = render(<LayoutHarness initialMode="floating" />)
     const root = container.querySelector('[data-ai-chat-mode]')
 
-    await user.click(
-      screen.getByRole('button', { name: 'AI Chat 런처로 축소' }),
-    )
+    await user.click(screen.getByRole('button', { name: 'AI Chat 런처로 축소' }))
 
     expect(root).toHaveAttribute('data-ai-chat-mode', 'launcher')
     const launcher = screen.getByRole('button', { name: 'AI Chat 열기' })
@@ -132,9 +124,7 @@ describe('MeetingContentLayout', () => {
     await user.click(launcher)
 
     expect(root).toHaveAttribute('data-ai-chat-mode', 'floating')
-    expect(
-      screen.getByRole('button', { name: 'AI Chat 런처로 축소' }),
-    ).toHaveFocus()
+    expect(screen.getByRole('button', { name: 'AI Chat 런처로 축소' })).toHaveFocus()
   })
 
   it('renders launcher without panel content and returns focus to floating', async () => {
@@ -143,17 +133,13 @@ describe('MeetingContentLayout', () => {
 
     const root = container.querySelector('[data-ai-chat-mode]')
     expect(root).toHaveAttribute('data-ai-chat-mode', 'launcher')
-    expect(
-      screen.queryByRole('complementary', { name: 'AI Chat' }),
-    ).not.toBeInTheDocument()
+    expect(screen.queryByRole('complementary', { name: 'AI Chat' })).not.toBeInTheDocument()
 
     const launcher = screen.getByRole('button', { name: 'AI Chat 열기' })
     await user.click(launcher)
 
     expect(root).toHaveAttribute('data-ai-chat-mode', 'floating')
-    expect(
-      screen.getByRole('button', { name: 'AI Chat 런처로 축소' }),
-    ).toHaveFocus()
+    expect(screen.getByRole('button', { name: 'AI Chat 런처로 축소' })).toHaveFocus()
   })
 
   it('focuses the launcher when an external control requests launcher mode', () => {
