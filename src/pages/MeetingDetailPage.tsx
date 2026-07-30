@@ -1,5 +1,5 @@
 import React, { useEffect, useState, type Ref } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { Button, Modal, ChatInput } from '../shared/ui'
 import { ProjectSidebar, type ProjectSidebarUser } from '../widgets/project-sidebar'
 import { fetchMeetingDetail, updateMeetingTitle } from '../shared/api/mock/services/meeting.mock'
@@ -291,6 +291,7 @@ interface MeetingDetailPageProps {
 
 export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
   const { meetingRecordId = '' } = useParams()
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<'personal' | 'allSummary' | 'allRecord'>('allRecord')
   const [meetingData, setMeetingData] = useState<MeetingDetailResponse | null>(null)
 
@@ -435,6 +436,9 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
   return (
     <div className="flex h-screen w-full bg-white overflow-hidden relative">
       <ProjectSidebar
+        accountSettingsActions={{
+          onOpenAccountInfo: () => navigate('/settings/account'),
+        }}
         user={user}
         projects={sampleProjects}
         activeProjectId={activeProjectId}

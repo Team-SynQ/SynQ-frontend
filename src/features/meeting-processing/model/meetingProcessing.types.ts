@@ -11,5 +11,6 @@ export type MeetingHistoryPresentation = {
 
 export type ProjectNavigationState = {
   activeProjectId?: string
+  openCreateProject?: boolean
   processingMeetingRecordId?: string
 }

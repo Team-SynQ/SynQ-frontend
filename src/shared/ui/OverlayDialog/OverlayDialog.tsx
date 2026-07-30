@@ -18,6 +18,7 @@ export type OverlayDialogProps = {
   closeOnEscape?: boolean
   closeOnBackdrop?: boolean
   onClose?: () => void
+  backdropClassName?: string
   className?: string
   children: ReactNode
 }
@@ -29,6 +30,7 @@ export function OverlayDialog({
   closeOnEscape = false,
   closeOnBackdrop = false,
   onClose,
+  backdropClassName,
   className,
   children,
 }: OverlayDialogProps) {
@@ -97,7 +99,10 @@ export function OverlayDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-overlay-black-60 px-s py-m"
+      className={cn(
+        'fixed inset-0 z-[60] flex items-center justify-center bg-overlay-black-60 px-s py-m',
+        backdropClassName,
+      )}
       onMouseDown={handleBackdropMouseDown}
     >
       <section
