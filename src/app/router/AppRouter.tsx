@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
+import { AccountSettingsPage } from '../../pages/AccountSettingsPage'
 import LoginPage from '../../pages/LoginPage'
 import { MeetingDetailPage } from '../../pages/MeetingDetailPage'
 import { MeetingPage } from '../../pages/MeetingPage'
@@ -22,6 +23,10 @@ export function AppRoutes() {
       <Route element={<OnboardingRoute />} path="/onboarding" />
       <Route element={<LoginPage />} path="/login" />
       <Route element={<ProjectMainboardPage user={projectMockActorFixture} />} path="/projects" />
+      <Route
+        element={<AccountSettingsPage user={projectMockActorFixture} />}
+        path="/settings/account"
+      />
       <Route element={<UserSetupFlow />} path="/setup">
         <Route index element={<Navigate replace to="role" />} />
         <Route element={<UserRoleSetupRoute />} path="role" />

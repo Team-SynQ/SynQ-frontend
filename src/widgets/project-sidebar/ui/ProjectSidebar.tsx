@@ -1,9 +1,13 @@
 import { useState } from 'react'
 
+import {
+  AccountSettingsMenu,
+  type AccountSettingsActions,
+} from '../../../features/account-settings'
 import plusIcon from '../../../shared/assets/icons/plus.svg'
 import sidebarIcon from '../../../shared/assets/icons/sidebar.svg'
 import { cn } from '../../../shared/lib/cn'
-import { Button, Logo, Panel, ProjectMenuItem, UserInfo } from '../../../shared/ui'
+import { Button, Logo, Panel, ProjectMenuItem } from '../../../shared/ui'
 
 import type { ProjectSidebarUser } from '../model/projectSidebar.types'
 
@@ -16,6 +20,7 @@ type ProjectSidebarProps = {
   user?: ProjectSidebarUser
   projects?: SidebarProject[]
   activeProjectId?: string
+  accountSettingsActions?: AccountSettingsActions
   onAddProject?: () => void
   onSelectProject?: (projectId: string) => void
   onToggleSidebar?: () => void
@@ -25,6 +30,7 @@ export function ProjectSidebar({
   user,
   projects = [],
   activeProjectId,
+  accountSettingsActions,
   onAddProject,
   onSelectProject,
   onToggleSidebar,
@@ -39,7 +45,11 @@ export function ProjectSidebar({
   return (
     <Panel
       className="h-screen shrink-0"
-      footer={user && !isCollapsed ? <UserInfo email={user.email} name={user.name} /> : undefined}
+      footer={
+        user && !isCollapsed ? (
+          <AccountSettingsMenu email={user.email} name={user.name} {...accountSettingsActions} />
+        ) : undefined
+      }
       type={isCollapsed ? 'fold' : 'unfolded'}
       header={
         <div className="flex w-full items-center justify-between">

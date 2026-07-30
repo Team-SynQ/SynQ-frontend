@@ -111,7 +111,10 @@ export function ProjectMainboardPage({
 }: ProjectMainboardPageProps) {
   const location = useLocation()
   const navigate = useNavigate()
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const navigationState = location.state as ProjectNavigationState | null
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(
+    () => navigationState?.openCreateProject === true,
+  )
   const [projects, setProjects] = useState<ProjectSummary[]>([])
   const [activeProjectId, setActiveProjectId] = useState<string>()
   const [completedMeetingsByProject, setCompletedMeetingsByProject] = useState<
@@ -124,8 +127,8 @@ export function ProjectMainboardPage({
     useState<ProjectReferenceFeedback>()
   const creationSuccessToast = useTransientVisibility()
   const projectReferenceFeedbackToast = useTransientVisibility()
-  const navigationState = location.state as ProjectNavigationState | null
   const requestedActiveProjectId = navigationState?.activeProjectId
+  const requestedOpenCreateProject = navigationState?.openCreateProject
   const [requestedProcessingRecordId] = useState(() => navigationState?.processingMeetingRecordId)
   const {
     dismissCompletion,
@@ -142,13 +145,21 @@ export function ProjectMainboardPage({
   } = useTransientVisibility()
 
   useEffect(() => {
-    if (!requestedProcessingRecordId) return
+    if (!requestedOpenCreateProject && !requestedProcessingRecordId) return
 
     navigate(location.pathname, {
       replace: true,
-      state: { activeProjectId: requestedActiveProjectId } satisfies ProjectNavigationState,
+      state: {
+        activeProjectId: requestedActiveProjectId,
+      } satisfies ProjectNavigationState,
     })
-  }, [location.pathname, navigate, requestedActiveProjectId, requestedProcessingRecordId])
+  }, [
+    location.pathname,
+    navigate,
+    requestedActiveProjectId,
+    requestedOpenCreateProject,
+    requestedProcessingRecordId,
+  ])
 
   useEffect(() => {
     let isSubscribed = true
@@ -420,6 +431,9 @@ export function ProjectMainboardPage({
       onPointerDownCapture={dismissCompletion}
     >
       <ProjectSidebar
+        accountSettingsActions={{
+          onOpenAccountInfo: () => navigate('/settings/account'),
+        }}
         activeProjectId={activeProjectId}
         onAddProject={handleAddProject}
         onSelectProject={setActiveProjectId}
