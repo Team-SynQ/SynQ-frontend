@@ -17,6 +17,7 @@ describe('PersonalSettingsPanel', () => {
     )
     expect(screen.getByRole('button', { name: '계정 및 기본 설정' })).toHaveClass(
       'h-[42px]',
+      'rounded-[10px]!',
       'bg-overlay-dark-08!',
     )
 

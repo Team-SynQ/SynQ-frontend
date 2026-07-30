@@ -109,6 +109,17 @@ describe('AppRouter', () => {
     expect(window.location.pathname).toBe('/settings/account')
   })
 
+  it('opens help from the account settings panel', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/settings/account')
+
+    await user.click(screen.getByRole('button', { name: '도움말' }))
+
+    expect(window.location.pathname).toBe('/settings/help')
+    expect(screen.getByRole('heading', { name: '도움말' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '도움말' })).toHaveAttribute('aria-current', 'page')
+  })
+
   it('opens project creation from the account settings sidebar', async () => {
     const user = userEvent.setup()
     renderAppAt('/settings/account')

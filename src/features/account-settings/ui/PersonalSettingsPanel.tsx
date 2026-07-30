@@ -34,7 +34,7 @@ export function PersonalSettingsPanel({
           <Button
             aria-current={activeSection === section.id ? 'page' : undefined}
             className={cn(
-              'w-full justify-start! px-xs text-fg-secondary',
+              'w-full justify-start! rounded-[10px]! px-xs text-fg-secondary',
               activeSection === section.id && 'bg-overlay-dark-08!',
             )}
             key={section.id}
