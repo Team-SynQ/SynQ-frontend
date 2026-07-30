@@ -3,4 +3,8 @@ export { AccountSettingsMenu, type AccountSettingsActions } from './ui/AccountSe
 export { AccountSettingsView, type AccountSettingsViewProps } from './ui/AccountSettingsView'
 export { ProfileImageEditor, type ProfileImageEditorProps } from './ui/ProfileImageEditor'
 export { PersonalSettingsPanel, type AccountSettingsSection } from './ui/PersonalSettingsPanel'
-export { defaultAccountPerspectives, type AccountPerspective } from './model/accountSettings.types'
+export {
+  defaultAccountPerspectives,
+  type AccountPerspective,
+  type AccountPerspectiveDraft,
+} from './model/accountSettings.types'

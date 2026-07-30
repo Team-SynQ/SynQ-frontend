@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -39,11 +39,12 @@ describe('ProfileImageEditor', () => {
   })
 
   it('rejects unsupported image formats', async () => {
-    const user = userEvent.setup()
     const onUploadImage = vi.fn()
     render(<ProfileImageEditor onUploadImage={onUploadImage} />)
 
-    await selectFile(user, new File(['image'], 'profile.gif', { type: 'image/gif' }))
+    fireEvent.change(screen.getByLabelText('프로필 이미지 파일 선택'), {
+      target: { files: [new File(['image'], 'profile.gif', { type: 'image/gif' })] },
+    })
 
     expect(onUploadImage).not.toHaveBeenCalled()
     expect(

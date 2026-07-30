@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom'
 import type { ProjectNavigationState } from '../features/meeting-processing'
 import {
   AccountSettingsView,
+  type AccountPerspective,
+  type AccountPerspectiveDraft,
   type AccountSettingsViewProps,
   defaultAccountPerspectives,
   PersonalSettingsPanel,
@@ -14,22 +16,63 @@ type AccountSettingsPageProps = {
   user: ProjectSidebarUser
 } & Pick<
   AccountSettingsViewProps,
-  'initialProfileImageUrl' | 'onSaveName' | 'onSaveProfileImage' | 'onUploadProfileImage'
+  | 'initialProfileImageUrl'
+  | 'onAddPerspective'
+  | 'onSaveName'
+  | 'onSaveProfileImage'
+  | 'onUpdatePerspective'
+  | 'onUploadProfileImage'
 >
 
 export function AccountSettingsPage({
   initialProfileImageUrl,
+  onAddPerspective,
   onSaveName,
   onSaveProfileImage,
+  onUpdatePerspective,
   onUploadProfileImage,
   user,
 }: AccountSettingsPageProps) {
   const navigate = useNavigate()
   const [accountName, setAccountName] = useState(user.name)
+  const [perspectives, setPerspectives] = useState(defaultAccountPerspectives)
 
   const handleSaveName = async (nextName: string) => {
     await onSaveName?.(nextName)
     setAccountName(nextName)
+  }
+
+  const handleAddPerspective = async (draft: AccountPerspectiveDraft) => {
+    await onAddPerspective?.(draft)
+    setPerspectives((current) => [
+      ...current,
+      {
+        ...draft,
+        id: `custom-perspective-${Date.now()}-${current.length}`,
+      },
+    ])
+  }
+
+  const handleDeletePerspective = (perspectiveId: string) => {
+    setPerspectives((current) => current.filter(({ id }) => id !== perspectiveId))
+  }
+
+  const handleSetDefaultPerspective = (perspectiveId: string) => {
+    setPerspectives((current) =>
+      current.map((perspective) => ({
+        ...perspective,
+        isDefault: perspective.id === perspectiveId,
+      })),
+    )
+  }
+
+  const handleUpdatePerspective = async (nextPerspective: AccountPerspective) => {
+    await onUpdatePerspective?.(nextPerspective)
+    setPerspectives((current) =>
+      current.map((perspective) =>
+        perspective.id === nextPerspective.id ? nextPerspective : perspective,
+      ),
+    )
   }
 
   return (
@@ -51,10 +94,14 @@ export function AccountSettingsPage({
           email={user.email}
           initialProfileImageUrl={initialProfileImageUrl}
           name={accountName}
+          onAddPerspective={handleAddPerspective}
+          onDeletePerspective={handleDeletePerspective}
           onSaveName={handleSaveName}
+          onSetDefaultPerspective={handleSetDefaultPerspective}
           onSaveProfileImage={onSaveProfileImage}
+          onUpdatePerspective={handleUpdatePerspective}
           onUploadProfileImage={onUploadProfileImage}
-          perspectives={defaultAccountPerspectives}
+          perspectives={perspectives}
         />
       </div>
     </main>
