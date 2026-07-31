@@ -73,7 +73,7 @@ type PrivacyPolicyContentProps = {
 }
 
 export function PrivacyPolicyContent({ id, labelledBy }: PrivacyPolicyContentProps) {
-  const document = privacyPolicyDocument
+  const policyDocument = privacyPolicyDocument
 
   return (
     <article
@@ -83,28 +83,28 @@ export function PrivacyPolicyContent({ id, labelledBy }: PrivacyPolicyContentPro
       role="tabpanel"
     >
       <div className="shrink-0 typo-body-02 text-fg-secondary">
-        <p className="m-0">{document.name}</p>
-        <p className="m-0">시행일자: {document.effectiveDate}</p>
+        <p className="m-0">{policyDocument.name}</p>
+        <p className="m-0">시행일자: {policyDocument.effectiveDate}</p>
       </div>
 
       <div className="shrink-0 typo-body-01">
-        <p className="m-0 text-fg-primary">{document.introduction[0]}</p>
-        <p className="m-0 text-fg-secondary">{document.introduction[1]}</p>
+        <p className="m-0 text-fg-primary">{policyDocument.introduction[0]}</p>
+        <p className="m-0 text-fg-secondary">{policyDocument.introduction[1]}</p>
       </div>
 
       <section className="flex shrink-0 flex-col gap-s">
         <h2 className="m-0 typo-body-01 font-medium text-fg-primary">
-          {document.collection.title}
+          {policyDocument.collection.title}
         </h2>
         <PolicyDataTable
-          ariaLabel={document.collection.title}
+          ariaLabel={policyDocument.collection.title}
           columnWidths={[180, undefined, 65]}
-          table={document.collection.table}
+          table={policyDocument.collection.table}
         />
-        <p className="m-0 typo-body-02 text-fg-secondary">{document.collection.note}</p>
+        <p className="m-0 typo-body-02 text-fg-secondary">{policyDocument.collection.note}</p>
       </section>
 
-      {document.sections.map((section) => (
+      {policyDocument.sections.map((section) => (
         <PrivacySection key={section.title} {...section} />
       ))}
     </article>
