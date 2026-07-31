@@ -5,14 +5,16 @@ import { describe, expect, it, vi } from 'vitest'
 import { HelpView } from './HelpView'
 
 describe('HelpView', () => {
-  it('renders the readable help introduction state', () => {
+  it('renders the readable SynQ introduction state', () => {
     render(<HelpView />)
 
     expect(screen.getByRole('heading', { name: '도움말' })).toBeInTheDocument()
 
     const introductionTab = screen.getByRole('tab', { name: 'SynQ 소개 다시보기' })
+    const meetingTab = screen.getByRole('tab', { name: '회의 사용법 다시보기' })
     expect(introductionTab).toHaveAttribute('aria-selected', 'true')
-    expect(introductionTab).toHaveClass('font-semibold', 'typo-title-02', 'text-[#121212]')
+    expect(introductionTab).toHaveClass('font-semibold!', 'typo-title-02', 'text-fg-primary')
+    expect(meetingTab).toHaveClass('font-normal!', 'typo-title-02', 'text-fg-secondary')
 
     const introductionTitle = screen.getByRole('heading', {
       name: '회의 중, 이해하지 못한 채 넘어간 순간이 있나요?',
@@ -37,32 +39,42 @@ describe('HelpView', () => {
     expect(imageScrollRegion).not.toContainElement(introductionTitle.parentElement)
     expect(imageScrollRegion).not.toContainElement(screen.getByRole('status'))
     expect(imageScrollRegion).not.toContainElement(screen.getByRole('button', { name: '다음' }))
-    expect(imageScrollRegion?.closest('section')).toHaveClass('gap-s')
-
-    expect(screen.getByRole('button', { name: '다음' })).toHaveClass('w-[375px]')
   })
 
-  it('restarts the introduction and delegates the meeting tutorial tab', async () => {
+  it('switches tabs and advances the meeting tutorial frame', async () => {
     const user = userEvent.setup()
-    const onOpenMeetingTutorial = vi.fn()
-    render(<HelpView onOpenMeetingTutorial={onOpenMeetingTutorial} />)
+    const renderMeetingTutorial = vi.fn((step: number) => (
+      <div aria-label={`회의 사용법 ${step}단계 프레임`} role="img" />
+    ))
+    render(<HelpView renderMeetingTutorial={renderMeetingTutorial} />)
+
+    const meetingTab = screen.getByRole('tab', { name: '회의 사용법 다시보기' })
+    await user.click(meetingTab)
+
+    expect(meetingTab).toHaveAttribute('aria-selected', 'true')
+    expect(meetingTab).toHaveClass('font-semibold!', 'text-fg-primary')
+    expect(screen.getByRole('tab', { name: 'SynQ 소개 다시보기' })).toHaveClass(
+      'font-normal!',
+      'text-fg-secondary',
+    )
+    const meetingFrame = screen.getByRole('img', { name: '회의 사용법 1단계 프레임' })
+    expect(meetingFrame).toBeInTheDocument()
+    expect(meetingFrame.parentElement?.parentElement).toHaveClass(
+      'ml-[168px]',
+      'w-[760px]',
+      'self-start',
+    )
+    expect(
+      screen.getByRole('heading', { name: '놓치지 않도록, 회의는 함께 기록돼요' }),
+    ).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '다음' }))
+
+    expect(screen.getByRole('img', { name: '회의 사용법 2단계 프레임' })).toBeInTheDocument()
     expect(
-      screen.getByRole('heading', {
-        name: '회의의 흐름을 놓치지 않고 바로 질문하세요',
-      }),
+      screen.getByRole('heading', { name: '중요한 발화는 더 깊게 이해할 수 있어요' }),
     ).toBeInTheDocument()
     expect(screen.getByRole('status')).toHaveAccessibleName('2/3 단계')
-
-    await user.click(screen.getByRole('tab', { name: 'SynQ 소개 다시보기' }))
-    expect(
-      screen.getByRole('heading', {
-        name: '회의 중, 이해하지 못한 채 넘어간 순간이 있나요?',
-      }),
-    ).toBeInTheDocument()
-
-    await user.click(screen.getByRole('tab', { name: '회의 사용법 다시보기' }))
-    expect(onOpenMeetingTutorial).toHaveBeenCalledOnce()
+    expect(renderMeetingTutorial).toHaveBeenLastCalledWith(2)
   })
 })

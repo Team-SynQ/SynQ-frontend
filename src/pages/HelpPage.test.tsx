@@ -27,12 +27,16 @@ describe('HelpPage', () => {
     expect(screen.getByRole('heading', { name: '계정 설정 목적지' })).toBeInTheDocument()
   })
 
-  it('opens the existing meeting tutorial', async () => {
+  it('switches to the embedded meeting tutorial frame', async () => {
     const browserUser = userEvent.setup()
     renderHelpPage()
 
     await browserUser.click(screen.getByRole('tab', { name: '회의 사용법 다시보기' }))
-    expect(screen.getByRole('heading', { name: '회의 튜토리얼 목적지' })).toBeInTheDocument()
+
+    expect(screen.getByRole('img', { name: '회의 사용법 1단계 안내 화면' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: '놓치지 않도록, 회의는 함께 기록돼요' }),
+    ).toBeInTheDocument()
   })
 })
 
@@ -42,7 +46,6 @@ function renderHelpPage() {
       <Routes>
         <Route element={<HelpPage user={user} />} path="/settings/help" />
         <Route element={<h1>계정 설정 목적지</h1>} path="/settings/account" />
-        <Route element={<h1>회의 튜토리얼 목적지</h1>} path="/meetings/demo/tutorial" />
       </Routes>
     </MemoryRouter>,
   )

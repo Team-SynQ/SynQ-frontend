@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { PersonalSettingsPanel } from '../features/account-settings'
 import { HelpView } from '../features/help'
 import type { ProjectNavigationState } from '../features/meeting-processing'
+import { MeetingTutorialPreview } from '../features/meeting-tutorial'
 import { ProjectSidebar, type ProjectSidebarUser } from '../widgets/project-sidebar'
 
 export type HelpPageProps = {
@@ -33,7 +34,7 @@ export function HelpPage({ user }: HelpPageProps) {
             if (section === 'account') navigate('/settings/account')
           }}
         />
-        <HelpView onOpenMeetingTutorial={() => navigate('/meetings/demo/tutorial')} />
+        <HelpView renderMeetingTutorial={(step) => <MeetingTutorialPreview step={step} />} />
       </div>
     </main>
   )

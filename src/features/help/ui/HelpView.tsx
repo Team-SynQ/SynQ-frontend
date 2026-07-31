@@ -1,11 +1,19 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 
+import { cn } from '../../../shared/lib/cn'
 import { Button } from '../../../shared/ui'
 import { helpIntroductionSteps, type HelpIntroductionStep } from '../model/helpIntroduction.config'
+import {
+  helpMeetingTutorialContent,
+  helpMeetingTutorialSteps,
+  type HelpMeetingTutorialStep,
+} from '../model/helpMeetingTutorial.config'
 
 export type HelpViewProps = {
-  onOpenMeetingTutorial?: () => void
+  renderMeetingTutorial?: (step: HelpMeetingTutorialStep) => ReactNode
 }
+
+type HelpTab = 'introduction' | 'meeting'
 
 type HelpBoardImageProps = Pick<HelpIntroductionStep, 'imageDisplaySize' | 'imageSrc' | 'title'>
 
@@ -26,13 +34,33 @@ function HelpBoardImage({ imageDisplaySize, imageSrc, title }: HelpBoardImagePro
   )
 }
 
-export function HelpView({ onOpenMeetingTutorial }: HelpViewProps) {
-  const [currentStep, setCurrentStep] = useState(0)
-  const step = helpIntroductionSteps[currentStep]
-  const lastStep = currentStep === helpIntroductionSteps.length - 1
+export function HelpView({ renderMeetingTutorial }: HelpViewProps) {
+  const [activeTab, setActiveTab] = useState<HelpTab>('introduction')
+  const [introductionStep, setIntroductionStep] = useState(0)
+  const [meetingStep, setMeetingStep] = useState<HelpMeetingTutorialStep>(1)
+  const introduction = helpIntroductionSteps[introductionStep]
+  const meeting = helpMeetingTutorialContent[meetingStep]
+  const activeStep = activeTab === 'introduction' ? introductionStep + 1 : meetingStep
+
+  const selectIntroduction = () => {
+    setActiveTab('introduction')
+    setIntroductionStep(0)
+  }
+
+  const selectMeeting = () => {
+    setActiveTab('meeting')
+    setMeetingStep(1)
+  }
 
   const handleNext = () => {
-    setCurrentStep((current) => (current + 1) % helpIntroductionSteps.length)
+    if (activeTab === 'introduction') {
+      setIntroductionStep((current) => (current + 1) % helpIntroductionSteps.length)
+      return
+    }
+
+    setMeetingStep((current) =>
+      current === helpMeetingTutorialSteps.length ? 1 : ((current + 1) as HelpMeetingTutorialStep),
+    )
   }
 
   return (
@@ -45,18 +73,28 @@ export function HelpView({ onOpenMeetingTutorial }: HelpViewProps) {
           role="tablist"
         >
           <button
-            aria-selected="true"
-            className="h-[64px] w-[190px] border-b-2 border-fg-primary px-m font-semibold typo-title-02 text-[#121212]"
-            onClick={() => setCurrentStep(0)}
+            aria-selected={activeTab === 'introduction'}
+            className={cn(
+              'h-[64px] w-[190px] border-b-2 px-m typo-title-02',
+              activeTab === 'introduction'
+                ? 'border-fg-primary font-semibold! text-fg-primary'
+                : 'border-transparent font-normal! text-fg-secondary',
+            )}
+            onClick={selectIntroduction}
             role="tab"
             type="button"
           >
             SynQ 소개 다시보기
           </button>
           <button
-            aria-selected="false"
-            className="h-[64px] w-[190px] border-b-2 border-transparent px-m typo-title-02 text-fg-secondary"
-            onClick={onOpenMeetingTutorial}
+            aria-selected={activeTab === 'meeting'}
+            className={cn(
+              'h-[64px] w-[190px] border-b-2 px-m typo-title-02',
+              activeTab === 'meeting'
+                ? 'border-fg-primary font-semibold! text-fg-primary'
+                : 'border-transparent font-normal! text-fg-secondary',
+            )}
+            onClick={selectMeeting}
             role="tab"
             type="button"
           >
@@ -65,42 +103,60 @@ export function HelpView({ onOpenMeetingTutorial }: HelpViewProps) {
         </div>
       </header>
 
-      <div className="ml-[168px] flex min-h-0 w-[760px] flex-1 flex-col items-center gap-l self-start pb-s">
+      <div
+        className={cn(
+          'ml-[168px] flex min-h-0 flex-1 flex-col items-center gap-l self-start pb-s',
+          'w-[760px]',
+        )}
+      >
         <div className="flex min-h-0 w-full flex-1 items-start justify-center overflow-y-auto pt-[44px]">
-          <HelpBoardImage
-            imageDisplaySize={step.imageDisplaySize}
-            imageSrc={step.imageSrc}
-            title={step.title}
-          />
+          {activeTab === 'introduction' ? (
+            <HelpBoardImage
+              imageDisplaySize={introduction.imageDisplaySize}
+              imageSrc={introduction.imageSrc}
+              title={introduction.title}
+            />
+          ) : (
+            (renderMeetingTutorial?.(meetingStep) ?? (
+              <div
+                aria-label={`회의 사용법 ${meetingStep}단계 프레임`}
+                className="h-[530px] w-[760px] shrink-0 rounded-m bg-surface-muted"
+                role="img"
+              />
+            ))
+          )}
         </div>
 
         <div className="flex shrink-0 flex-col items-center gap-s">
           <div
-            aria-label={`${currentStep + 1}/${helpIntroductionSteps.length} 단계`}
-            className="flex h-[6px] items-center gap-[4px]"
+            aria-label={`${activeStep}/3 단계`}
+            className="flex h-[6px] items-center gap-[6px]"
             role="status"
           >
-            {helpIntroductionSteps.map((item, index) => (
+            {[1, 2, 3].map((step) => (
               <span
                 aria-hidden="true"
-                className={`size-[6px] rounded-full ${
-                  index === currentStep ? 'bg-brand-primary' : 'bg-line-default'
-                }`}
-                key={item.title}
+                className={cn(
+                  'size-[6px] rounded-full',
+                  step === activeStep ? 'bg-brand-primary' : 'bg-line-default',
+                )}
+                key={step}
               />
             ))}
           </div>
 
           <div className="flex w-[509px] flex-col items-center gap-xs text-center">
-            <h2 className="m-0 typo-title-02 text-fg-primary">{step.title}</h2>
+            <h2 className="m-0 typo-title-02 text-fg-primary">
+              {activeTab === 'introduction' ? introduction.title : meeting.title}
+            </h2>
             <p className="m-0 whitespace-pre-line typo-body-01 text-fg-secondary">
-              {step.description}
+              {activeTab === 'introduction' ? introduction.description : meeting.description}
             </p>
           </div>
         </div>
 
         <Button className="w-[375px]" onClick={handleNext} size="large">
-          {lastStep ? '다시보기' : '다음'}
+          {activeStep === 3 ? '다시보기' : '다음'}
         </Button>
       </div>
     </section>
