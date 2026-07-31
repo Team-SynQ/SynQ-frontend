@@ -85,6 +85,8 @@ export function AccountSettingsPage({
         }
         accountSettingsActions={{
           onOpenAccountInfo: () => navigate('/settings/account'),
+          onOpenHelp: () => navigate('/settings/help'),
+          onOpenTerms: () => navigate('/settings/policy'),
         }}
         user={{ ...user, name: accountName }}
       />
@@ -92,6 +94,7 @@ export function AccountSettingsPage({
         <PersonalSettingsPanel
           onSelectSection={(section) => {
             if (section === 'help') navigate('/settings/help')
+            if (section === 'policy') navigate('/settings/policy')
           }}
         />
         <AccountSettingsView

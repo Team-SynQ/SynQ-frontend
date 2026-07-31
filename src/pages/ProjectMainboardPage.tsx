@@ -433,6 +433,8 @@ export function ProjectMainboardPage({
       <ProjectSidebar
         accountSettingsActions={{
           onOpenAccountInfo: () => navigate('/settings/account'),
+          onOpenHelp: () => navigate('/settings/help'),
+          onOpenTerms: () => navigate('/settings/policy'),
         }}
         activeProjectId={activeProjectId}
         onAddProject={handleAddProject}

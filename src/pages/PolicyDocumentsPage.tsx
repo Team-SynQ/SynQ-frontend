@@ -1,16 +1,15 @@
 import { useNavigate } from 'react-router-dom'
 
 import { PersonalSettingsPanel } from '../features/account-settings'
-import { HelpView } from '../features/help'
 import type { ProjectNavigationState } from '../features/meeting-processing'
-import { MeetingTutorialPreview } from '../features/meeting-tutorial'
+import { PolicyDocumentsView } from '../features/policy-documents'
 import { ProjectSidebar, type ProjectSidebarUser } from '../widgets/project-sidebar'
 
-export type HelpPageProps = {
+export type PolicyDocumentsPageProps = {
   user: ProjectSidebarUser
 }
 
-export function HelpPage({ user }: HelpPageProps) {
+export function PolicyDocumentsPage({ user }: PolicyDocumentsPageProps) {
   const navigate = useNavigate()
 
   return (
@@ -30,13 +29,13 @@ export function HelpPage({ user }: HelpPageProps) {
       />
       <div className="flex min-w-0 flex-1 gap-s overflow-hidden px-l py-xl">
         <PersonalSettingsPanel
-          activeSection="help"
+          activeSection="policy"
           onSelectSection={(section) => {
             if (section === 'account') navigate('/settings/account')
-            if (section === 'policy') navigate('/settings/policy')
+            if (section === 'help') navigate('/settings/help')
           }}
         />
-        <HelpView renderMeetingTutorial={(step) => <MeetingTutorialPreview step={step} />} />
+        <PolicyDocumentsView />
       </div>
     </main>
   )
