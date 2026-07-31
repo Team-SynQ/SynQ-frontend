@@ -1,9 +1,7 @@
 import chevronDownIcon from '../../../shared/assets/icons/chevron-down.svg'
 import closeIcon from '../../../shared/assets/icons/close.svg'
 import editIcon from '../../../shared/assets/icons/edit.svg'
-import membersIcon from '../../../shared/assets/icons/members.svg'
 import minimizeIcon from '../../../shared/assets/icons/minimize.svg'
-import moreVerticalIcon from '../../../shared/assets/icons/more-vertical.svg'
 import pauseIcon from '../../../shared/assets/icons/pause.svg'
 import pinIcon from '../../../shared/assets/icons/pin.svg'
 import refreshIcon from '../../../shared/assets/icons/refresh.svg'
@@ -12,17 +10,17 @@ import { Button, ChatInput, LiveStatus } from '../../../shared/ui'
 const transcriptItems = [
   {
     time: '14:44',
-    text: '네, 지난주 유저 인터뷰 결과를 토대로 봤을 때, 제품 측면에서는 온보딩 플로우 개선이 가장 큰 임팩트를 줄 수 있을 것 같습니다. 사용자들이 앱에 처음 들어왔을 때 핵심 기능을 파악하기 전에 헤매는 구간이 너무 길어요.',
+    text: '이번 스프린트에서는 신규 온보딩 개선을 우선순위로 가져가려고 합니다. 사용자 이탈이 가장 많이 발생하는 첫 사용 경험을 개선하는 것이 이번 목표입니다.',
     minHeight: 126,
   },
   {
     time: '15:03',
-    text: '맞습니다. 어제 데이터 팀에서 뽑아준 로그를 확인해 봤는데, 현재 이탈률의 40% 이상이 첫 사용 경험에서 발생하고 있어요. 특히 튜토리얼 2단계에서 그냥 앱을 꺼버리는 비율이 제일 높더라고요.',
+    text: '기존 온보딩은 단계가 많아서 중간에 이탈하는 사용자가 많았습니다. 핵심 기능을 먼저 보여주고 필요한 내용만 순서대로 안내하는 방향으로 수정하면 좋겠습니다.',
     minHeight: 126,
   },
   {
     time: '15:34',
-    text: '그 수치면 당장 온보딩부터 뜯어고치는 게 맞겠네요. 그래서 이번 분기에는 다른 피처 개발보다 온보딩 개편을 최우선으로 두려고 합니다. 마케팅 팀에서 대규모 캠페인을 준비 중이라서요.',
+    text: '기능 구현 자체는 어렵지 않습니다. 다만 애니메이션과 상태 저장 기능까지 포함하면 일정이 조금 늘어날 수 있습니다.',
     minHeight: 101,
   },
 ] as const
@@ -58,17 +56,13 @@ function MeetingHeader() {
       <div className="flex min-w-0 items-center gap-s whitespace-nowrap">
         <strong className="typo-title-01">서비스디자인</strong>
         <span className="typo-title-02 text-fg-secondary">2차 대면회의</span>
-        <img alt="참여자" className="size-[32px]" src={membersIcon} />
         <LiveStatus className="h-[32px] border-0 bg-semantic-error-surface px-m font-normal" />
       </div>
 
       <div className="flex shrink-0 items-center gap-s whitespace-nowrap">
-        <span className="p-xs typo-transcription-body-01 text-fg-secondary">17:25</span>
+        <span className="p-xs typo-transcription-body-01 text-fg-secondary">16:13</span>
         <img alt="일시 정지" className="size-[42px]" src={pauseIcon} />
         <Button size="medium">회의 종료</Button>
-        <Button aria-label="더보기" className="size-[32px] px-0" size="small" variant="basic">
-          <img alt="" aria-hidden="true" className="size-[24px]" src={moreVerticalIcon} />
-        </Button>
       </div>
     </header>
   )
@@ -156,9 +150,9 @@ function SynqHint() {
 
 function AiChatPanel() {
   return (
-    <aside className="relative grid min-h-0 grid-rows-[60px_100px_minmax(0,1fr)_224px] overflow-hidden rounded-tl-[16px] bg-surface-elevated">
+    <aside className="relative grid min-h-0 grid-rows-[60px_100px_minmax(0,1fr)_224px] overflow-hidden bg-surface-elevated">
       <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 top-[2px] rounded-tl-m"
+        className="pointer-events-none absolute inset-x-0 bottom-0 top-[2px]"
         data-tutorial-target="ai-chat-panel"
       />
       <header className="flex items-center justify-between border border-line-default px-m">
@@ -183,23 +177,35 @@ function AiChatPanel() {
 
 function ChatConversation() {
   return (
-    <div className="flex min-h-0 flex-col overflow-y-auto border-x border-line-default bg-surface-muted px-[28px] pb-m pt-[26px]">
+    <div className="flex min-h-0 flex-col overflow-y-auto border-x border-line-default bg-surface-muted p-m">
       <div className="mr-[-4px] flex min-h-[50px] max-w-full shrink-0 items-center self-end rounded-bl-m rounded-tl-m rounded-tr-m bg-gray-700 px-s typo-transcription-body-01 text-fg-inverse">
-        현재 일정이 현실적인지 분석해줘
+        이 일정의 현실성과 리스크를 분석해 줘
       </div>
 
       <div
         className="mt-m w-full max-w-[400px] shrink-0 rounded-br-m rounded-tl-m rounded-tr-m border border-surface-muted bg-surface-elevated p-s typo-transcription-body-01"
         data-chat-response
       >
-        <p className="m-0">현재 일정 기준으로 예상되는 리스크를 분석했습니다.</p>
+        <p className="m-0">
+          4월 말 베타, 5월 초 릴리즈 일정이 현실적으로 가능한지 리스크를 분석해 드립니다.
+        </p>
         <ul className="my-s list-disc pl-m">
-          <li>QA 기간이 1주 미만으로 줄어들 가능성이 있습니다.</li>
-          <li>디자인 수정 요청이 발생할 경우 일정이 지연될 수 있습니다.</li>
-          <li>베타 테스트 결과를 반영할 시간이 부족할 수 있습니다.</li>
+          <li>
+            일정 리스크 분석: 현재 팀의 개발 공수를 고려할 때, 5월 초 정식 릴리즈는 다소 공격적인
+            목표입니다.
+          </li>
+          <li>
+            주요 병목 포인트: 온보딩 개편은 다양한 환경에서의 예외 케이스 처리가 필수적이므로, QA
+            기간을 최소 1주일 이상 확보해야 합니다.
+          </li>
+          <li>
+            특히 다음 주 예정된 '결제 모듈 연동 테스트'와 작업 리소스가 겹칠 경우 지연 가능성이 매우
+            높습니다.
+          </li>
         </ul>
         <p className="m-0 rounded-s bg-surface-muted px-[12px] py-[10px]">
-          베타 기간을 1주 연장하거나, 정식 배포 범위를 핵심 기능 중심으로 조정하는 것을 권장합니다.
+          제안: 정식 릴리즈를 1주일 연기하거나, 베타 버전의 범위를 '핵심 이탈 방지' 기능으로 좁히는
+          것을 권장합니다.
         </p>
       </div>
 
@@ -226,7 +232,7 @@ function ChatComposer() {
           이 일정의 현실성과 리스크를 분석해 줘
         </Button>
         <Button size="medium" variant="primaryLine">
-          리소스 부족을 해결할 대안은?
+          QA 리소스 부족을 해결할 대안은?
         </Button>
       </div>
       <ChatInput

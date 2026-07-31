@@ -85,11 +85,18 @@ export function AccountSettingsPage({
         }
         accountSettingsActions={{
           onOpenAccountInfo: () => navigate('/settings/account'),
+          onOpenHelp: () => navigate('/settings/help'),
+          onOpenTerms: () => navigate('/settings/policy'),
         }}
         user={{ ...user, name: accountName }}
       />
       <div className="flex min-w-0 flex-1 gap-s overflow-hidden px-l py-xl">
-        <PersonalSettingsPanel />
+        <PersonalSettingsPanel
+          onSelectSection={(section) => {
+            if (section === 'help') navigate('/settings/help')
+            if (section === 'policy') navigate('/settings/policy')
+          }}
+        />
         <AccountSettingsView
           email={user.email}
           initialProfileImageUrl={initialProfileImageUrl}

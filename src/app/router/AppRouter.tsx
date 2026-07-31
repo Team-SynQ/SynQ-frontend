@@ -1,11 +1,13 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
 import { AccountSettingsPage } from '../../pages/AccountSettingsPage'
+import { HelpPage } from '../../pages/HelpPage'
 import LoginPage from '../../pages/LoginPage'
 import { MeetingDetailPage } from '../../pages/MeetingDetailPage'
 import { MeetingPage } from '../../pages/MeetingPage'
 import { MeetingStartPage } from '../../pages/MeetingStartPage'
 import { MeetingTutorialPage } from '../../pages/MeetingTutorialPage'
+import { PolicyDocumentsPage } from '../../pages/PolicyDocumentsPage'
 import { ProjectMainboardPage } from '../../pages/ProjectMainboardPage'
 import { projectMockActorFixture } from '../../shared/api/mock/fixtures/projects.fixture'
 import { LandingRoute, OnboardingRoute } from './EntryFlowRoutes'
@@ -26,6 +28,11 @@ export function AppRoutes() {
       <Route
         element={<AccountSettingsPage user={projectMockActorFixture} />}
         path="/settings/account"
+      />
+      <Route element={<HelpPage user={projectMockActorFixture} />} path="/settings/help" />
+      <Route
+        element={<PolicyDocumentsPage user={projectMockActorFixture} />}
+        path="/settings/policy"
       />
       <Route element={<UserSetupFlow />} path="/setup">
         <Route index element={<Navigate replace to="role" />} />
