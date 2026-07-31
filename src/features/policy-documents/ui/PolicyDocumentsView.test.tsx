@@ -10,12 +10,13 @@ describe('PolicyDocumentsView', () => {
 
     expect(screen.getByRole('heading', { name: '정책 문서' })).toBeInTheDocument()
     const activeTab = screen.getByRole('tab', { name: '이용 약관' })
+    expect(activeTab).toHaveAttribute('aria-controls', 'terms-document-panel')
     expect(activeTab).toHaveAttribute('aria-selected', 'true')
-    expect(activeTab).toHaveClass(
-      'font-semibold!',
-      'typo-title-02',
-      'text-fg-tab-active',
+    expect(screen.getByRole('tabpanel', { name: '이용 약관' })).toHaveAttribute(
+      'id',
+      'terms-document-panel',
     )
+    expect(activeTab).toHaveClass('font-semibold!', 'typo-title-02', 'text-fg-tab-active')
     expect(screen.getByText('시행일자: 2026년 7월 28일')).toBeInTheDocument()
     expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(12)
     const introduction = screen.getByText(
@@ -32,20 +33,24 @@ describe('PolicyDocumentsView', () => {
     await browserUser.click(screen.getByRole('tab', { name: '개인정보 처리 방침' }))
 
     const privacyTab = screen.getByRole('tab', { name: '개인정보 처리 방침' })
+    expect(privacyTab).toHaveAttribute('aria-controls', 'privacy-policy-panel')
     expect(privacyTab).toHaveAttribute('aria-selected', 'true')
-    expect(privacyTab).toHaveClass(
-      'font-semibold!',
-      'typo-title-02',
-      'text-fg-tab-active',
+    expect(screen.getByRole('tabpanel', { name: '개인정보 처리 방침' })).toHaveAttribute(
+      'id',
+      'privacy-policy-panel',
     )
-    expect(
-      screen.getByText(/SynQ.*이용자의 개인정보를 중요시하며/),
-    ).toBeInTheDocument()
+    expect(screen.getByText('SynQ 개인정보 처리 방침')).toBeInTheDocument()
+    expect(privacyTab).toHaveClass('font-semibold!', 'typo-title-02', 'text-fg-tab-active')
+    expect(screen.getByText(/SynQ.*이용자의 개인정보를 중요시하며/)).toBeInTheDocument()
     expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(3)
     expect(screen.getAllByRole('table')).toHaveLength(1)
     expect(screen.getByText('간편 회원가입')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: '3. 개인정보의 보유 및 이용 기간' })).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: '4. 개인정보의 제3자 제공' })).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: '3. 개인정보의 보유 및 이용 기간' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('heading', { name: '4. 개인정보의 제3자 제공' }),
+    ).not.toBeInTheDocument()
 
     const collectionColumns = container.querySelectorAll('table:first-of-type col')
     expect(collectionColumns[0]).toHaveStyle({ width: '180px' })

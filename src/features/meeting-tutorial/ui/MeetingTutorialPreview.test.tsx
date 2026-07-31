@@ -4,9 +4,21 @@ import { describe, expect, it } from 'vitest'
 import { MeetingTutorialPreview } from './MeetingTutorialPreview'
 
 const staticFrames = [
-  { figmaNodeId: '1904:17936', imageSrc: '/assets/images/help-meeting-tutorial-step1.png', step: 1 },
-  { figmaNodeId: '1904:18718', imageSrc: '/assets/images/help-meeting-tutorial-step2.png', step: 2 },
-  { figmaNodeId: '1904:18951', imageSrc: '/assets/images/help-meeting-tutorial-step3.png', step: 3 },
+  {
+    figmaNodeId: '1904:17936',
+    imageSrc: '/assets/images/help-meeting-tutorial-step1.png',
+    step: 1,
+  },
+  {
+    figmaNodeId: '1904:18718',
+    imageSrc: '/assets/images/help-meeting-tutorial-step2.png',
+    step: 2,
+  },
+  {
+    figmaNodeId: '1904:18951',
+    imageSrc: '/assets/images/help-meeting-tutorial-step3.png',
+    step: 3,
+  },
 ] as const
 
 describe('MeetingTutorialPreview', () => {
@@ -18,7 +30,13 @@ describe('MeetingTutorialPreview', () => {
     expect(preview).toHaveAttribute('src', frame.imageSrc)
     expect(preview).toHaveAttribute('height', '530')
     expect(preview).toHaveAttribute('width', '760')
-    expect(preview).toHaveClass('h-[530px]', 'w-[760px]', 'rounded-m', 'object-cover', 'shadow-tutorial-preview')
+    expect(preview).toHaveClass(
+      'h-[530px]',
+      'w-[760px]',
+      'rounded-m',
+      'object-cover',
+      'shadow-tutorial-preview',
+    )
     expect(container.querySelector('[data-meeting-tutorial-step]')).not.toBeInTheDocument()
     expect(container.querySelector('[data-meeting-tutorial-frame]')).not.toBeInTheDocument()
     expect(container.querySelector('[data-overlay-slot]')).not.toBeInTheDocument()

@@ -120,6 +120,14 @@ describe('AppRouter', () => {
     expect(screen.getByRole('button', { name: '도움말' })).toHaveAttribute('aria-current', 'page')
   })
 
+  it('opens policy documents directly', () => {
+    renderAppAt('/settings/policy')
+
+    expect(window.location.pathname).toBe('/settings/policy')
+    expect(screen.getByRole('heading', { name: '정책 문서' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '이용 약관' })).toHaveAttribute('aria-selected', 'true')
+  })
+
   it('opens project creation from the account settings sidebar', async () => {
     const user = userEvent.setup()
     renderAppAt('/settings/account')

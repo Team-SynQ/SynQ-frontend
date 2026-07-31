@@ -18,10 +18,7 @@ describe('PolicyDocumentsPage', () => {
       'aria-current',
       'page',
     )
-    expect(screen.getByRole('tab', { name: '이용 약관' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    )
+    expect(screen.getByRole('tab', { name: '이용 약관' })).toHaveAttribute('aria-selected', 'true')
   })
 
   it('moves to help settings', async () => {

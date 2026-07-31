@@ -5,14 +5,15 @@ import {
 } from '../model/privacyPolicy'
 
 type PolicyDataTableProps = {
+  ariaLabel: string
   columnWidths?: readonly (number | undefined)[]
   table: PrivacyPolicyTable
 }
 
-function PolicyDataTable({ columnWidths, table }: PolicyDataTableProps) {
+function PolicyDataTable({ ariaLabel, columnWidths, table }: PolicyDataTableProps) {
   return (
     <div className="w-full overflow-hidden rounded-m border-stroke-md border-line-default">
-      <table className="w-full table-fixed border-collapse typo-caption">
+      <table aria-label={ariaLabel} className="w-full table-fixed border-collapse typo-caption">
         <colgroup>
           {table.columns.map((column, index) => (
             <col key={column} style={{ width: columnWidths?.[index] }} />
@@ -33,11 +34,11 @@ function PolicyDataTable({ columnWidths, table }: PolicyDataTableProps) {
         </thead>
         <tbody>
           {table.rows.map((row) => (
-            <tr key={row.join('-')}>
-              {row.map((cell) => (
+            <tr key={row[0]}>
+              {row.map((cell, index) => (
                 <td
                   className="border border-line-default bg-surface-default p-[10px] text-center text-fg-secondary"
-                  key={cell}
+                  key={table.columns[index]}
                 >
                   {cell}
                 </td>
@@ -66,19 +67,23 @@ function PrivacySection({ description, items, title }: PrivacyPolicySection) {
   )
 }
 
-export function PrivacyPolicyContent() {
+type PrivacyPolicyContentProps = {
+  id: string
+  labelledBy: string
+}
+
+export function PrivacyPolicyContent({ id, labelledBy }: PrivacyPolicyContentProps) {
   const document = privacyPolicyDocument
 
   return (
     <article
-      aria-labelledby="privacy-policy-title"
+      aria-labelledby={labelledBy}
       className="flex min-h-0 flex-1 flex-col gap-m overflow-y-auto px-s pb-xl"
+      id={id}
       role="tabpanel"
     >
       <div className="shrink-0 typo-body-02 text-fg-secondary">
-        <p className="m-0" id="privacy-policy-title">
-          {document.name}
-        </p>
+        <p className="m-0">{document.name}</p>
         <p className="m-0">시행일자: {document.effectiveDate}</p>
       </div>
 
@@ -91,14 +96,17 @@ export function PrivacyPolicyContent() {
         <h2 className="m-0 typo-body-01 font-medium text-fg-primary">
           {document.collection.title}
         </h2>
-        <PolicyDataTable columnWidths={[180, undefined, 65]} table={document.collection.table} />
+        <PolicyDataTable
+          ariaLabel={document.collection.title}
+          columnWidths={[180, undefined, 65]}
+          table={document.collection.table}
+        />
         <p className="m-0 typo-body-02 text-fg-secondary">{document.collection.note}</p>
       </section>
 
       {document.sections.map((section) => (
         <PrivacySection key={section.title} {...section} />
       ))}
-
     </article>
   )
 }

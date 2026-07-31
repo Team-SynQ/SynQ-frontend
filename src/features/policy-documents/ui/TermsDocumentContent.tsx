@@ -1,16 +1,20 @@
 import { termsDocument } from '../model/termsOfService'
 
-export function TermsDocumentContent() {
+type TermsDocumentContentProps = {
+  id: string
+  labelledBy: string
+}
+
+export function TermsDocumentContent({ id, labelledBy }: TermsDocumentContentProps) {
   return (
     <article
-      aria-labelledby="terms-document-title"
+      aria-labelledby={labelledBy}
       className="flex min-h-0 flex-1 flex-col gap-m overflow-y-auto px-s pb-xl"
+      id={id}
       role="tabpanel"
     >
       <div className="shrink-0 typo-body-02 text-fg-secondary">
-        <p className="m-0" id="terms-document-title">
-          {termsDocument.name}
-        </p>
+        <p className="m-0">{termsDocument.name}</p>
         <p className="m-0">시행일자: {termsDocument.effectiveDate}</p>
       </div>
 

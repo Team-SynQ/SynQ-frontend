@@ -7,8 +7,18 @@ import { TermsDocumentContent } from './TermsDocumentContent'
 type PolicyDocumentTab = 'privacy' | 'terms'
 
 const policyTabs = [
-  { id: 'terms' as const, label: '이용 약관' },
-  { id: 'privacy' as const, label: '개인정보 처리 방침' },
+  {
+    id: 'terms' as const,
+    label: '이용 약관',
+    panelId: 'terms-document-panel',
+    tabId: 'terms-document-tab',
+  },
+  {
+    id: 'privacy' as const,
+    label: '개인정보 처리 방침',
+    panelId: 'privacy-policy-panel',
+    tabId: 'privacy-policy-tab',
+  },
 ]
 
 export function PolicyDocumentsView() {
@@ -28,6 +38,7 @@ export function PolicyDocumentsView() {
 
             return (
               <button
+                aria-controls={tab.panelId}
                 aria-selected={isActive}
                 className={cn(
                   'h-[64px] w-[190px] border-b-2 px-m typo-title-02',
@@ -35,6 +46,7 @@ export function PolicyDocumentsView() {
                     ? 'border-fg-primary font-semibold! text-fg-tab-active'
                     : 'border-transparent text-fg-secondary',
                 )}
+                id={tab.tabId}
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 role="tab"
@@ -47,7 +59,11 @@ export function PolicyDocumentsView() {
         </div>
       </header>
 
-      {activeTab === 'terms' ? <TermsDocumentContent /> : <PrivacyPolicyContent />}
+      {activeTab === 'terms' ? (
+        <TermsDocumentContent id="terms-document-panel" labelledBy="terms-document-tab" />
+      ) : (
+        <PrivacyPolicyContent id="privacy-policy-panel" labelledBy="privacy-policy-tab" />
+      )}
     </section>
   )
 }
