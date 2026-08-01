@@ -31,6 +31,8 @@ function renderProjectMainboardPage(
     <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
         <Route element={<ProjectMainboardPage {...props} />} path="/projects" />
+        <Route element={<NavigationDestination />} path="/settings/help" />
+        <Route element={<NavigationDestination />} path="/settings/policy" />
         <Route element={<NavigationDestination />} path="/meetings/demo/tutorial" />
         <Route element={<NavigationDestination />} path="/meetings/:meetingRecordId/detail" />
       </Routes>
@@ -72,10 +74,28 @@ const previousMeeting: CompletedMeeting = {
   completedAt: new Date(2026, 6, 26, 12, 0).toISOString(),
 }
 
+const sidebarUser = {
+  email: 'honggildong@gmail.com',
+  name: '홍길동',
+}
+
 describe('ProjectMainboardPage', () => {
   afterEach(() => {
     vi.restoreAllMocks()
     vi.useRealTimers()
+  })
+
+  it.each([
+    { label: '도움말', path: '/settings/help' },
+    { label: '이용약관', path: '/settings/policy' },
+  ])('routes the sidebar account menu $label item', async ({ label, path }) => {
+    const browserUser = userEvent.setup()
+    renderProjectMainboardPage({ user: sidebarUser })
+
+    await browserUser.click(screen.getByRole('button', { name: new RegExp(sidebarUser.name) }))
+    await browserUser.click(screen.getByRole('menuitem', { name: label }))
+
+    expect(screen.getByText(new RegExp(`이동 완료 ${path}`))).toBeInTheDocument()
   })
 
   it('loads the active project meeting history and opens the latest summary', async () => {

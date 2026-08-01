@@ -101,6 +101,58 @@ describe('AppRouter', () => {
     expect(screen.getByText(projectMockActorFixture.email)).toBeInTheDocument()
   })
 
+  it('opens account settings directly', () => {
+    renderAppAt('/settings/account')
+
+    expect(screen.getByRole('heading', { name: '계정 정보 및 보안' })).toBeInTheDocument()
+    expect(screen.getAllByText(projectMockActorFixture.email)).toHaveLength(2)
+    expect(window.location.pathname).toBe('/settings/account')
+  })
+
+  it('opens help from the account settings panel', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/settings/account')
+
+    await user.click(screen.getByRole('button', { name: '도움말' }))
+
+    expect(window.location.pathname).toBe('/settings/help')
+    expect(screen.getByRole('heading', { name: '도움말' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '도움말' })).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('opens policy documents directly', () => {
+    renderAppAt('/settings/policy')
+
+    expect(window.location.pathname).toBe('/settings/policy')
+    expect(screen.getByRole('heading', { name: '정책 문서' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '이용 약관' })).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('opens project creation from the account settings sidebar', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/settings/account')
+
+    await user.click(screen.getByRole('button', { name: '프로젝트 추가' }))
+
+    expect(window.location.pathname).toBe('/projects')
+    expect(await screen.findByRole('heading', { name: '프로젝트 생성' })).toBeInTheDocument()
+  })
+
+  it('opens account settings from the project sidebar menu', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/projects')
+
+    await user.click(
+      screen.getByRole('button', {
+        name: new RegExp(projectMockActorFixture.name),
+      }),
+    )
+    await user.click(screen.getByRole('menuitem', { name: '계정 정보 및 보안' }))
+
+    expect(window.location.pathname).toBe('/settings/account')
+    expect(screen.getByRole('heading', { name: '계정 정보 및 보안' })).toBeInTheDocument()
+  })
+
   it('opens the existing live meeting page directly', async () => {
     renderAppAt('/meetings/demo/live')
 
