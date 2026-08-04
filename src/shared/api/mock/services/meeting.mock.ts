@@ -1,6 +1,8 @@
 import type { MeetingDetailResponse, MeetingAvatarKey } from '../../contracts/meeting.contracts'
+import { liveMeetingMockDb } from '../db/liveMeeting.mockDb'
+import { MockApiError, waitForMockApi } from '../lib/mockApi'
 
-const mockMeetingDetailStore: MeetingDetailResponse = {
+const mockMeetingDetailTemplate: MeetingDetailResponse = {
   recordId: 'record-1',
   meetingId: 'meeting-1',
   projectId: 'proj-1',
@@ -53,21 +55,47 @@ const mockMeetingDetailStore: MeetingDetailResponse = {
   },
 }
 
-export async function fetchMeetingDetail(meetingRecordId: string): Promise<MeetingDetailResponse> {
-  void meetingRecordId
+const fallbackTitleOverrides = new Map<string, string>()
 
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({ ...mockMeetingDetailStore })
-    }, 200)
-  })
+export async function fetchMeetingDetail(meetingRecordId: string): Promise<MeetingDetailResponse> {
+  await waitForMockApi()
+  if (liveMeetingMockDb.isCompletedMeetingDeleted(meetingRecordId)) {
+    throw new MockApiError(404, 'MEETING_RECORD_NOT_FOUND', '회의 기록을 찾을 수 없습니다.')
+  }
+
+  const completedMeeting = liveMeetingMockDb.getCompletedMeeting(meetingRecordId)
+  if (completedMeeting) {
+    return {
+      ...structuredClone(mockMeetingDetailTemplate),
+      ...completedMeeting,
+    }
+  }
+
+  return {
+    ...structuredClone(mockMeetingDetailTemplate),
+    recordId: meetingRecordId,
+    meetingTitle:
+      fallbackTitleOverrides.get(meetingRecordId) ?? mockMeetingDetailTemplate.meetingTitle,
+  }
 }
 
 export async function updateMeetingTitle(
   meetingRecordId: string,
   newTitle: string,
 ): Promise<boolean> {
-  void meetingRecordId
-  mockMeetingDetailStore.meetingTitle = newTitle
+  await waitForMockApi()
+  if (liveMeetingMockDb.isCompletedMeetingDeleted(meetingRecordId)) {
+    throw new MockApiError(404, 'MEETING_RECORD_NOT_FOUND', '회의 기록을 찾을 수 없습니다.')
+  }
+
+  const normalizedTitle = newTitle.trim()
+  if (!normalizedTitle || normalizedTitle.length > 50) {
+    throw new MockApiError(400, 'INVALID_MEETING_TITLE', '회의 제목을 확인해 주세요.')
+  }
+
+  const updated = liveMeetingMockDb.updateCompletedMeetingTitle(meetingRecordId, normalizedTitle)
+  if (!updated) {
+    fallbackTitleOverrides.set(meetingRecordId, normalizedTitle)
+  }
   return true
 }

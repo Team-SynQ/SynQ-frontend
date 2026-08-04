@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { resetLiveMeetingMockDb } from '../db/liveMeeting.mockDb'
+import { liveMeetingMockDb, resetLiveMeetingMockDb } from '../db/liveMeeting.mockDb'
 import { liveMeetingAiMockGateway, liveMeetingMockService } from './liveMeeting.mock'
+import { fetchMeetingDetail } from './meeting.mock'
 
 describe('liveMeetingMockService', () => {
   beforeEach(() => {
@@ -225,6 +226,91 @@ describe('liveMeetingMockService', () => {
     await expect(liveMeetingMockService.listCompletedMeetings('project-2')).resolves.toEqual([
       expect.objectContaining({ projectId: 'project-2' }),
     ])
+  })
+
+  it('updates one completed record by recordId without changing a sibling record', async () => {
+    const baseRequest = {
+      meetingId: 'demo',
+      projectId: 'project-1',
+      projectTitle: '서비스 디자인',
+      durationSeconds: 600,
+      host: {
+        id: 'you',
+        name: '윤금서',
+        avatarKey: 'you' as const,
+      },
+    }
+    const first = await liveMeetingMockService.completeMeeting({
+      ...baseRequest,
+      meetingTitle: '첫 번째 회의',
+      completedAt: '2026-07-27T01:00:00.000Z',
+    })
+    const second = await liveMeetingMockService.completeMeeting({
+      ...baseRequest,
+      meetingTitle: '두 번째 회의',
+      completedAt: '2026-07-27T02:00:00.000Z',
+    })
+
+    const updated = await liveMeetingMockService.updateCompletedMeetingTitle(
+      second.recordId,
+      '변경된 회의',
+    )
+
+    expect(updated).toMatchObject({
+      recordId: second.recordId,
+      meetingTitle: '변경된 회의',
+    })
+    await expect(liveMeetingMockService.listCompletedMeetings('project-1')).resolves.toEqual([
+      expect.objectContaining({ recordId: second.recordId, meetingTitle: '변경된 회의' }),
+      expect.objectContaining({ recordId: first.recordId, meetingTitle: '첫 번째 회의' }),
+    ])
+  })
+
+  it('deletes one completed record and marks its detail as unavailable', async () => {
+    const record = await liveMeetingMockService.completeMeeting({
+      meetingId: 'demo',
+      projectId: 'project-1',
+      projectTitle: '서비스 디자인',
+      meetingTitle: '삭제할 회의',
+      durationSeconds: 600,
+      completedAt: '2026-07-27T01:00:00.000Z',
+      host: {
+        id: 'you',
+        name: '윤금서',
+        avatarKey: 'you',
+      },
+    })
+
+    await liveMeetingMockService.deleteCompletedMeeting(record.recordId)
+
+    await expect(liveMeetingMockService.listCompletedMeetings('project-1')).resolves.toEqual([])
+    expect(liveMeetingMockDb.isCompletedMeetingDeleted(record.recordId)).toBe(true)
+    await expect(fetchMeetingDetail(record.recordId)).rejects.toMatchObject({
+      code: 'MEETING_RECORD_NOT_FOUND',
+    })
+  })
+
+  it('exposes an updated completed title through the meeting detail mock', async () => {
+    const record = await liveMeetingMockService.completeMeeting({
+      meetingId: 'demo',
+      projectId: 'project-1',
+      projectTitle: '서비스 디자인',
+      meetingTitle: '수정 전 회의',
+      durationSeconds: 600,
+      completedAt: '2026-07-27T01:00:00.000Z',
+      host: {
+        id: 'you',
+        name: '윤금서',
+        avatarKey: 'you',
+      },
+    })
+
+    await liveMeetingMockService.updateCompletedMeetingTitle(record.recordId, '수정 후 회의')
+
+    await expect(fetchMeetingDetail(record.recordId)).resolves.toMatchObject({
+      recordId: record.recordId,
+      meetingTitle: '수정 후 회의',
+    })
   })
 
   it('fails completion for the save error scenario', async () => {

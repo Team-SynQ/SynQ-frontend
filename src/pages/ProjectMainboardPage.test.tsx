@@ -116,6 +116,82 @@ describe('ProjectMainboardPage', () => {
     ).toBeInTheDocument()
   })
 
+  it('updates the history row and latest summary after renaming the newest record', async () => {
+    const user = userEvent.setup()
+    const updateCompletedMeetingTitle = vi.fn(
+      async (recordId: string, title: string): Promise<CompletedMeeting> => ({
+        ...completedMeeting,
+        recordId,
+        meetingTitle: title,
+      }),
+    )
+
+    renderProjectMainboardPage({
+      loadProjects: () => Promise.resolve([projectOne]),
+      loadCompletedMeetings: () => Promise.resolve([completedMeeting, previousMeeting]),
+      updateCompletedMeetingTitle,
+    })
+
+    await screen.findAllByText('온보딩 개선 회의')
+    await user.click(screen.getByRole('button', { name: '온보딩 개선 회의 더보기' }))
+    await user.click(screen.getByRole('menuitem', { name: '제목 수정하기' }))
+    const titleInput = screen.getByLabelText('회의 제목')
+    await user.clear(titleInput)
+    await user.type(titleInput, '변경된 최신 회의')
+    await user.click(screen.getByRole('button', { name: '제목 변경하기' }))
+
+    expect(await screen.findAllByText('변경된 최신 회의')).toHaveLength(2)
+    expect(updateCompletedMeetingTitle).toHaveBeenCalledWith('meeting-record-1', '변경된 최신 회의')
+  })
+
+  it('promotes the next record and shows empty states as records are deleted', async () => {
+    const user = userEvent.setup()
+    const deleteCompletedMeeting = vi.fn().mockResolvedValue(undefined)
+
+    renderProjectMainboardPage({
+      deleteCompletedMeeting,
+      loadProjects: () => Promise.resolve([projectOne]),
+      loadCompletedMeetings: () => Promise.resolve([completedMeeting, previousMeeting]),
+    })
+
+    await screen.findAllByText('온보딩 개선 회의')
+    await user.click(screen.getByRole('button', { name: '온보딩 개선 회의 더보기' }))
+    await user.click(screen.getByRole('menuitem', { name: '기록 삭제하기' }))
+    await user.click(screen.getByRole('button', { name: '지우기' }))
+
+    expect(await screen.findAllByText('이전 회의')).toHaveLength(2)
+    expect(screen.queryByText('온보딩 개선 회의')).not.toBeInTheDocument()
+    const deleteToast = await screen.findByRole('status', { name: '회의 기록 삭제 완료' })
+    expect(deleteToast).toBeInTheDocument()
+    expect(deleteToast.parentElement).toHaveStyle({ top: '20px' })
+
+    await user.click(screen.getByRole('button', { name: '이전 회의 더보기' }))
+    await user.click(screen.getByRole('menuitem', { name: '기록 삭제하기' }))
+    await user.click(screen.getByRole('button', { name: '지우기' }))
+
+    expect(await screen.findAllByText(/아직 회의 기록이 없습니다/)).toHaveLength(2)
+    expect(deleteCompletedMeeting).toHaveBeenNthCalledWith(1, 'meeting-record-1')
+    expect(deleteCompletedMeeting).toHaveBeenNthCalledWith(2, 'meeting-record-previous')
+  })
+
+  it('keeps meeting data when deletion rejects and shows failure feedback', async () => {
+    const user = userEvent.setup()
+
+    renderProjectMainboardPage({
+      deleteCompletedMeeting: vi.fn().mockRejectedValue(new Error('request failed')),
+      loadProjects: () => Promise.resolve([projectOne]),
+      loadCompletedMeetings: () => Promise.resolve([completedMeeting, previousMeeting]),
+    })
+
+    await screen.findAllByText('온보딩 개선 회의')
+    await user.click(screen.getByRole('button', { name: '온보딩 개선 회의 더보기' }))
+    await user.click(screen.getByRole('menuitem', { name: '기록 삭제하기' }))
+    await user.click(screen.getByRole('button', { name: '지우기' }))
+
+    expect(await screen.findByText('회의 기록 삭제 실패')).toBeInTheDocument()
+    expect(screen.getAllByText('온보딩 개선 회의')).toHaveLength(2)
+  })
+
   it('prefers the project selected by return navigation state', async () => {
     const secondProject = { ...projectOne, id: 'project-2', name: '두 번째 프로젝트' }
     const loadCompletedMeetings = vi.fn(() => Promise.resolve([]))

@@ -11,6 +11,7 @@ export function MeetingTitleResultToast(props: MeetingTitleResultToastProps) {
         description={`'${props.nextTitle}' 제목으로 변경됐습니다.`}
         className={props.className}
         position="topCenter"
+        positionOffset={20}
         title="회의 기록 제목 변경 성공"
         type="success"
       />
@@ -22,6 +23,7 @@ export function MeetingTitleResultToast(props: MeetingTitleResultToastProps) {
       description="오류가 발생했습니다. 다시 시도해 주세요."
       className={props.className}
       position="topCenter"
+      positionOffset={20}
       title="회의 기록 제목 변경 실패"
       type="error"
     />

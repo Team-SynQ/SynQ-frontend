@@ -76,6 +76,26 @@ describe('project meeting dashboard', () => {
     expect(within(rows[0]!).getByText('윤금서')).toBeInTheDocument()
   })
 
+  it.each([
+    { missingCallback: 'both', onDeleteMeeting: undefined, onRenameMeeting: undefined },
+    { missingCallback: 'delete', onDeleteMeeting: undefined, onRenameMeeting: vi.fn() },
+    { missingCallback: 'rename', onDeleteMeeting: vi.fn(), onRenameMeeting: undefined },
+  ])(
+    'does not render record actions when the $missingCallback mutation callback is unavailable',
+    ({ onDeleteMeeting, onRenameMeeting }) => {
+      render(
+        <ProjectMeetingHistory
+          meetings={meetings}
+          onDeleteMeeting={onDeleteMeeting}
+          onRenameMeeting={onRenameMeeting}
+        />,
+      )
+
+      expect(screen.queryByRole('button', { name: '두 번째 회의 더보기' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: '첫 번째 회의 더보기' })).not.toBeInTheDocument()
+    },
+  )
+
   it('shows processing and completion status only on the matching meeting row', () => {
     const { rerender } = render(
       <ProjectMeetingHistory
@@ -112,11 +132,35 @@ describe('project meeting dashboard', () => {
     ).not.toBeInTheDocument()
   })
 
+  it('disables record actions only for the processing meeting', () => {
+    render(
+      <ProjectMeetingHistory
+        meetings={meetings}
+        onDeleteMeeting={vi.fn()}
+        onRenameMeeting={vi.fn()}
+        presentation={{
+          recordId: 'meeting-record-2',
+          status: 'processing',
+        }}
+      />,
+    )
+
+    expect(screen.getByRole('button', { name: '두 번째 회의 더보기' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '첫 번째 회의 더보기' })).toBeEnabled()
+  })
+
   it('opens a meeting from its content but not from the more button', async () => {
     const user = userEvent.setup()
     const onOpenMeetingDetail = vi.fn()
 
-    render(<ProjectMeetingHistory meetings={meetings} onOpenMeetingDetail={onOpenMeetingDetail} />)
+    render(
+      <ProjectMeetingHistory
+        meetings={meetings}
+        onDeleteMeeting={vi.fn()}
+        onOpenMeetingDetail={onOpenMeetingDetail}
+        onRenameMeeting={vi.fn()}
+      />,
+    )
 
     await user.click(
       screen.getByRole('button', {

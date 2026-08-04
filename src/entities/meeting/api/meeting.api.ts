@@ -13,6 +13,8 @@ export type MeetingApi = {
   updateTranscript(request: UpdateTranscriptRequest): Promise<TranscriptSegmentResponse>
   completeMeeting(request: CompleteMeetingRequest): Promise<CompletedMeetingSummary>
   listCompletedMeetings(projectId: string): Promise<CompletedMeetingSummary[]>
+  updateCompletedMeetingTitle(recordId: string, title: string): Promise<CompletedMeetingSummary>
+  deleteCompletedMeeting(recordId: string): Promise<void>
 }
 
 export const meetingApi: MeetingApi = liveMeetingMockService

@@ -109,4 +109,27 @@ describe('MeetingTitleEditDialog', () => {
 
     expect(screen.getByLabelText('회의 제목')).toHaveValue('3차 회의')
   })
+
+  it('locks editing and dismissal while a title update is pending', async () => {
+    const user = userEvent.setup()
+    const onCancel = vi.fn()
+
+    render(
+      <MeetingTitleEditDialog
+        currentTitle="4차 대면 회의"
+        onCancel={onCancel}
+        onSubmit={vi.fn()}
+        open
+        pending
+      />,
+    )
+
+    expect(screen.getByLabelText('회의 제목')).toBeDisabled()
+    expect(screen.getByRole('button', { name: '취소' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '제목 변경하기' })).toBeDisabled()
+
+    await user.keyboard('{Escape}')
+
+    expect(onCancel).not.toHaveBeenCalled()
+  })
 })

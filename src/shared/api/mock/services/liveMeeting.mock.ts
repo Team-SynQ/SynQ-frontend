@@ -95,6 +95,30 @@ export const liveMeetingMockService = {
     await waitForMockApi()
     return liveMeetingMockDb.listCompletedMeetings(projectId)
   },
+
+  async updateCompletedMeetingTitle(
+    recordId: string,
+    title: string,
+  ): Promise<CompletedMeetingSummary> {
+    await waitForMockApi()
+    const normalizedTitle = title.trim()
+    if (!normalizedTitle || normalizedTitle.length > 50) {
+      throw new MockApiError(400, 'INVALID_MEETING_TITLE', '회의 제목을 확인해 주세요.')
+    }
+
+    const updated = liveMeetingMockDb.updateCompletedMeetingTitle(recordId, normalizedTitle)
+    if (!updated) {
+      throw new MockApiError(404, 'MEETING_RECORD_NOT_FOUND', '회의 기록을 찾을 수 없습니다.')
+    }
+    return updated
+  },
+
+  async deleteCompletedMeeting(recordId: string): Promise<void> {
+    await waitForMockApi()
+    if (!liveMeetingMockDb.deleteCompletedMeeting(recordId)) {
+      throw new MockApiError(404, 'MEETING_RECORD_NOT_FOUND', '회의 기록을 찾을 수 없습니다.')
+    }
+  },
 }
 
 export const liveMeetingAiMockGateway = {
