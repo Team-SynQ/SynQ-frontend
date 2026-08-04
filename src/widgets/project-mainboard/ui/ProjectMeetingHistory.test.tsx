@@ -76,6 +76,26 @@ describe('project meeting dashboard', () => {
     expect(within(rows[0]!).getByText('윤금서')).toBeInTheDocument()
   })
 
+  it.each([
+    { missingCallback: 'both', onDeleteMeeting: undefined, onRenameMeeting: undefined },
+    { missingCallback: 'delete', onDeleteMeeting: undefined, onRenameMeeting: vi.fn() },
+    { missingCallback: 'rename', onDeleteMeeting: vi.fn(), onRenameMeeting: undefined },
+  ])(
+    'does not render record actions when the $missingCallback mutation callback is unavailable',
+    ({ onDeleteMeeting, onRenameMeeting }) => {
+      render(
+        <ProjectMeetingHistory
+          meetings={meetings}
+          onDeleteMeeting={onDeleteMeeting}
+          onRenameMeeting={onRenameMeeting}
+        />,
+      )
+
+      expect(screen.queryByRole('button', { name: '두 번째 회의 더보기' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: '첫 번째 회의 더보기' })).not.toBeInTheDocument()
+    },
+  )
+
   it('shows processing and completion status only on the matching meeting row', () => {
     const { rerender } = render(
       <ProjectMeetingHistory
@@ -133,7 +153,14 @@ describe('project meeting dashboard', () => {
     const user = userEvent.setup()
     const onOpenMeetingDetail = vi.fn()
 
-    render(<ProjectMeetingHistory meetings={meetings} onOpenMeetingDetail={onOpenMeetingDetail} />)
+    render(
+      <ProjectMeetingHistory
+        meetings={meetings}
+        onDeleteMeeting={vi.fn()}
+        onOpenMeetingDetail={onOpenMeetingDetail}
+        onRenameMeeting={vi.fn()}
+      />,
+    )
 
     await user.click(
       screen.getByRole('button', {

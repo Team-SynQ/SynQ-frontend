@@ -33,8 +33,8 @@ export function ProjectMeetingHistory({
   meetings,
   presentation,
   onOpenMeetingDetail,
-  onDeleteMeeting = async () => undefined,
-  onRenameMeeting = async () => undefined,
+  onDeleteMeeting,
+  onRenameMeeting,
 }: ProjectMeetingHistoryProps) {
   const [deleteFeedback, setDeleteFeedback] = useState<
     { result: 'success'; meetingTitle: string } | { result: 'failure' } | null
@@ -42,6 +42,8 @@ export function ProjectMeetingHistory({
   const deleteFeedbackVisibility = useTransientVisibility()
 
   const handleDeleteMeeting = async (meeting: CompletedMeeting) => {
+    if (!onDeleteMeeting) return
+
     try {
       await onDeleteMeeting(meeting.recordId)
       setDeleteFeedback({ result: 'success', meetingTitle: meeting.meetingTitle })
@@ -121,12 +123,14 @@ export function ProjectMeetingHistory({
                         </span>
                       </span>
                     </button>
-                    <MeetingRecordActions
-                      disabled={status === 'processing'}
-                      meeting={meeting}
-                      onDelete={() => handleDeleteMeeting(meeting)}
-                      onRename={onRenameMeeting}
-                    />
+                    {onDeleteMeeting && onRenameMeeting ? (
+                      <MeetingRecordActions
+                        disabled={status === 'processing'}
+                        meeting={meeting}
+                        onDelete={() => handleDeleteMeeting(meeting)}
+                        onRename={onRenameMeeting}
+                      />
+                    ) : null}
                   </li>
                 )
               })}
