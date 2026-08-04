@@ -14,6 +14,8 @@ type ProjectMainboardProps = {
   onAddMaterials?: (materials: ProjectMaterialDraft) => Promise<void> | void
   onDeleteMaterial?: (materialId: string) => Promise<void> | void
   onRenameMaterial?: (materialId: string, nextName: string) => Promise<void> | void
+  onRenameMeeting?: (recordId: string, nextTitle: string) => Promise<void>
+  onDeleteMeeting?: (recordId: string) => Promise<void>
   meetings?: CompletedMeeting[]
   meetingHistoryPresentation?: MeetingHistoryPresentation
   meetingProcessingOverlayOpen?: boolean
@@ -32,6 +34,8 @@ export function ProjectMainboard({
   onCreateProject,
   onDeleteMaterial,
   onRenameMaterial,
+  onRenameMeeting,
+  onDeleteMeeting,
   meetings = [],
   meetingHistoryPresentation,
   meetingProcessingOverlayOpen,
@@ -55,6 +59,8 @@ export function ProjectMainboard({
           onAddMaterials={onAddMaterials}
           onDeleteMaterial={onDeleteMaterial}
           onRenameMaterial={onRenameMaterial}
+          onRenameMeeting={onRenameMeeting}
+          onDeleteMeeting={onDeleteMeeting}
           meetings={meetings}
           meetingHistoryPresentation={meetingHistoryPresentation}
           meetingProcessingOverlayOpen={meetingProcessingOverlayOpen}

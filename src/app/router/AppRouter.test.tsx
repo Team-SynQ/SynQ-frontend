@@ -174,6 +174,41 @@ describe('AppRouter', () => {
     expect(window.location.pathname).toBe('/meetings/meeting-record-999/detail')
   })
 
+  it('uses the route record id when editing a meeting detail title', async () => {
+    const user = userEvent.setup()
+    const updateMeetingTitle = vi
+      .spyOn(meetingMockService, 'updateMeetingTitle')
+      .mockResolvedValue(true)
+
+    renderAppAt('/meetings/meeting-record-999/detail')
+
+    expect(
+      await screen.findByRole('heading', {
+        name: '신규 온보딩 개선 및 출시 일정 논의',
+      }),
+    ).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '더보기 메뉴' }))
+    await user.click(screen.getByRole('button', { name: '회의 제목 수정하기' }))
+    const titleInput = screen.getByPlaceholderText('회의 제목을 입력해 주세요')
+    await user.clear(titleInput)
+    await user.type(titleInput, '변경된 상세 제목')
+    await user.click(screen.getByRole('button', { name: '제목 변경하기' }))
+
+    expect(await screen.findByRole('heading', { name: '변경된 상세 제목' })).toBeInTheDocument()
+    expect(updateMeetingTitle).toHaveBeenCalledWith('meeting-record-999', '변경된 상세 제목')
+  })
+
+  it('shows a recoverable error when a meeting detail cannot be loaded', async () => {
+    vi.spyOn(meetingMockService, 'fetchMeetingDetail').mockRejectedValueOnce(
+      new Error('meeting record not found'),
+    )
+
+    renderAppAt('/meetings/deleted-record/detail')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('회의 기록을 불러오지 못했습니다.')
+    expect(screen.getByRole('button', { name: '메인보드로 이동' })).toBeInTheDocument()
+  })
+
   it('allows direct access to a setup step without stored selections', () => {
     renderAppAt('/setup/preview')
 

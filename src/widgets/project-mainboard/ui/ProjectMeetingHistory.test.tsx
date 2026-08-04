@@ -112,6 +112,23 @@ describe('project meeting dashboard', () => {
     ).not.toBeInTheDocument()
   })
 
+  it('disables record actions only for the processing meeting', () => {
+    render(
+      <ProjectMeetingHistory
+        meetings={meetings}
+        onDeleteMeeting={vi.fn()}
+        onRenameMeeting={vi.fn()}
+        presentation={{
+          recordId: 'meeting-record-2',
+          status: 'processing',
+        }}
+      />,
+    )
+
+    expect(screen.getByRole('button', { name: '두 번째 회의 더보기' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '첫 번째 회의 더보기' })).toBeEnabled()
+  })
+
   it('opens a meeting from its content but not from the more button', async () => {
     const user = userEvent.setup()
     const onOpenMeetingDetail = vi.fn()

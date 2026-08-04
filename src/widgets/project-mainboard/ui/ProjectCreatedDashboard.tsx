@@ -40,6 +40,8 @@ type ProjectCreatedDashboardProps = {
   onAddMaterials?: (materials: ProjectMaterialDraft) => Promise<void> | void
   onDeleteMaterial?: (materialId: string) => Promise<void> | void
   onRenameMaterial?: (materialId: string, nextName: string) => Promise<void> | void
+  onRenameMeeting?: (recordId: string, nextTitle: string) => Promise<void>
+  onDeleteMeeting?: (recordId: string) => Promise<void>
   meetings?: CompletedMeeting[]
   meetingHistoryPresentation?: MeetingHistoryPresentation
   meetingProcessingOverlayOpen?: boolean
@@ -63,6 +65,8 @@ export function ProjectCreatedDashboard({
   onAddMaterials,
   onDeleteMaterial,
   onRenameMaterial,
+  onRenameMeeting,
+  onDeleteMeeting,
   meetings = [],
   meetingHistoryPresentation,
   meetingProcessingOverlayOpen = false,
@@ -156,7 +160,9 @@ export function ProjectCreatedDashboard({
       ) : (
         <ProjectMeetingHistory
           meetings={meetings}
+          onDeleteMeeting={onDeleteMeeting}
           onOpenMeetingDetail={onOpenMeetingDetail}
+          onRenameMeeting={onRenameMeeting}
           presentation={meetingHistoryPresentation}
         />
       )}

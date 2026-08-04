@@ -48,6 +48,8 @@ type ProjectMainboardPageProps = {
     nextName: string,
   ) => Promise<void> | void
   loadCompletedMeetings?: (projectId: string) => Promise<CompletedMeeting[]>
+  updateCompletedMeetingTitle?: (recordId: string, title: string) => Promise<CompletedMeeting>
+  deleteCompletedMeeting?: (recordId: string) => Promise<void>
   loadProjectInformation?: (
     projectId: string,
   ) => Promise<ProjectSummary | void> | ProjectSummary | void
@@ -68,6 +70,10 @@ let nextClientReferenceId = 0
 
 const loadCompletedMeetingHistory = (projectId: string) =>
   meetingApi.listCompletedMeetings(projectId)
+const updateCompletedMeetingHistoryTitle = (recordId: string, title: string) =>
+  meetingApi.updateCompletedMeetingTitle(recordId, title)
+const deleteCompletedMeetingHistory = (recordId: string) =>
+  meetingApi.deleteCompletedMeeting(recordId)
 
 function createClientProjectReferences(
   materials: ProjectMaterialDraft,
@@ -105,6 +111,8 @@ export function ProjectMainboardPage({
   deleteProjectReference,
   renameProjectReference,
   loadCompletedMeetings = loadCompletedMeetingHistory,
+  updateCompletedMeetingTitle = updateCompletedMeetingHistoryTitle,
+  deleteCompletedMeeting = deleteCompletedMeetingHistory,
   loadProjectInformation,
   updateProject,
   deleteProject,
@@ -404,6 +412,30 @@ export function ProjectMainboardPage({
     }
   }
 
+  const handleRenameMeeting = async (recordId: string, nextTitle: string) => {
+    if (!activeProjectId) return
+
+    const updatedMeeting = await updateCompletedMeetingTitle(recordId, nextTitle)
+    setCompletedMeetingsByProject((current) => ({
+      ...current,
+      [activeProjectId]: (current[activeProjectId] ?? []).map((meeting) =>
+        meeting.recordId === recordId ? updatedMeeting : meeting,
+      ),
+    }))
+  }
+
+  const handleDeleteMeeting = async (recordId: string) => {
+    if (!activeProjectId) return
+
+    await deleteCompletedMeeting(recordId)
+    setCompletedMeetingsByProject((current) => ({
+      ...current,
+      [activeProjectId]: (current[activeProjectId] ?? []).filter(
+        (meeting) => meeting.recordId !== recordId,
+      ),
+    }))
+  }
+
   const activeProject = projects.find((project) => project.id === activeProjectId)
   const activeProjectMeetings = activeProjectId
     ? (completedMeetingsByProject[activeProjectId] ?? [])
@@ -458,9 +490,11 @@ export function ProjectMainboardPage({
         onAddMaterials={handleAddMaterials}
         onCreateProject={handleCreateProject}
         onDeleteProject={handleDeleteProject}
+        onDeleteMeeting={handleDeleteMeeting}
         onLoadProject={handleLoadProjectInformation}
         onDeleteMaterial={handleDeleteMaterial}
         onRenameMaterial={handleRenameMaterial}
+        onRenameMeeting={handleRenameMeeting}
         onOpenMeetingDetail={(recordId) =>
           navigate(`/meetings/${encodeURIComponent(recordId)}/detail`)
         }
