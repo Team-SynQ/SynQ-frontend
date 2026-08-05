@@ -96,6 +96,25 @@ describe('useLiveMeetingController async boundaries', () => {
     expect(result.current.transcript.state.isSpeaking).toBe(false)
   })
 
+  it('normalizes the current participant host flag from the join role', async () => {
+    vi.spyOn(meetingLifecycleApi, 'joinMeeting').mockResolvedValue({
+      meetingId: 1,
+      title: '2차 대면회의',
+      status: 'IN_PROGRESS',
+      role: 'MEMBER',
+      joinedAt: '2026-08-05T00:00:00.000Z',
+      wsUrl: 'wss://mock.synq/meetings/1',
+    })
+
+    const { result } = await renderReadyController()
+
+    if (result.current.status !== 'ready') throw new Error('controller is not ready')
+    expect(result.current.role).toBe('participant')
+    expect(
+      result.current.meeting.participants.find((participant) => participant.isCurrentUser)?.isHost,
+    ).toBe(false)
+  })
+
   it('keeps the AI draft and pinned context while exposing a controlled send error', async () => {
     vi.spyOn(meetingAiMockGateway, 'sendMeetingAiQuestion').mockRejectedValue(
       new Error('AI_SEND_FAILED'),

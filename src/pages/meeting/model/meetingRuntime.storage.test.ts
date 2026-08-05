@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   clearMeetingRuntime,
@@ -9,6 +9,10 @@ import {
 describe('meetingRuntime storage', () => {
   beforeEach(() => {
     window.sessionStorage.clear()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('isolates persisted runtime by meeting id', () => {
@@ -32,6 +36,24 @@ describe('meetingRuntime storage', () => {
       activeSeconds: 3,
       recordingState: 'recording',
     })
+  })
+
+  it('does not propagate a session storage write failure', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('storage blocked', 'SecurityError')
+    })
+
+    expect(() =>
+      writeMeetingRuntime('1', { activeSeconds: 8, recordingState: 'recording' }),
+    ).not.toThrow()
+  })
+
+  it('does not propagate a session storage removal failure', () => {
+    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+      throw new DOMException('storage blocked', 'SecurityError')
+    })
+
+    expect(() => clearMeetingRuntime('1')).not.toThrow()
   })
 
   it.each([

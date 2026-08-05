@@ -41,6 +41,7 @@ function renderProjectMainboardPage(
 }
 
 const projectOne: ProjectSummary = {
+  apiProjectId: 1,
   id: 'project-1',
   name: '서비스 디자인',
   overview: '',
@@ -359,7 +360,7 @@ describe('ProjectMainboardPage', () => {
     })
     renderProjectMainboardPage({
       createMeeting,
-      loadProjects: () => Promise.resolve([{ ...projectOne, id: '1' }]),
+      loadProjects: () => Promise.resolve([projectOne]),
       loadCompletedMeetings: () => Promise.resolve([]),
       requestMicrophonePermission,
     })
@@ -376,7 +377,7 @@ describe('ProjectMainboardPage', () => {
     expect(requestMicrophonePermission).toHaveBeenCalledOnce()
     expect(createMeeting).toHaveBeenCalledWith(1, { consentAgreed: true })
     expect(await screen.findByText(/이동 완료 \/meetings\/41\/tutorial/)).toHaveTextContent(
-      '{"projectId":"1","projectTitle":"서비스 디자인"}',
+      '{"projectId":"project-1","projectTitle":"서비스 디자인"}',
     )
   })
 
@@ -497,6 +498,7 @@ describe('ProjectMainboardPage', () => {
 
     await act(async () => {
       finishCreation?.({
+        apiProjectId: 101,
         id: 'project-created',
         name: '\uC2E0\uADDC \uD504\uB85C\uC81D\uD2B8',
         overview: '',
@@ -534,6 +536,7 @@ describe('ProjectMainboardPage', () => {
       createdProjectCount += 1
 
       return {
+        apiProjectId: createdProjectCount,
         id: `project-created-${createdProjectCount}`,
         name: draft.name,
         overview: draft.overview,
@@ -616,6 +619,7 @@ describe('ProjectMainboardPage', () => {
         }),
     )
     const onSubmitProject = vi.fn((draft: ProjectCreateDraft) => ({
+      apiProjectId: 201,
       id: 'latest-project',
       name: draft.name,
       overview: draft.overview,
@@ -644,6 +648,7 @@ describe('ProjectMainboardPage', () => {
     await act(async () => {
       finishInitialLoad?.([
         {
+          apiProjectId: 202,
           id: 'fetched-project',
           name: 'fetched project',
           overview: '',
@@ -672,6 +677,7 @@ describe('ProjectMainboardPage', () => {
     const loadProjects = vi.fn(() =>
       Promise.resolve<ProjectSummary[]>([
         {
+          apiProjectId: 1,
           id: 'project-1',
           name: '서비스 디자인',
           overview: '',
@@ -729,6 +735,7 @@ describe('ProjectMainboardPage', () => {
     const loadProjects = vi.fn(() =>
       Promise.resolve<ProjectSummary[]>([
         {
+          apiProjectId: 1,
           id: 'project-1',
           name: '서비스 디자인',
           overview: '',
@@ -772,6 +779,7 @@ describe('ProjectMainboardPage', () => {
     const loadProjects = vi.fn(() =>
       Promise.resolve<ProjectSummary[]>([
         {
+          apiProjectId: 1,
           id: 'project-1',
           name: '서비스 디자인',
           overview: '',
@@ -823,6 +831,7 @@ describe('ProjectMainboardPage', () => {
   it('deletes a project through the Figma confirmation dialog and shows the success toast', async () => {
     const user = userEvent.setup()
     const project: ProjectSummary = {
+      apiProjectId: 301,
       id: 'project-delete',
       name: '서비스 디자인',
       overview: '',
@@ -856,6 +865,7 @@ describe('ProjectMainboardPage', () => {
   it('keeps the delete dialog open and shows the Figma error toast when deletion fails', async () => {
     const user = userEvent.setup()
     const project: ProjectSummary = {
+      apiProjectId: 302,
       id: 'project-delete-failure',
       name: '서비스 디자인',
       overview: '',
@@ -883,6 +893,7 @@ describe('ProjectMainboardPage', () => {
   it('updates the active project and sidebar from the project settings modal', async () => {
     const user = userEvent.setup()
     const project: ProjectSummary = {
+      apiProjectId: 303,
       id: 'project-edit',
       name: '회의 보조 AI, 씽큐',
       overview: '기존 프로젝트 개요',

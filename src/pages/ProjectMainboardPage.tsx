@@ -271,7 +271,7 @@ export function ProjectMainboardPage({
 
   const createMeetingAndNavigate = async () => {
     if (!activeProject) return
-    const projectId = Number(activeProject.id)
+    const projectId = activeProject.apiProjectId
     if (!Number.isSafeInteger(projectId) || projectId <= 0) {
       setMeetingEntryVariant('meetingStartFailed')
       return

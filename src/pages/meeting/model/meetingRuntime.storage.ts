@@ -29,9 +29,17 @@ export function readMeetingRuntime(meetingId: string): PersistedMeetingRuntime |
 }
 
 export function writeMeetingRuntime(meetingId: string, value: PersistedMeetingRuntime): void {
-  window.sessionStorage.setItem(meetingRuntimeStorageKey(meetingId), JSON.stringify(value))
+  try {
+    window.sessionStorage.setItem(meetingRuntimeStorageKey(meetingId), JSON.stringify(value))
+  } catch {
+    // Runtime restoration is best-effort when browser storage is unavailable.
+  }
 }
 
 export function clearMeetingRuntime(meetingId: string): void {
-  window.sessionStorage.removeItem(meetingRuntimeStorageKey(meetingId))
+  try {
+    window.sessionStorage.removeItem(meetingRuntimeStorageKey(meetingId))
+  } catch {
+    // A completed meeting must not fail because browser storage is unavailable.
+  }
 }

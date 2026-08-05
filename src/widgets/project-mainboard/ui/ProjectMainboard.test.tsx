@@ -7,6 +7,7 @@ import { PROJECT_REFERENCE_MAX_MATERIALS, type ProjectSummary } from '../../../e
 import { ProjectMainboard } from './ProjectMainboard'
 
 const project: ProjectSummary = {
+  apiProjectId: 1,
   id: 'project-1',
   name: '서비스 디자인',
   overview: '더블 다이아몬드 프로세스를 적용한 사이드프로젝트',

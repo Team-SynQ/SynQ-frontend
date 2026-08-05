@@ -112,10 +112,16 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
       .then(([joinResponse, response]) => {
         if (!active || !isCurrentMeetingSession(meetingId, requestSessionSequence)) return
 
-        setMeeting(response)
+        const joinedAsHost = joinResponse.role === 'HOST'
+        setMeeting({
+          ...response,
+          participants: response.participants.map((participant) =>
+            participant.isCurrentUser ? { ...participant, isHost: joinedAsHost } : participant,
+          ),
+        })
         setLoadError(null)
         setMeetingTitle(joinResponse.title)
-        setRole(joinResponse.role === 'HOST' ? 'host' : 'participant')
+        setRole(joinedAsHost ? 'host' : 'participant')
         setSelectedSegmentId(null)
         setHintState({ status: 'idle' })
         setEditState({ status: 'idle' })
