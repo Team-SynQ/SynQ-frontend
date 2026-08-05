@@ -1,6 +1,7 @@
 import membersIcon from '../../../shared/assets/icons/members.svg'
 import moreVerticalIcon from '../../../shared/assets/icons/more-vertical.svg'
 import pauseIcon from '../../../shared/assets/icons/pause.svg'
+import playIcon from '../../../shared/assets/icons/play.svg'
 import { formatElapsedTime } from '../../../entities/meeting'
 import type { MeetingHeaderActions, MeetingHeaderViewModel } from '../../../entities/meeting'
 import { Button, LiveStatus } from '../../../shared/ui'
@@ -27,8 +28,8 @@ export function MeetingHeader({
   moreMenuTriggerRef,
   moreMenuPopover,
 }: MeetingHeaderProps) {
-  const recordingControlLabel =
-    model.recordingState === 'recording' ? '녹음 일시 정지' : '녹음 재개'
+  const isPaused = model.recordingState === 'paused'
+  const recordingControlLabel = isPaused ? '회의 다시 시작' : '회의 일시정지'
 
   return (
     <header className="flex h-[90px] min-w-0 items-center justify-between gap-s bg-surface-elevated px-l py-m">
@@ -67,13 +68,19 @@ export function MeetingHeader({
         </time>
         <Button
           aria-label={recordingControlLabel}
-          aria-pressed={model.recordingState === 'paused'}
+          aria-pressed={isPaused}
           className="size-[42px] rounded-full px-0!"
+          disabled={model.recordingControlDisabled}
           onClick={actions.onToggleRecording}
           size="medium"
           variant="basic"
         >
-          <img alt="" aria-hidden="true" className="size-[42px]" src={pauseIcon} />
+          <img
+            alt=""
+            aria-hidden="true"
+            className="size-[42px]"
+            src={isPaused ? playIcon : pauseIcon}
+          />
         </Button>
         <Button onClick={actions.onEndMeeting} size="medium">
           {model.isHost ? '회의 종료' : '나가기'}

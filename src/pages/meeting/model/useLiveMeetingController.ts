@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import {
+  liveMeetingSnapshotGateway,
   meetingAiMockGateway,
-  meetingApi,
+  meetingConnectionGateway,
+  meetingLifecycleApi,
+  meetingRecordGateway,
   type CompletedMeeting,
   type LiveMeeting,
   type LiveMeetingAiPinnedContext,
@@ -19,6 +22,7 @@ import type {
   TranscriptHintState,
   TranscriptPanelProps,
 } from '../../../features/live-transcription'
+import { useMeetingRuntime } from './useMeetingRuntime'
 
 type ReadyController = {
   status: 'ready'
@@ -26,6 +30,9 @@ type ReadyController = {
   meetingTitle: string
   elapsedSeconds: number
   recordingState: 'recording' | 'paused'
+  connectionState: 'connecting' | 'connected' | 'reconnecting'
+  connectionNotice: 'unstable' | 'restored' | null
+  role: 'host' | 'participant'
   transcript: TranscriptPanelProps
   aiChat: AiChatContentProps
   aiChatDisplayMode: AiChatDisplayMode
@@ -51,8 +58,7 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
   const [meeting, setMeeting] = useState<LiveMeeting | null>(null)
   const [loadError, setLoadError] = useState<{ meetingId: string; message: string } | null>(null)
   const [meetingTitle, setMeetingTitle] = useState('')
-  const [elapsedSeconds, setElapsedSeconds] = useState(0)
-  const [recordingState, setRecordingState] = useState<'recording' | 'paused'>('recording')
+  const [role, setRole] = useState<'host' | 'participant'>('host')
   const [selectedSegmentId, setSelectedSegmentId] = useState<string | null>(null)
   const [hintState, setHintState] = useState<TranscriptHintState>({ status: 'idle' })
   const [editState, setEditState] = useState<TranscriptEditState>({ status: 'idle' })
@@ -67,6 +73,17 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
   const composerInputRef = useRef<HTMLInputElement>(null)
   const lastExpandedAiChatModeRef = useRef<Exclude<AiChatDisplayMode, 'launcher'>>('docked')
   const meetingSessionRef = useRef({ meetingId, sequence: 0 })
+  const endedMeetingRef = useRef<{
+    meetingId: string
+    endedAt: string
+  } | null>(null)
+  const runtime = useMeetingRuntime({
+    enabled: meeting?.meetingId === meetingId,
+    meetingId,
+    restoreConnection: meetingConnectionGateway.restoreConnection,
+  })
+  const apiMeetingId = Number(meetingId)
+  const hasValidMeetingId = Number.isSafeInteger(apiMeetingId) && apiMeetingId > 0
 
   const isCurrentMeetingSession = useCallback(
     (requestMeetingId: string, requestSequence: number) =>
@@ -82,16 +99,23 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
 
     hintRequestSequenceRef.current += 1
 
-    void meetingApi
-      .joinMeeting(meetingId)
-      .then((response) => {
+    if (!hasValidMeetingId) {
+      return () => {
+        active = false
+      }
+    }
+
+    void Promise.all([
+      meetingLifecycleApi.joinMeeting(apiMeetingId),
+      liveMeetingSnapshotGateway.getSnapshot(meetingId),
+    ])
+      .then(([joinResponse, response]) => {
         if (!active || !isCurrentMeetingSession(meetingId, requestSessionSequence)) return
 
         setMeeting(response)
         setLoadError(null)
-        setMeetingTitle(response.meetingTitle)
-        setElapsedSeconds(response.elapsedSeconds)
-        setRecordingState(response.recordingState)
+        setMeetingTitle(joinResponse.title)
+        setRole(joinResponse.role === 'HOST' ? 'host' : 'participant')
         setSelectedSegmentId(null)
         setHintState({ status: 'idle' })
         setEditState({ status: 'idle' })
@@ -100,6 +124,7 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
         setIsSending(false)
         setSendError(null)
         setAiChatDisplayMode('docked')
+        endedMeetingRef.current = null
         hintCacheRef.current.clear()
         setMessages(
           response.aiChat.messages.map(({ id, role, content }) => ({
@@ -120,19 +145,7 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
     return () => {
       active = false
     }
-  }, [isCurrentMeetingSession, meetingId])
-
-  const hasMeeting = meeting !== null
-
-  useEffect(() => {
-    if (!hasMeeting) return
-
-    const timerId = window.setInterval(() => {
-      setElapsedSeconds((current) => current + 1)
-    }, 1000)
-
-    return () => window.clearInterval(timerId)
-  }, [hasMeeting])
+  }, [apiMeetingId, hasValidMeetingId, isCurrentMeetingSession, meetingId])
 
   const loadHint = useCallback(
     async (transcriptId: string, useCache: boolean) => {
@@ -180,6 +193,9 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
     [isCurrentMeetingSession, meetingId],
   )
 
+  if (!hasValidMeetingId) {
+    return { status: 'error', message: '회의 정보를 확인할 수 없습니다.' }
+  }
   if (loadError?.meetingId === meetingId) {
     return { status: 'error', message: loadError.message }
   }
@@ -220,7 +236,7 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
     setEditState(savingState)
 
     try {
-      const updated = await meetingApi.updateTranscript({
+      const updated = await liveMeetingSnapshotGateway.updateTranscript({
         meetingId,
         segmentId: savingState.transcriptId,
         text: savingState.draftText,
@@ -323,19 +339,29 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
       throw new Error('회의 진행자 정보를 찾을 수 없습니다.')
     }
 
-    return meetingApi.completeMeeting({
+    const activeDurationSeconds = runtime.freezeForEnd()
+    let endedMeeting = endedMeetingRef.current
+    if (!endedMeeting || endedMeeting.meetingId !== meeting.meetingId) {
+      const response = await meetingLifecycleApi.endMeeting(Number(meeting.meetingId))
+      endedMeeting = { meetingId: meeting.meetingId, endedAt: response.endedAt }
+      endedMeetingRef.current = endedMeeting
+    }
+
+    const completedMeeting = await meetingRecordGateway.finalizeEndedMeeting({
       meetingId: meeting.meetingId,
       projectId: context.projectId,
       projectTitle: context.projectTitle,
       meetingTitle,
-      durationSeconds: elapsedSeconds,
-      completedAt: new Date().toISOString(),
+      activeDurationSeconds,
+      endedAt: endedMeeting.endedAt,
       host: {
         id: host.id,
         name: host.name,
         avatarKey: host.avatarKey,
       },
     })
+    runtime.clear()
+    return completedMeeting
   }
 
   const transcript: TranscriptPanelProps = {
@@ -354,9 +380,10 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
             : current,
         ),
       onRefresh: () => {
+        if (!runtime.canProgress) return
         const requestMeetingId = meetingId
         const requestSessionSequence = meetingSessionRef.current.sequence
-        void meetingApi
+        void liveMeetingSnapshotGateway
           .listTranscripts(meetingId)
           .then((segments) => {
             if (!isCurrentMeetingSession(requestMeetingId, requestSessionSequence)) return
@@ -385,7 +412,7 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
             kind: 'active',
             editState,
             hintState,
-            isSpeaking: meeting.transcript.isSpeaking,
+            isSpeaking: runtime.canProgress && meeting.transcript.isSpeaking,
             segments: meeting.transcript.segments,
             selectedSegmentId,
           },
@@ -422,14 +449,16 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
     status: 'ready',
     meeting,
     meetingTitle,
-    elapsedSeconds,
-    recordingState,
+    elapsedSeconds: runtime.activeSeconds,
+    recordingState: runtime.recordingState,
+    connectionState: runtime.connectionState,
+    connectionNotice: runtime.connectionNotice,
+    role,
     transcript,
     aiChat,
     aiChatDisplayMode,
     setMeetingTitle,
-    toggleRecording: () =>
-      setRecordingState((current) => (current === 'recording' ? 'paused' : 'recording')),
+    toggleRecording: runtime.toggleRecording,
     completeMeeting,
     changeAiChatDisplayMode,
   }

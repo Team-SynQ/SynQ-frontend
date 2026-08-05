@@ -1,5 +1,39 @@
 export type MeetingAvatarKey = 'you' | 'design' | 'pm' | 'server'
 
+export type ApiResponse<T> = {
+  isSuccess: boolean
+  code: string
+  message: string
+  result: T
+}
+
+export type MeetingCreateRequest = {
+  consentAgreed: boolean
+}
+
+export type MeetingCreateResponse = {
+  meetingId: number
+  title: string
+  status: string
+  startedAt: string
+  wsUrl: string
+}
+
+export type MeetingJoinResponse = {
+  meetingId: number
+  title: string
+  status: string
+  role: string
+  joinedAt: string
+  wsUrl: string
+}
+
+export type MeetingEndResponse = {
+  meetingId: number
+  status: string
+  endedAt: string
+}
+
 export type MeetingParticipantResponse = {
   id: string
   name: string
@@ -63,6 +97,11 @@ export type LiveMeetingResponse = {
   }
 }
 
+export type LiveMeetingSnapshotResponse = Omit<
+  LiveMeetingResponse,
+  'elapsedSeconds' | 'recordingState'
+>
+
 export type UpdateTranscriptRequest = {
   meetingId: string
   segmentId: string
@@ -107,6 +146,16 @@ export type CompleteMeetingRequest = Omit<
   CompletedMeetingSummary,
   'recordId' | 'overview' | 'keywords' | 'decisions'
 >
+
+export type FinalizeMeetingRecordRequest = {
+  meetingId: string
+  projectId: string
+  projectTitle: string
+  meetingTitle: string
+  activeDurationSeconds: number
+  endedAt: string
+  host: CompletedMeetingSummary['host']
+}
 
 export type PersonalSummary = {
   roleBadge: string
