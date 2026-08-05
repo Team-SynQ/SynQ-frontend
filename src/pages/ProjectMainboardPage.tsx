@@ -1,7 +1,18 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 
-import { meetingApi, type CompletedMeeting } from '../entities/meeting'
+import {
+  meetingLifecycleApi,
+  meetingRecordGateway,
+  type CompletedMeeting,
+  type MeetingLifecycleApi,
+} from '../entities/meeting'
+import {
+  MeetingEntryModal,
+  requestMeetingMicrophonePermission,
+  type MeetingEntryModalVariant,
+  type MeetingMicrophonePermissionResult,
+} from '../features/meeting-entry'
 import {
   listProjectSummaries,
   PROJECT_REFERENCE_MAX_MATERIALS,
@@ -58,6 +69,8 @@ type ProjectMainboardPageProps = {
     draft: ProjectInformationDraft,
   ) => Promise<ProjectSummary | void> | ProjectSummary | void
   deleteProject?: (projectId: string) => Promise<void> | void
+  createMeeting?: MeetingLifecycleApi['createMeeting']
+  requestMicrophonePermission?: () => Promise<MeetingMicrophonePermissionResult>
 }
 
 type ProjectReferenceFeedback = {
@@ -69,11 +82,11 @@ type ProjectReferenceFeedback = {
 let nextClientReferenceId = 0
 
 const loadCompletedMeetingHistory = (projectId: string) =>
-  meetingApi.listCompletedMeetings(projectId)
+  meetingRecordGateway.listCompletedMeetings(projectId)
 const updateCompletedMeetingHistoryTitle = (recordId: string, title: string) =>
-  meetingApi.updateCompletedMeetingTitle(recordId, title)
+  meetingRecordGateway.updateCompletedMeetingTitle(recordId, title)
 const deleteCompletedMeetingHistory = (recordId: string) =>
-  meetingApi.deleteCompletedMeeting(recordId)
+  meetingRecordGateway.deleteCompletedMeeting(recordId)
 
 function createClientProjectReferences(
   materials: ProjectMaterialDraft,
@@ -116,6 +129,8 @@ export function ProjectMainboardPage({
   loadProjectInformation,
   updateProject,
   deleteProject,
+  createMeeting = meetingLifecycleApi.createMeeting,
+  requestMicrophonePermission = requestMeetingMicrophonePermission,
 }: ProjectMainboardPageProps) {
   const location = useLocation()
   const navigate = useNavigate()
@@ -131,6 +146,10 @@ export function ProjectMainboardPage({
   const [meetingHistoryErrorProjectId, setMeetingHistoryErrorProjectId] = useState<string>()
   const [meetingHistoryReloadKey, setMeetingHistoryReloadKey] = useState(0)
   const [latestCreatedProjectName, setLatestCreatedProjectName] = useState<string>()
+  const [meetingEntryVariant, setMeetingEntryVariant] = useState<MeetingEntryModalVariant | null>(
+    null,
+  )
+  const meetingStartPendingRef = useRef(false)
   const [projectReferenceFeedback, setProjectReferenceFeedback] =
     useState<ProjectReferenceFeedback>()
   const creationSuccessToast = useTransientVisibility()
@@ -248,6 +267,68 @@ export function ProjectMainboardPage({
   const handleAddProject = () => {
     setIsCreateModalOpen(true)
     onAddProject?.()
+  }
+
+  const createMeetingAndNavigate = async () => {
+    if (!activeProject) return
+    const projectId = activeProject.apiProjectId
+    if (!Number.isSafeInteger(projectId) || projectId <= 0) {
+      setMeetingEntryVariant('meetingStartFailed')
+      return
+    }
+
+    try {
+      const created = await createMeeting(projectId, { consentAgreed: true })
+      setMeetingEntryVariant(null)
+      navigate(`/meetings/${created.meetingId}/tutorial`, {
+        state: {
+          projectId: activeProject.id,
+          projectTitle: activeProject.name,
+        },
+      })
+    } catch {
+      setMeetingEntryVariant('meetingStartFailed')
+    }
+  }
+
+  const handleMeetingEntryPrimaryAction = async () => {
+    if (meetingEntryVariant === 'startConfirmation') {
+      setMeetingEntryVariant('microphonePermissionRequired')
+      return
+    }
+
+    if (meetingStartPendingRef.current) return
+
+    if (meetingEntryVariant === 'microphonePermissionRequired') {
+      meetingStartPendingRef.current = true
+      try {
+        const permissionResult = await requestMicrophonePermission()
+        if (permissionResult === 'unsupported') {
+          setMeetingEntryVariant('recordingUnsupported')
+          return
+        }
+        if (permissionResult === 'denied') {
+          setMeetingEntryVariant('microphonePermissionFailed')
+          return
+        }
+        await createMeetingAndNavigate()
+      } finally {
+        meetingStartPendingRef.current = false
+      }
+      return
+    }
+
+    if (meetingEntryVariant === 'meetingStartFailed') {
+      meetingStartPendingRef.current = true
+      try {
+        await createMeetingAndNavigate()
+      } finally {
+        meetingStartPendingRef.current = false
+      }
+      return
+    }
+
+    setMeetingEntryVariant(null)
   }
 
   const handleProjectCreated = async (
@@ -504,12 +585,8 @@ export function ProjectMainboardPage({
         }}
         onStartMeeting={() => {
           if (!activeProject) return
-          navigate('/meetings/demo/tutorial', {
-            state: {
-              projectId: activeProject.id,
-              projectTitle: activeProject.name,
-            },
-          })
+          meetingStartPendingRef.current = false
+          setMeetingEntryVariant('startConfirmation')
         }}
         onUpdateProject={handleUpdateProject}
         project={activeProject}
@@ -519,6 +596,13 @@ export function ProjectMainboardPage({
         onCreate={handleProjectCreated}
         open={isCreateModalOpen}
       />
+      {meetingEntryVariant ? (
+        <MeetingEntryModal
+          onPrimaryAction={() => void handleMeetingEntryPrimaryAction()}
+          onSecondaryAction={() => setMeetingEntryVariant(null)}
+          variant={meetingEntryVariant}
+        />
+      ) : null}
       {isProjectLoadErrorMounted ? (
         <Toast
           description="잠시 후 다시 시도해 주세요."

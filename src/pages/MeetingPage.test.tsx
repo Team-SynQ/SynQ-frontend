@@ -3,10 +3,15 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { meetingApi } from '../entities/meeting'
+import {
+  meetingConnectionGateway,
+  meetingLifecycleApi,
+  meetingRecordGateway,
+} from '../entities/meeting'
 import type { ProjectNavigationState } from '../features/meeting-processing'
 import { resetLiveMeetingMockDb } from '../shared/api/mock/db/liveMeeting.mockDb'
-import { liveMeetingFixture } from '../shared/api/mock/fixtures/liveMeeting.fixture'
+import { resetMeetingLifecycleMockDb } from '../shared/api/mock/db/meetingLifecycle.mockDb'
+import { writeMeetingRuntime } from './meeting/model/meetingRuntime.storage'
 import { MeetingPage } from './MeetingPage'
 
 function ProjectDestination() {
@@ -22,7 +27,7 @@ function ProjectDestination() {
 }
 
 async function renderMeetingPage(
-  path = '/meetings/demo/live',
+  path = '/meetings/1/live',
   state?: { projectId: string; projectTitle: string },
 ) {
   const result = render(
@@ -41,7 +46,9 @@ async function renderMeetingPage(
 describe('MeetingPage controls', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
+    window.sessionStorage.clear()
     resetLiveMeetingMockDb()
+    resetMeetingLifecycleMockDb()
   })
 
   it('opens and dismisses the participant list', async () => {
@@ -99,7 +106,7 @@ describe('MeetingPage controls', () => {
   })
 
   it('moves from end confirmation to the saving dialog', async () => {
-    vi.spyOn(meetingApi, 'completeMeeting').mockReturnValue(new Promise(() => undefined))
+    vi.spyOn(meetingLifecycleApi, 'endMeeting').mockReturnValue(new Promise(() => undefined))
     const user = userEvent.setup()
     await renderMeetingPage()
 
@@ -114,7 +121,7 @@ describe('MeetingPage controls', () => {
 
   it('shows the saved meeting and returns to the completed project', async () => {
     const user = userEvent.setup()
-    await renderMeetingPage('/meetings/demo/live', {
+    await renderMeetingPage('/meetings/1/live', {
       projectId: 'project-1',
       projectTitle: '서비스 디자인',
     })
@@ -133,16 +140,18 @@ describe('MeetingPage controls', () => {
   })
 
   it('returns a non-host participant to the project without completing the meeting', async () => {
-    const completeMeeting = vi.spyOn(meetingApi, 'completeMeeting')
-    vi.spyOn(meetingApi, 'joinMeeting').mockResolvedValue({
-      ...structuredClone(liveMeetingFixture),
-      participants: liveMeetingFixture.participants.map((participant) =>
-        participant.isCurrentUser ? { ...participant, isHost: false } : participant,
-      ),
+    const finalizeEndedMeeting = vi.spyOn(meetingRecordGateway, 'finalizeEndedMeeting')
+    vi.spyOn(meetingLifecycleApi, 'joinMeeting').mockResolvedValue({
+      meetingId: 1,
+      title: '2차 대면회의',
+      status: 'IN_PROGRESS',
+      role: 'MEMBER',
+      joinedAt: '2026-08-05T00:00:00.000Z',
+      wsUrl: 'wss://mock.synq/meetings/1',
     })
     const user = userEvent.setup()
 
-    await renderMeetingPage('/meetings/demo/live', {
+    await renderMeetingPage('/meetings/1/live', {
       projectId: 'project-1',
       projectTitle: '서비스 디자인',
     })
@@ -151,14 +160,14 @@ describe('MeetingPage controls', () => {
     const dialog = screen.getByRole('dialog', { name: '회의를 나가시겠어요?' })
     await user.click(within(dialog).getByRole('button', { name: '나가기' }))
 
-    expect(completeMeeting).not.toHaveBeenCalled()
+    expect(finalizeEndedMeeting).not.toHaveBeenCalled()
     expect(await screen.findByText('프로젝트 메인 project-1')).toBeInTheDocument()
     expect(screen.getByText('처리 회의 없음')).toBeInTheDocument()
   })
 
   it('shows a retry control when completed meeting storage fails', async () => {
     const user = userEvent.setup()
-    await renderMeetingPage('/meetings/demo-save-error/live')
+    await renderMeetingPage('/meetings/4/live')
 
     await user.click(screen.getByRole('button', { name: '회의 종료' }))
     await user.click(screen.getByRole('button', { name: '종료하기' }))
@@ -278,7 +287,7 @@ describe('MeetingPage controls', () => {
 
   it('keeps a failed transcript draft visible without committing it', async () => {
     const user = userEvent.setup()
-    await renderMeetingPage('/meetings/demo-edit-error/live')
+    await renderMeetingPage('/meetings/3/live')
 
     await user.click(await screen.findByText(/지난주 유저 인터뷰 결과/))
     await user.click(screen.getByRole('button', { name: '전사 수정' }))
@@ -293,7 +302,7 @@ describe('MeetingPage controls', () => {
 
   it('retries a failed SynQ hint request', async () => {
     const user = userEvent.setup()
-    await renderMeetingPage('/meetings/demo-hint-error/live')
+    await renderMeetingPage('/meetings/2/live')
 
     await user.click(await screen.findByText(/지난주 유저 인터뷰 결과/))
     expect(await screen.findByRole('alert')).toHaveTextContent('SynQ 힌트를 불러오지 못했습니다.')
@@ -302,5 +311,19 @@ describe('MeetingPage controls', () => {
 
     expect(await screen.findByText('팀 질문')).toBeInTheDocument()
     expect(screen.getByText('온보딩 개선의 완료 기준은 무엇인가요?')).toBeInTheDocument()
+  })
+
+  it('freezes the host controls and timer while restoring a refreshed meeting', async () => {
+    writeMeetingRuntime('1', { activeSeconds: 8, recordingState: 'recording' })
+    vi.spyOn(meetingConnectionGateway, 'restoreConnection').mockReturnValue(
+      new Promise(() => undefined),
+    )
+
+    await renderMeetingPage()
+
+    expect(await screen.findByText('연결 상태 불안정')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'assertive')
+    expect(await screen.findByText('00:08')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '회의 일시정지' })).toBeDisabled()
   })
 })

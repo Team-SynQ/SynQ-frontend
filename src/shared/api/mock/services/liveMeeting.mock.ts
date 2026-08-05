@@ -1,8 +1,10 @@
 import type {
   CompleteMeetingRequest,
   CompletedMeetingSummary,
+  FinalizeMeetingRecordRequest,
   GetTranscriptHintRequest,
   LiveMeetingResponse,
+  LiveMeetingSnapshotResponse,
   MeetingAiChatMessageResponse,
   SendMeetingAiQuestionRequest,
   TranscriptHintResponse,
@@ -119,6 +121,62 @@ export const liveMeetingMockService = {
       throw new MockApiError(404, 'MEETING_RECORD_NOT_FOUND', '회의 기록을 찾을 수 없습니다.')
     }
   },
+}
+
+export const liveMeetingSnapshotMockGateway = {
+  async getSnapshot(meetingId: string): Promise<LiveMeetingSnapshotResponse> {
+    await waitForMockApi()
+    const meeting = requireMeeting(meetingId)
+    const segments = liveMeetingMockDb.listTranscripts(meetingId) ?? meeting.transcript.segments
+    return {
+      meetingId: meeting.meetingId,
+      projectId: meeting.projectId,
+      projectTitle: meeting.projectTitle,
+      meetingTitle: meeting.meetingTitle,
+      participants: meeting.participants,
+      transcript: {
+        ...meeting.transcript,
+        segments,
+      },
+      aiChat: meeting.aiChat,
+    }
+  },
+
+  listTranscripts: liveMeetingMockService.listTranscripts,
+  updateTranscript: liveMeetingMockService.updateTranscript,
+}
+
+export const meetingRecordMockGateway = {
+  async finalizeEndedMeeting(
+    request: FinalizeMeetingRecordRequest,
+  ): Promise<CompletedMeetingSummary> {
+    await waitForMockApi()
+    requireMeeting(request.meetingId)
+
+    if (liveMeetingMockDb.getScenario(request.meetingId)?.completionFails) {
+      throw new MockApiError(500, 'MEETING_COMPLETE_FAILED', '회의 기록을 저장하지 못했습니다.')
+    }
+
+    const existing = liveMeetingMockDb.getCompletedMeetingByMeetingId(request.meetingId)
+    if (existing) return existing
+
+    return liveMeetingMockDb.addCompletedMeeting({
+      meetingId: request.meetingId,
+      projectId: request.projectId,
+      projectTitle: request.projectTitle,
+      meetingTitle: request.meetingTitle,
+      durationSeconds: request.activeDurationSeconds,
+      completedAt: request.endedAt,
+      host: request.host,
+      overview: completedMeetingSummaryFixture.overview,
+      keywords: [...completedMeetingSummaryFixture.keywords],
+      decisions: [...completedMeetingSummaryFixture.decisions],
+    })
+  },
+
+  listCompletedMeetings: liveMeetingMockService.listCompletedMeetings,
+  updateCompletedMeetingTitle: liveMeetingMockService.updateCompletedMeetingTitle,
+  deleteCompletedMeeting: liveMeetingMockService.deleteCompletedMeeting,
 }
 
 export const liveMeetingAiMockGateway = {

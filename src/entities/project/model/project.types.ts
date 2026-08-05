@@ -8,6 +8,7 @@ export type ProjectReferenceMaterial = {
 }
 
 export type ProjectSummary = {
+  apiProjectId: number
   id: string
   name: string
   overview: string

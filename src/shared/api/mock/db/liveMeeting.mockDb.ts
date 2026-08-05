@@ -63,6 +63,25 @@ export const liveMeetingMockDb = {
     return record ? cloneMeeting(record.meeting) : undefined
   },
 
+  registerMeeting(meetingId: string, projectId: string): LiveMeetingResponse {
+    const existing = requireRecord(meetingId)
+    if (existing) return cloneMeeting(existing.meeting)
+
+    const template = createLiveMeetingScenarios()['1']
+    if (!template) throw new Error('Default live meeting scenario is missing.')
+    const record: LiveMeetingRecord = {
+      ...structuredClone(template),
+      meeting: {
+        ...cloneMeeting(template.meeting),
+        meetingId,
+        projectId,
+      },
+      hintAttempts: {},
+    }
+    records.set(meetingId, record)
+    return cloneMeeting(record.meeting)
+  },
+
   getScenario(meetingId: string): LiveMeetingScenario | undefined {
     const record = requireRecord(meetingId)
     if (!record) return undefined
@@ -146,6 +165,14 @@ export const liveMeetingMockDb = {
   getCompletedMeeting(recordId: string): CompletedMeetingSummary | undefined {
     const location = findCompletedMeetingLocation(recordId)
     return location ? structuredClone(location.projectRecords[location.index]) : undefined
+  },
+
+  getCompletedMeetingByMeetingId(meetingId: string): CompletedMeetingSummary | undefined {
+    for (const projectRecords of completedMeetingRecords.values()) {
+      const record = projectRecords.find((candidate) => candidate.meetingId === meetingId)
+      if (record) return structuredClone(record)
+    }
+    return undefined
   },
 
   updateCompletedMeetingTitle(

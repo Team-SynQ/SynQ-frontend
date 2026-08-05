@@ -33,7 +33,7 @@ function renderProjectMainboardPage(
         <Route element={<ProjectMainboardPage {...props} />} path="/projects" />
         <Route element={<NavigationDestination />} path="/settings/help" />
         <Route element={<NavigationDestination />} path="/settings/policy" />
-        <Route element={<NavigationDestination />} path="/meetings/demo/tutorial" />
+        <Route element={<NavigationDestination />} path="/meetings/:meetingId/tutorial" />
         <Route element={<NavigationDestination />} path="/meetings/:meetingRecordId/detail" />
       </Routes>
     </MemoryRouter>,
@@ -41,6 +41,7 @@ function renderProjectMainboardPage(
 }
 
 const projectOne: ProjectSummary = {
+  apiProjectId: 1,
   id: 'project-1',
   name: '서비스 디자인',
   overview: '',
@@ -349,18 +350,94 @@ describe('ProjectMainboardPage', () => {
 
   it('starts a meeting with the active project context', async () => {
     const user = userEvent.setup()
+    const requestMicrophonePermission = vi.fn().mockResolvedValue('granted')
+    const createMeeting = vi.fn().mockResolvedValue({
+      meetingId: 41,
+      title: '새 회의',
+      status: 'IN_PROGRESS',
+      startedAt: '2026-08-05T00:00:00.000Z',
+      wsUrl: 'wss://mock.synq/meetings/41',
+    })
     renderProjectMainboardPage({
+      createMeeting,
       loadProjects: () => Promise.resolve([projectOne]),
       loadCompletedMeetings: () => Promise.resolve([]),
+      requestMicrophonePermission,
     })
 
     await screen.findByRole('heading', { name: '서비스 디자인' })
     await user.click(screen.getByRole('button', { name: '새 회의 시작' }))
+    await user.click(screen.getByRole('button', { name: '동의하고 시작' }))
 
-    expect(await screen.findByText(/이동 완료/)).toHaveTextContent(
+    expect(screen.getByText('마이크 접근 권한이 필요합니다.')).toBeInTheDocument()
+    expect(createMeeting).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: '권한 허용하기' }))
+
+    expect(requestMicrophonePermission).toHaveBeenCalledOnce()
+    expect(createMeeting).toHaveBeenCalledWith(1, { consentAgreed: true })
+    expect(await screen.findByText(/이동 완료 \/meetings\/41\/tutorial/)).toHaveTextContent(
       '{"projectId":"project-1","projectTitle":"서비스 디자인"}',
     )
   })
+
+  it('shows the meeting start failure modal and retries creation', async () => {
+    const user = userEvent.setup()
+    const requestMicrophonePermission = vi.fn().mockResolvedValue('granted')
+    const createMeeting = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('CREATE_FAILED'))
+      .mockResolvedValueOnce({
+        meetingId: 42,
+        title: '새 회의',
+        status: 'IN_PROGRESS',
+        startedAt: '2026-08-05T00:00:00.000Z',
+        wsUrl: 'wss://mock.synq/meetings/42',
+      })
+    renderProjectMainboardPage({
+      createMeeting,
+      loadProjects: () => Promise.resolve([{ ...projectOne, id: '1' }]),
+      loadCompletedMeetings: () => Promise.resolve([]),
+      requestMicrophonePermission,
+    })
+
+    await screen.findByRole('heading', { name: '서비스 디자인' })
+    await user.click(screen.getByRole('button', { name: '새 회의 시작' }))
+    await user.click(screen.getByRole('button', { name: '동의하고 시작' }))
+    await user.click(screen.getByRole('button', { name: '권한 허용하기' }))
+
+    expect(await screen.findByText(/회의를 시작하지 못했습니다/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '다시 시도하기' }))
+
+    expect(requestMicrophonePermission).toHaveBeenCalledOnce()
+    expect(createMeeting).toHaveBeenCalledTimes(2)
+    expect(await screen.findByText(/이동 완료 \/meetings\/42\/tutorial/)).toBeInTheDocument()
+  })
+
+  it.each([
+    ['denied', /마이크 권한을 확인하지 못했습니다/],
+    ['unsupported', '현재 환경에서는 녹음을 사용할 수 없습니다.'],
+  ] as const)(
+    'does not create a meeting when microphone permission is %s',
+    async (permissionResult, expectedTitle) => {
+      const user = userEvent.setup()
+      const createMeeting = vi.fn()
+      renderProjectMainboardPage({
+        createMeeting,
+        loadProjects: () => Promise.resolve([{ ...projectOne, id: '1' }]),
+        loadCompletedMeetings: () => Promise.resolve([]),
+        requestMicrophonePermission: vi.fn().mockResolvedValue(permissionResult),
+      })
+
+      await screen.findByRole('heading', { name: '서비스 디자인' })
+      await user.click(screen.getByRole('button', { name: '새 회의 시작' }))
+      await user.click(screen.getByRole('button', { name: '동의하고 시작' }))
+      await user.click(screen.getByRole('button', { name: '권한 허용하기' }))
+
+      expect(await screen.findByText(expectedTitle)).toBeInTheDocument()
+      expect(createMeeting).not.toHaveBeenCalled()
+    },
+  )
 
   it('keeps the empty dashboard until a project is created', async () => {
     renderProjectMainboardPage()
@@ -421,6 +498,7 @@ describe('ProjectMainboardPage', () => {
 
     await act(async () => {
       finishCreation?.({
+        apiProjectId: 101,
         id: 'project-created',
         name: '\uC2E0\uADDC \uD504\uB85C\uC81D\uD2B8',
         overview: '',
@@ -458,6 +536,7 @@ describe('ProjectMainboardPage', () => {
       createdProjectCount += 1
 
       return {
+        apiProjectId: createdProjectCount,
         id: `project-created-${createdProjectCount}`,
         name: draft.name,
         overview: draft.overview,
@@ -540,6 +619,7 @@ describe('ProjectMainboardPage', () => {
         }),
     )
     const onSubmitProject = vi.fn((draft: ProjectCreateDraft) => ({
+      apiProjectId: 201,
       id: 'latest-project',
       name: draft.name,
       overview: draft.overview,
@@ -568,6 +648,7 @@ describe('ProjectMainboardPage', () => {
     await act(async () => {
       finishInitialLoad?.([
         {
+          apiProjectId: 202,
           id: 'fetched-project',
           name: 'fetched project',
           overview: '',
@@ -596,6 +677,7 @@ describe('ProjectMainboardPage', () => {
     const loadProjects = vi.fn(() =>
       Promise.resolve<ProjectSummary[]>([
         {
+          apiProjectId: 1,
           id: 'project-1',
           name: '서비스 디자인',
           overview: '',
@@ -653,6 +735,7 @@ describe('ProjectMainboardPage', () => {
     const loadProjects = vi.fn(() =>
       Promise.resolve<ProjectSummary[]>([
         {
+          apiProjectId: 1,
           id: 'project-1',
           name: '서비스 디자인',
           overview: '',
@@ -696,6 +779,7 @@ describe('ProjectMainboardPage', () => {
     const loadProjects = vi.fn(() =>
       Promise.resolve<ProjectSummary[]>([
         {
+          apiProjectId: 1,
           id: 'project-1',
           name: '서비스 디자인',
           overview: '',
@@ -747,6 +831,7 @@ describe('ProjectMainboardPage', () => {
   it('deletes a project through the Figma confirmation dialog and shows the success toast', async () => {
     const user = userEvent.setup()
     const project: ProjectSummary = {
+      apiProjectId: 301,
       id: 'project-delete',
       name: '서비스 디자인',
       overview: '',
@@ -780,6 +865,7 @@ describe('ProjectMainboardPage', () => {
   it('keeps the delete dialog open and shows the Figma error toast when deletion fails', async () => {
     const user = userEvent.setup()
     const project: ProjectSummary = {
+      apiProjectId: 302,
       id: 'project-delete-failure',
       name: '서비스 디자인',
       overview: '',
@@ -807,6 +893,7 @@ describe('ProjectMainboardPage', () => {
   it('updates the active project and sidebar from the project settings modal', async () => {
     const user = userEvent.setup()
     const project: ProjectSummary = {
+      apiProjectId: 303,
       id: 'project-edit',
       name: '회의 보조 AI, 씽큐',
       overview: '기존 프로젝트 개요',

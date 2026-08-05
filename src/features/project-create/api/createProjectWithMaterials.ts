@@ -27,6 +27,7 @@ export async function createProjectWithMaterials(
     )
 
     return {
+      apiProjectId: createdProject.projectId,
       id: String(createdProject.projectId),
       name: createdProject.title,
       overview: createdProject.description ?? '',

@@ -14,6 +14,7 @@ function renderAppAt(path: string) {
 afterEach(() => {
   vi.restoreAllMocks()
   vi.useRealTimers()
+  window.sessionStorage.clear()
   window.history.pushState({}, '', '/')
 })
 
@@ -154,10 +155,10 @@ describe('AppRouter', () => {
   })
 
   it('opens the existing live meeting page directly', async () => {
-    renderAppAt('/meetings/demo/live')
+    renderAppAt('/meetings/1/live')
 
     expect(await screen.findByRole('button', { name: '회의 종료' })).toBeInTheDocument()
-    expect(window.location.pathname).toBe('/meetings/demo/live')
+    expect(window.location.pathname).toBe('/meetings/1/live')
   })
 
   it('opens the implemented meeting detail using the route record id', async () => {

@@ -2,7 +2,7 @@ import type {
   AiChatPinnedContext,
   CompleteMeetingRequest,
   CompletedMeetingSummary,
-  LiveMeetingResponse,
+  LiveMeetingSnapshotResponse,
   MeetingAiChatMessageResponse,
   MeetingAiChatSuggestionResponse,
   MeetingParticipantResponse,
@@ -20,6 +20,7 @@ export type MeetingHeaderViewModel = {
   liveStatus: 'live'
   elapsedSeconds: number
   recordingState: 'recording' | 'paused'
+  recordingControlDisabled: boolean
 }
 
 export type MeetingHeaderActions = {
@@ -29,7 +30,7 @@ export type MeetingHeaderActions = {
   onOpenMoreMenu: () => void
 }
 
-export type LiveMeeting = LiveMeetingResponse
+export type LiveMeeting = LiveMeetingSnapshotResponse
 export type LiveMeetingParticipant = MeetingParticipantResponse
 export type LiveMeetingTranscriptSegment = TranscriptSegmentResponse
 export type LiveMeetingTranscriptHint = TranscriptHintResponse
