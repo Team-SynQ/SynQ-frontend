@@ -5,17 +5,17 @@ import { MeetingTutorialPreview } from './MeetingTutorialPreview'
 
 const staticFrames = [
   {
-    figmaNodeId: '1904:17936',
+    figmaNodeId: '1961:18027',
     imageSrc: '/assets/images/help-meeting-tutorial-step1.png',
     step: 1,
   },
   {
-    figmaNodeId: '1904:18718',
+    figmaNodeId: '1961:18711',
     imageSrc: '/assets/images/help-meeting-tutorial-step2.png',
     step: 2,
   },
   {
-    figmaNodeId: '1904:18951',
+    figmaNodeId: '1961:22695',
     imageSrc: '/assets/images/help-meeting-tutorial-step3.png',
     step: 3,
   },

@@ -5,9 +5,9 @@ export type MeetingTutorialPreviewProps = {
 }
 
 const staticPreviewFrames = {
-  1: { figmaNodeId: '1904:17936', imageSrc: '/assets/images/help-meeting-tutorial-step1.png' },
-  2: { figmaNodeId: '1904:18718', imageSrc: '/assets/images/help-meeting-tutorial-step2.png' },
-  3: { figmaNodeId: '1904:18951', imageSrc: '/assets/images/help-meeting-tutorial-step3.png' },
+  1: { figmaNodeId: '1961:18027', imageSrc: '/assets/images/help-meeting-tutorial-step1.png' },
+  2: { figmaNodeId: '1961:18711', imageSrc: '/assets/images/help-meeting-tutorial-step2.png' },
+  3: { figmaNodeId: '1961:22695', imageSrc: '/assets/images/help-meeting-tutorial-step3.png' },
 } as const
 
 export function MeetingTutorialPreview({ step }: MeetingTutorialPreviewProps) {
