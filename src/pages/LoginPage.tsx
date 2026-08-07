@@ -116,13 +116,21 @@ const LoginPage: React.FC = () => {
         </div>
 
         <footer className="flex justify-center items-center w-full gap-4 text-xs text-gray-400">
-          <a href="#privacy" className="hover:underline">
+          <button
+            type="button"
+            onClick={() => navigate('/privacy')}
+            className="hover:underline focus:outline-none cursor-pointer"
+          >
             개인정보 처리방침
-          </a>
+          </button>
           <span className="w-[1px] h-3 bg-gray-200" />
-          <a href="#terms" className="hover:underline">
+          <button
+            type="button"
+            onClick={() => navigate('/terms')}
+            className="hover:underline focus:outline-none cursor-pointer"
+          >
             이용 약관
-          </a>
+          </button>
         </footer>
       </div>
     </div>
