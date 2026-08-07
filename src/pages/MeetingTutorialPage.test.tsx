@@ -40,6 +40,12 @@ const tutorialTargetRects: Record<
   'transcript-3': { height: 101, left: 32, top: 470, width: 876 },
 }
 
+const originalScrollIntoViewDescriptor = Object.getOwnPropertyDescriptor(
+  Element.prototype,
+  'scrollIntoView',
+)
+let scrollIntoViewDescriptorBeforeTest: PropertyDescriptor | undefined
+
 function createRect({
   height,
   left,
@@ -67,6 +73,10 @@ function createRect({
 describe('MeetingTutorialPage', () => {
   beforeEach(() => {
     window.localStorage.clear()
+    scrollIntoViewDescriptorBeforeTest = Object.getOwnPropertyDescriptor(
+      Element.prototype,
+      'scrollIntoView',
+    )
     Element.prototype.scrollIntoView = vi.fn()
     vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (
       this: Element,
@@ -83,7 +93,16 @@ describe('MeetingTutorialPage', () => {
     })
   })
 
-  afterEach(() => vi.restoreAllMocks())
+  afterEach(() => {
+    vi.restoreAllMocks()
+
+    if (scrollIntoViewDescriptorBeforeTest) {
+      Object.defineProperty(Element.prototype, 'scrollIntoView', scrollIntoViewDescriptorBeforeTest)
+      return
+    }
+
+    Reflect.deleteProperty(Element.prototype, 'scrollIntoView')
+  })
 
   it('advances in order and starts the meeting from step three', async () => {
     const user = userEvent.setup()
@@ -114,5 +133,13 @@ describe('MeetingTutorialPage', () => {
 
     expect(screen.getByText('회의 화면')).toBeInTheDocument()
     expect(window.localStorage.getItem('synq:meeting-tutorial:hidden')).toBeNull()
+  })
+})
+
+describe('MeetingTutorialPage test cleanup', () => {
+  it('restores the original scrollIntoView descriptor after the page tests', () => {
+    expect(Object.getOwnPropertyDescriptor(Element.prototype, 'scrollIntoView')).toEqual(
+      originalScrollIntoViewDescriptor,
+    )
   })
 })
