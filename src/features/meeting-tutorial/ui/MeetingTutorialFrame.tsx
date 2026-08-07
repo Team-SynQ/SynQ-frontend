@@ -4,6 +4,7 @@ import { Button, Checkbox } from '../../../shared/ui'
 export type MeetingTutorialFrameProps = {
   dontShowAgain?: boolean
   scale?: number
+  showSkip?: boolean
   onDontShowAgainChange?: (checked: boolean) => void
   onSkip?: () => void
 }
@@ -11,6 +12,7 @@ export type MeetingTutorialFrameProps = {
 export function MeetingTutorialFrame({
   dontShowAgain = false,
   scale = 1,
+  showSkip = true,
   onDontShowAgainChange,
   onSkip,
 }: MeetingTutorialFrameProps) {
@@ -38,22 +40,24 @@ export function MeetingTutorialFrame({
             scale={scale}
           />
         </div>
-        <Button
-          onClick={onSkip}
-          size="small"
-          style={{
-            borderRadius: 8 * scale,
-            fontSize: 14 * scale,
-            fontWeight: 500,
-            height: 32 * scale,
-            letterSpacing: -0.35 * scale,
-            lineHeight: 1.4,
-            paddingInline: 16 * scale,
-          }}
-          variant="fillGray100"
-        >
-          건너뛰기
-        </Button>
+        {showSkip ? (
+          <Button
+            onClick={onSkip}
+            size="small"
+            style={{
+              borderRadius: 8 * scale,
+              fontSize: 14 * scale,
+              fontWeight: 500,
+              height: 32 * scale,
+              letterSpacing: -0.35 * scale,
+              lineHeight: 1.4,
+              paddingInline: 16 * scale,
+            }}
+            variant="fillGray100"
+          >
+            건너뛰기
+          </Button>
+        ) : null}
       </div>
     </header>
   )
