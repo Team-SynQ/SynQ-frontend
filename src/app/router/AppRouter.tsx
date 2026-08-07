@@ -8,7 +8,9 @@ import { MeetingPage } from '../../pages/MeetingPage'
 import { MeetingStartPage } from '../../pages/MeetingStartPage'
 import { MeetingTutorialPage } from '../../pages/MeetingTutorialPage'
 import { PolicyDocumentsPage } from '../../pages/PolicyDocumentsPage'
+import { PrivacyPage } from '../../pages/PrivacyPage'
 import { ProjectMainboardPage } from '../../pages/ProjectMainboardPage'
+import { TermsPage } from '../../pages/TermsPage'
 import { projectMockActorFixture } from '../../shared/api/mock/fixtures/projects.fixture'
 import { LandingRoute, OnboardingRoute } from './EntryFlowRoutes'
 import {
@@ -24,6 +26,8 @@ export function AppRoutes() {
       <Route element={<LandingRoute />} path="/" />
       <Route element={<OnboardingRoute />} path="/onboarding" />
       <Route element={<LoginPage />} path="/login" />
+      <Route element={<TermsPage />} path="/terms" />
+      <Route element={<PrivacyPage />} path="/privacy" />
       <Route element={<ProjectMainboardPage user={projectMockActorFixture} />} path="/projects" />
       <Route
         element={<AccountSettingsPage user={projectMockActorFixture} />}
