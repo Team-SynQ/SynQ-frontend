@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+
+import { createKakaoOAuthState } from '../shared/lib/kakaoOAuthState'
 import { Toast } from '../shared/ui/Toast'
 
 const LoginPage: React.FC = () => {
@@ -8,12 +10,27 @@ const LoginPage: React.FC = () => {
   const [toastOpacity, setToastOpacity] = useState(0)
   const [toastCycle] = useState(0)
 
-  const handleSocialLogin = () => {
-    // TODO: 실제 소셜 로그인 연동 시 실패 피드백 처리를 다시 활성화합니다.
-    // setToastOpacity(0);
-    // setShowToast(true);
-    // setToastCycle(value => value + 1);
+  const handleKakaoLogin = () => {
+    const clientId = import.meta.env.VITE_KAKAO_CLIENT_ID
+    const redirectUri = import.meta.env.VITE_KAKAO_REDIRECT_URI
 
+    if (!clientId || !redirectUri) {
+      console.error(
+        '.env 파일에 카카오 설정 정보(VITE_KAKAO_CLIENT_ID, VITE_KAKAO_REDIRECT_URI)가 존재하지 않습니다.',
+      )
+      return
+    }
+
+    const state = createKakaoOAuthState()
+    const kakaoAuthUrl = `https://kauth.kakao.com/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(
+      redirectUri,
+    )}&response_type=code&state=${encodeURIComponent(state)}`
+
+    window.location.href = kakaoAuthUrl
+  }
+
+  const handleOtherSocialLogin = () => {
+    // TODO: 네이버/구글 로그인 구현 시 연동 처리
     navigate('/setup/role')
   }
 
@@ -79,8 +96,8 @@ const LoginPage: React.FC = () => {
 
         <div className="flex flex-col w-full gap-3 mb-10">
           <button
-            onClick={handleSocialLogin}
-            className="flex items-center justify-center w-full h-12 bg-[#FEE500] hover:bg-[#FDD800] text-[#191919] font-semibold text-sm rounded-xl transition-colors relative"
+            onClick={handleKakaoLogin}
+            className="flex items-center justify-center w-full h-12 bg-[#FEE500] hover:bg-[#FDD800] text-[#191919] font-semibold text-sm rounded-xl transition-colors relative cursor-pointer"
           >
             <img
               src="/assets/images/logo-kakao.png"
@@ -91,8 +108,8 @@ const LoginPage: React.FC = () => {
           </button>
 
           <button
-            onClick={handleSocialLogin}
-            className="flex items-center justify-center w-full h-12 bg-[#03C75A] hover:bg-[#02B34F] text-white font-semibold text-sm rounded-xl transition-colors relative"
+            onClick={handleOtherSocialLogin}
+            className="flex items-center justify-center w-full h-12 bg-[#03C75A] hover:bg-[#02B34F] text-white font-semibold text-sm rounded-xl transition-colors relative cursor-pointer"
           >
             <img
               src="/assets/images/logo-naver.png"
@@ -103,8 +120,8 @@ const LoginPage: React.FC = () => {
           </button>
 
           <button
-            onClick={handleSocialLogin}
-            className="flex items-center justify-center w-full h-12 bg-[#F2F2F2] hover:bg-[#E5E5E5] text-[#333333] font-semibold text-sm rounded-xl transition-colors relative"
+            onClick={handleOtherSocialLogin}
+            className="flex items-center justify-center w-full h-12 bg-[#F2F2F2] hover:bg-[#E5E5E5] text-[#333333] font-semibold text-sm rounded-xl transition-colors relative cursor-pointer"
           >
             <img
               src="/assets/images/logo-google.png"

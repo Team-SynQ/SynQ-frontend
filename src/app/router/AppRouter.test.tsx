@@ -1,10 +1,11 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import App from '../../App'
 import * as meetingMockService from '../../shared/api/mock/services/meeting.mock'
 import { projectMockActorFixture } from '../../shared/api/mock/fixtures/projects.fixture'
+import { authService } from '../../shared/api/services/auth.service'
 
 function renderAppAt(path: string) {
   window.history.pushState({}, '', path)
@@ -13,8 +14,10 @@ function renderAppAt(path: string) {
 
 afterEach(() => {
   vi.restoreAllMocks()
+  vi.unstubAllEnvs()
   vi.useRealTimers()
   window.sessionStorage.clear()
+  window.localStorage.clear()
   window.history.pushState({}, '', '/')
 })
 
@@ -53,13 +56,50 @@ describe('AppRouter', () => {
     expect(window.location.pathname).toBe('/login')
   })
 
-  it('bypasses social login and opens role setup', async () => {
+  it('stores an OAuth state before starting Kakao login', async () => {
     const user = userEvent.setup()
+    vi.stubEnv('VITE_KAKAO_CLIENT_ID', 'test-kakao-client')
+    vi.stubEnv('VITE_KAKAO_REDIRECT_URI', 'http://localhost:5173/login/callback')
     renderAppAt('/login')
 
     await user.click(screen.getByRole('button', { name: '카카오로 계속하기' }))
 
-    expect(window.location.pathname).toBe('/setup/role')
+    expect(window.sessionStorage.getItem('kakaoOAuthState')).toMatch(/^[0-9a-f]{64}$/)
+  })
+
+  it('rejects a Kakao callback whose OAuth state does not match', async () => {
+    const kakaoLogin = vi.spyOn(authService, 'kakaoLogin')
+    window.sessionStorage.setItem('kakaoOAuthState', 'expected-state')
+
+    renderAppAt('/login/callback?code=test-code&state=unexpected-state')
+
+    await waitFor(() => {
+      expect(screen.getByText('소셜 인증 실패')).toBeInTheDocument()
+    })
+    expect(kakaoLogin).not.toHaveBeenCalled()
+    expect(window.sessionStorage.getItem('kakaoOAuthState')).toBeNull()
+  })
+
+  it('submits a Kakao code only when the OAuth state matches', async () => {
+    const kakaoLogin = vi.spyOn(authService, 'kakaoLogin').mockResolvedValue({
+      isSuccess: true,
+      code: 'COMMON200',
+      message: '성공입니다.',
+      result: {
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
+        isNewUser: true,
+        onboardingCompleted: false,
+      },
+    })
+    window.sessionStorage.setItem('kakaoOAuthState', 'matching-state')
+
+    renderAppAt('/login/callback?code=test-code&state=matching-state')
+
+    await waitFor(() => {
+      expect(kakaoLogin).toHaveBeenCalledWith({ code: 'test-code' })
+    })
+    expect(window.sessionStorage.getItem('kakaoOAuthState')).toBeNull()
   })
 
   it('redirects the setup index route to role selection', () => {
