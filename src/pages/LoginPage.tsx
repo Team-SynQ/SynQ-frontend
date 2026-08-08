@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+
+import { createKakaoOAuthState } from '../shared/lib/kakaoOAuthState'
 import { Toast } from '../shared/ui/Toast'
 
 const LoginPage: React.FC = () => {
@@ -13,13 +15,16 @@ const LoginPage: React.FC = () => {
     const redirectUri = import.meta.env.VITE_KAKAO_REDIRECT_URI
 
     if (!clientId || !redirectUri) {
-      console.error('.env 파일에 카카오 설정 정보(VITE_KAKAO_CLIENT_ID, VITE_KAKAO_REDIRECT_URI)가 존재하지 않습니다.')
+      console.error(
+        '.env 파일에 카카오 설정 정보(VITE_KAKAO_CLIENT_ID, VITE_KAKAO_REDIRECT_URI)가 존재하지 않습니다.',
+      )
       return
     }
 
+    const state = createKakaoOAuthState()
     const kakaoAuthUrl = `https://kauth.kakao.com/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(
-      redirectUri
-    )}&response_type=code`
+      redirectUri,
+    )}&response_type=code&state=${encodeURIComponent(state)}`
 
     window.location.href = kakaoAuthUrl
   }

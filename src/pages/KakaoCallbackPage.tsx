@@ -1,7 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
 import { authService } from '../shared/api/services/auth.service'
+import { consumeKakaoOAuthState } from '../shared/lib/kakaoOAuthState'
 import { Toast } from '../shared/ui/Toast'
 
 export const KakaoCallbackPage: React.FC = () => {
@@ -16,16 +17,55 @@ export const KakaoCallbackPage: React.FC = () => {
 
   const isSubmitted = useRef(false)
 
+  const triggerSuccessToast = useCallback(
+    (targetPath: string) => {
+      setToastType('success')
+      setToastTitle('로그인 성공')
+      setToastDescription('성공적으로 로그인되었습니다.')
+      setShowToast(true)
+      setToastOpacity(1)
+
+      setTimeout(() => {
+        setToastOpacity(0)
+      }, 1200)
+
+      setTimeout(() => {
+        setShowToast(false)
+        navigate(targetPath)
+      }, 1500)
+    },
+    [navigate],
+  )
+
+  const triggerErrorToast = useCallback(() => {
+    setToastType('error')
+    setToastTitle('소셜 인증 실패')
+    setToastDescription('로그인 처리 중 오류가 발생했습니다. 다시 시도해 주세요.')
+    setShowToast(true)
+    setToastOpacity(1)
+
+    setTimeout(() => {
+      setToastOpacity(0)
+    }, 2200)
+
+    setTimeout(() => {
+      setShowToast(false)
+      navigate('/login')
+    }, 2500)
+  }, [navigate])
+
   useEffect(() => {
-    const code = searchParams.get('code')
-
-    if (!code) {
-      triggerErrorToast()
-      return
-    }
-
     if (isSubmitted.current) return
     isSubmitted.current = true
+
+    const code = searchParams.get('code')
+    const state = searchParams.get('state')
+    const isValidState = consumeKakaoOAuthState(state)
+
+    if (!code || !isValidState) {
+      void Promise.resolve().then(triggerErrorToast)
+      return
+    }
 
     authService
       .kakaoLogin({ code })
@@ -46,41 +86,7 @@ export const KakaoCallbackPage: React.FC = () => {
         console.error('카카오 로그인 인증 실패:', error)
         triggerErrorToast()
       })
-  }, [searchParams, navigate])
-
-  const triggerSuccessToast = (targetPath: string) => {
-    setToastType('success')
-    setToastTitle('로그인 성공')
-    setToastDescription('성공적으로 로그인되었습니다.')
-    setShowToast(true)
-    setToastOpacity(1)
-
-    setTimeout(() => {
-      setToastOpacity(0)
-    }, 1200)
-
-    setTimeout(() => {
-      setShowToast(false)
-      navigate(targetPath)
-    }, 1500)
-  }
-
-  const triggerErrorToast = () => {
-    setToastType('error')
-    setToastTitle('소셜 인증 실패')
-    setToastDescription('로그인 처리 중 오류가 발생했습니다. 다시 시도해 주세요.')
-    setShowToast(true)
-    setToastOpacity(1)
-
-    setTimeout(() => {
-      setToastOpacity(0)
-    }, 2200)
-
-    setTimeout(() => {
-      setShowToast(false)
-      navigate('/login')
-    }, 2500)
-  }
+  }, [searchParams, triggerErrorToast, triggerSuccessToast])
 
   return (
     <div className="relative flex w-screen h-screen justify-center items-center bg-[#F4F6F9] text-gray-600 font-medium text-sm select-none">
