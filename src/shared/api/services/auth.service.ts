@@ -47,4 +47,23 @@ export const authService = {
     if (!response.ok) throw new Error('네이버 로그인 요청 실패')
     return response.json()
   },
+
+  logout: async (): Promise<{
+    isSuccess: boolean
+    code: string
+    message: string
+    result: string
+  }> => {
+    const token = localStorage.getItem('accessToken')
+
+    const response = await fetch(`${API_BASE_URL}/auth/logout`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    })
+    if (!response.ok) throw new Error('로그아웃 요청 실패')
+    return response.json()
+  },
 }
