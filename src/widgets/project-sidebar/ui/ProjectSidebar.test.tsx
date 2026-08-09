@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 
 import plusIcon from '../../../shared/assets/icons/plus.svg'
@@ -9,7 +10,11 @@ describe('ProjectSidebar', () => {
   it('collapses and expands with the sidebar toggle', async () => {
     const user = userEvent.setup()
     const onToggleSidebar = vi.fn()
-    const { container } = render(<ProjectSidebar onToggleSidebar={onToggleSidebar} />)
+    const { container } = render(
+      <MemoryRouter>
+        <ProjectSidebar onToggleSidebar={onToggleSidebar} />
+      </MemoryRouter>,
+    )
 
     const panel = container.querySelector('aside')
     const collapseButton = screen.getByRole('button', {
@@ -35,10 +40,12 @@ describe('ProjectSidebar', () => {
 
   it('renders the active project with the shared menu item', () => {
     render(
-      <ProjectSidebar
-        activeProjectId="project-1"
-        projects={[{ id: 'project-1', name: '서비스 디자인' }]}
-      />,
+      <MemoryRouter>
+        <ProjectSidebar
+          activeProjectId="project-1"
+          projects={[{ id: 'project-1', name: '서비스 디자인' }]}
+        />
+      </MemoryRouter>,
     )
 
     expect(screen.getByRole('button', { name: '서비스 디자인' })).toHaveClass(
@@ -46,11 +53,16 @@ describe('ProjectSidebar', () => {
       'text-fg-primary',
     )
   })
+
   it('opens project creation from the Figma-sized add button', async () => {
     const user = userEvent.setup()
     const onAddProject = vi.fn()
 
-    render(<ProjectSidebar onAddProject={onAddProject} />)
+    render(
+      <MemoryRouter>
+        <ProjectSidebar onAddProject={onAddProject} />
+      </MemoryRouter>,
+    )
 
     const addButton = screen.getByRole('button', {
       name: '\uD504\uB85C\uC81D\uD2B8 \uCD94\uAC00',
