@@ -1,13 +1,19 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { meetingAiMockGateway, meetingApi } from '../../../entities/meeting'
+import {
+  liveMeetingSnapshotGateway,
+  meetingAiMockGateway,
+  meetingLifecycleApi,
+  meetingRecordGateway,
+} from '../../../entities/meeting'
 import type {
   MeetingAiChatMessageResponse,
   TranscriptHintResponse,
   TranscriptSegmentResponse,
 } from '../../../shared/api/contracts/meeting.contracts'
 import { resetLiveMeetingMockDb } from '../../../shared/api/mock/db/liveMeeting.mockDb'
+import { resetMeetingLifecycleMockDb } from '../../../shared/api/mock/db/meetingLifecycle.mockDb'
 import { useLiveMeetingController } from './useLiveMeetingController'
 
 function deferred<T>() {
@@ -20,7 +26,7 @@ function deferred<T>() {
   return { promise, reject, resolve }
 }
 
-async function renderReadyController(meetingId = 'demo') {
+async function renderReadyController(meetingId = '1') {
   const hook = renderHook(
     ({ currentMeetingId }: { currentMeetingId: string }) =>
       useLiveMeetingController(currentMeetingId),
@@ -34,10 +40,14 @@ async function renderReadyController(meetingId = 'demo') {
 describe('useLiveMeetingController async boundaries', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
+    window.sessionStorage.clear()
     resetLiveMeetingMockDb()
+    resetMeetingLifecycleMockDb()
   })
 
   it('completes the meeting with the current title, elapsed time, and host', async () => {
+    const endMeeting = vi.spyOn(meetingLifecycleApi, 'endMeeting')
+    const finalizeMeeting = vi.spyOn(meetingRecordGateway, 'finalizeEndedMeeting')
     const { result } = await renderReadyController()
 
     act(() => {
@@ -58,13 +68,51 @@ describe('useLiveMeetingController async boundaries', () => {
       projectId: 'project-1',
       projectTitle: '서비스 디자인',
       meetingTitle: '온보딩 개선 회의',
-      durationSeconds: 373,
+      durationSeconds: 0,
       host: {
         id: 'you',
         name: '윤금서',
         avatarKey: 'you',
       },
     })
+    expect(endMeeting).toHaveBeenCalledWith(1)
+    expect(finalizeMeeting).toHaveBeenCalledWith(
+      expect.objectContaining({ activeDurationSeconds: 0, meetingId: '1' }),
+    )
+  })
+
+  it('stops the speaking state while manually paused', async () => {
+    const { result } = await renderReadyController()
+
+    act(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      result.current.toggleRecording()
+    })
+
+    if (result.current.status !== 'ready' || result.current.transcript.state.kind !== 'active') {
+      throw new Error('transcript is not active')
+    }
+    expect(result.current.recordingState).toBe('paused')
+    expect(result.current.transcript.state.isSpeaking).toBe(false)
+  })
+
+  it('normalizes the current participant host flag from the join role', async () => {
+    vi.spyOn(meetingLifecycleApi, 'joinMeeting').mockResolvedValue({
+      meetingId: 1,
+      title: '2차 대면회의',
+      status: 'IN_PROGRESS',
+      role: 'MEMBER',
+      joinedAt: '2026-08-05T00:00:00.000Z',
+      wsUrl: 'wss://mock.synq/meetings/1',
+    })
+
+    const { result } = await renderReadyController()
+
+    if (result.current.status !== 'ready') throw new Error('controller is not ready')
+    expect(result.current.role).toBe('participant')
+    expect(
+      result.current.meeting.participants.find((participant) => participant.isCurrentUser)?.isHost,
+    ).toBe(false)
   })
 
   it('keeps the AI draft and pinned context while exposing a controlled send error', async () => {
@@ -98,7 +146,7 @@ describe('useLiveMeetingController async boundaries', () => {
     const updateRequest = deferred<TranscriptSegmentResponse>()
     const sendRequest = deferred<MeetingAiChatMessageResponse>()
     const updateSpy = vi
-      .spyOn(meetingApi, 'updateTranscript')
+      .spyOn(liveMeetingSnapshotGateway, 'updateTranscript')
       .mockReturnValue(updateRequest.promise)
     const sendSpy = vi
       .spyOn(meetingAiMockGateway, 'sendMeetingAiQuestion')
@@ -128,11 +176,11 @@ describe('useLiveMeetingController async boundaries', () => {
     expect(updateSpy).toHaveBeenCalledOnce()
     expect(sendSpy).toHaveBeenCalledOnce()
 
-    rerender({ currentMeetingId: 'demo-hint-error' })
+    rerender({ currentMeetingId: '2' })
     await waitFor(() => {
       expect(result.current.status).toBe('ready')
       if (result.current.status === 'ready') {
-        expect(result.current.meeting.meetingId).toBe('demo-hint-error')
+        expect(result.current.meeting.meetingId).toBe('2')
       }
     })
 
@@ -164,7 +212,7 @@ describe('useLiveMeetingController async boundaries', () => {
   })
 
   it('handles transcript refresh rejection without an unhandled promise', async () => {
-    vi.spyOn(meetingApi, 'listTranscripts').mockRejectedValue(
+    vi.spyOn(liveMeetingSnapshotGateway, 'listTranscripts').mockRejectedValue(
       new Error('TRANSCRIPT_REFRESH_FAILED'),
     )
     const { result } = await renderReadyController()
@@ -174,7 +222,9 @@ describe('useLiveMeetingController async boundaries', () => {
       result.current.transcript.actions.onRefresh()
     })
 
-    await waitFor(() => expect(meetingApi.listTranscripts).toHaveBeenCalledWith('demo'))
+    await waitFor(() =>
+      expect(liveMeetingSnapshotGateway.listTranscripts).toHaveBeenCalledWith('1'),
+    )
   })
 
   it('keeps a hint collapsed when an in-flight response arrives later', async () => {
@@ -258,7 +308,7 @@ describe('useLiveMeetingController async boundaries', () => {
     const setIntervalSpy = vi.spyOn(window, 'setInterval')
     const { result, unmount } = await renderReadyController()
     setIntervalSpy.mockClear()
-    vi.spyOn(meetingApi, 'listTranscripts').mockResolvedValue([
+    vi.spyOn(liveMeetingSnapshotGateway, 'listTranscripts').mockResolvedValue([
       {
         id: 'segment-1',
         sequenceIndex: 1,

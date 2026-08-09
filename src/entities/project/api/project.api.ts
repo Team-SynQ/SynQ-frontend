@@ -39,6 +39,7 @@ export async function listProjectSummaries(): Promise<ProjectSummary[]> {
       const { references } = await projectApi.getProjectReferences(project.projectId)
 
       return {
+        apiProjectId: project.projectId,
         id: String(project.projectId),
         name: project.title,
         overview: project.description ?? '',

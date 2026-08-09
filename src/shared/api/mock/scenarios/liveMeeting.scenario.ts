@@ -27,6 +27,38 @@ function cloneHints(): Record<string, TranscriptHintResponse> {
 
 export function createLiveMeetingScenarios(): Record<string, LiveMeetingScenario> {
   return {
+    '1': {
+      meeting: cloneMeeting('1'),
+      hints: cloneHints(),
+      aiAnswer: liveMeetingAiAnswerFixture,
+      hintFailureCount: 0,
+      transcriptEditFails: false,
+      completionFails: false,
+    },
+    '2': {
+      meeting: cloneMeeting('2'),
+      hints: cloneHints(),
+      aiAnswer: liveMeetingAiAnswerFixture,
+      hintFailureCount: 1,
+      transcriptEditFails: false,
+      completionFails: false,
+    },
+    '3': {
+      meeting: cloneMeeting('3'),
+      hints: cloneHints(),
+      aiAnswer: liveMeetingAiAnswerFixture,
+      hintFailureCount: 0,
+      transcriptEditFails: true,
+      completionFails: false,
+    },
+    '4': {
+      meeting: cloneMeeting('4'),
+      hints: cloneHints(),
+      aiAnswer: liveMeetingAiAnswerFixture,
+      hintFailureCount: 0,
+      transcriptEditFails: false,
+      completionFails: true,
+    },
     demo: {
       meeting: cloneMeeting('demo'),
       hints: cloneHints(),

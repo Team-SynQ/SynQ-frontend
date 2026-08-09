@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 
 import type { CompletedMeeting, LiveMeetingProjectContext } from '../entities/meeting'
 import type { AiChatDisplayMode } from '../features/meeting-ai-chat'
+import { MeetingConnectionToast } from '../features/meeting-connection'
 import type { ProjectNavigationState } from '../features/meeting-processing'
 import {
   MeetingExitDialog,
@@ -74,9 +75,7 @@ export function MeetingPage() {
     isHost: participant.isHost,
     isMicrophoneOn: participant.isMicrophoneOn,
   }))
-  const currentUserIsHost = participants.some(
-    (participant) => participant.isCurrentUser && participant.isHost,
-  )
+  const currentUserIsHost = controller.role === 'host'
 
   const changeAiChatDisplayMode = (mode: AiChatDisplayMode) => {
     controller.changeAiChatDisplayMode(mode)
@@ -145,6 +144,7 @@ export function MeetingPage() {
             participantCount: participants.length,
             projectTitle: controller.meeting.projectTitle,
             recordingState: controller.recordingState,
+            recordingControlDisabled: controller.connectionState !== 'connected',
           },
           moreMenuOpen: activeControl === 'more',
           moreMenuPopover: (
@@ -169,6 +169,9 @@ export function MeetingPage() {
         }}
         transcript={controller.transcript}
       />
+      {currentUserIsHost && controller.connectionNotice ? (
+        <MeetingConnectionToast className="top-[106px]!" status={controller.connectionNotice} />
+      ) : null}
       <MeetingTitleEditDialog
         currentTitle={controller.meetingTitle}
         onCancel={() => setActiveControl('idle')}

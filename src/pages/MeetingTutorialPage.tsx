@@ -31,6 +31,7 @@ export function MeetingTutorialPage() {
         <MeetingTutorialOverlay
           contained
           dontShowAgain={dontShowAgain}
+          onComplete={enterMeeting}
           onDontShowAgainChange={setDontShowAgain}
           onSkip={enterMeeting}
           onStepChange={setStep}

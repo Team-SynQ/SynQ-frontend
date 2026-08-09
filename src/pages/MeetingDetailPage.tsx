@@ -293,9 +293,10 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
   const { meetingRecordId = '' } = useParams()
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<'personal' | 'allSummary' | 'allRecord'>('allRecord')
-  const [meetingData, setMeetingData] = useState<MeetingDetailResponse | null>(null)
+  const [loadedMeetingData, setMeetingData] = useState<MeetingDetailResponse | null>(null)
+  const [failedMeetingRecordId, setFailedMeetingRecordId] = useState<string>()
 
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [editModalRecordId, setEditModalRecordId] = useState<string>()
   const [editTitleInput, setEditTitleInput] = useState('')
 
   const [transcripts, setTranscripts] = useState<TranscriptItem[]>([
@@ -396,16 +397,36 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
   useEffect(() => {
     let active = true
 
-    void fetchMeetingDetail(meetingRecordId).then((data) => {
-      if (!active) return
-      setMeetingData(data)
-      setEditTitleInput(data.meetingTitle)
-    })
+    void fetchMeetingDetail(meetingRecordId)
+      .then((data) => {
+        if (!active) return
+        setMeetingData(data)
+        setFailedMeetingRecordId(undefined)
+        setEditTitleInput(data.meetingTitle)
+      })
+      .catch(() => {
+        if (active) setFailedMeetingRecordId(meetingRecordId)
+      })
 
     return () => {
       active = false
     }
   }, [meetingRecordId])
+
+  if (failedMeetingRecordId === meetingRecordId) {
+    return (
+      <main className="flex h-screen flex-col items-center justify-center gap-s bg-surface-default">
+        <p className="m-0 typo-body-01 text-fg-secondary" role="alert">
+          회의 기록을 불러오지 못했습니다.
+        </p>
+        <Button onClick={() => navigate('/projects')} size="medium">
+          메인보드로 이동
+        </Button>
+      </main>
+    )
+  }
+
+  const meetingData = loadedMeetingData?.recordId === meetingRecordId ? loadedMeetingData : null
 
   if (!meetingData) {
     return <div className="flex h-screen items-center justify-center">로딩 중...</div>
@@ -428,9 +449,13 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
 
   const handleConfirmEditTitle = async () => {
     if (!editTitleInput.trim()) return
-    await updateMeetingTitle(meetingData.meetingId, editTitleInput.trim())
-    setMeetingData((prev) => (prev ? { ...prev, meetingTitle: editTitleInput.trim() } : null))
-    setIsEditModalOpen(false)
+    const targetRecordId = meetingData.recordId
+    const nextTitle = editTitleInput.trim()
+    await updateMeetingTitle(targetRecordId, nextTitle)
+    setMeetingData((prev) =>
+      prev?.recordId === targetRecordId ? { ...prev, meetingTitle: nextTitle } : prev,
+    )
+    setEditModalRecordId((current) => (current === targetRecordId ? undefined : current))
   }
 
   return (
@@ -471,7 +496,7 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
                   members={sampleMembers}
                   onEditTitle={() => {
                     setEditTitleInput(meetingData.meetingTitle)
-                    setIsEditModalOpen(true)
+                    setEditModalRecordId(meetingData.recordId)
                   }}
                   onDeleteMeeting={() => {
                     if (confirm('회의를 삭제하시겠습니까?')) {
@@ -604,7 +629,7 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
 
       {activeTab === 'allRecord' && <AudioPlayerControls />}
 
-      {isEditModalOpen && (
+      {editModalRecordId === meetingData.recordId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <Modal
             type="form"
@@ -612,7 +637,7 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
             confirmLabel="제목 변경하기"
             cancelLabel="취소"
             onConfirm={handleConfirmEditTitle}
-            onCancel={() => setIsEditModalOpen(false)}
+            onCancel={() => setEditModalRecordId(undefined)}
           >
             <div className="flex flex-col gap-xs pt-xs">
               <label className="typo-body-02 font-medium text-fg-primary flex items-center justify-between">

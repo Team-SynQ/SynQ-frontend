@@ -15,6 +15,7 @@ type ToastProps = {
   description?: string
   autoClose?: boolean
   position?: ToastPosition
+  positionOffset?: number
   icon?: ReactNode
   visible?: boolean
   className?: string
@@ -36,6 +37,13 @@ const positionClasses: Record<ToastPosition, string> = {
   bottomRight: 'bottom-m! right-m!',
   topCenter: 'left-1/2! top-m! -translate-x-1/2!',
   bottomCenter: 'bottom-m! left-1/2! -translate-x-1/2!',
+}
+
+const positionAnchorClasses: Record<ToastPosition, string> = {
+  topRight: 'right-m!',
+  bottomRight: 'right-m!',
+  topCenter: 'left-1/2! -translate-x-1/2!',
+  bottomCenter: 'left-1/2! -translate-x-1/2!',
 }
 
 const sizeClasses: Record<ToastSize, string> = {
@@ -63,21 +71,30 @@ export function Toast({
   description,
   autoClose = true,
   position = 'topRight',
+  positionOffset,
   icon,
   visible = true,
   className,
 }: ToastProps) {
+  const positionStyle =
+    positionOffset === undefined
+      ? undefined
+      : position.startsWith('top')
+        ? { top: positionOffset }
+        : { bottom: positionOffset }
+
   return (
     <div
       aria-hidden={!visible}
       className={cn(
         'fixed z-50 flex w-[calc(100%-32px)]',
-        positionClasses[position],
+        positionOffset === undefined ? positionClasses[position] : positionAnchorClasses[position],
         wrapperSizeClasses[size],
         'transition-[opacity,transform] duration-300 ease-out motion-reduce:transition-none',
         visible ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-xs opacity-0',
         className,
       )}
+      style={positionStyle}
     >
       <section
         aria-label={title}

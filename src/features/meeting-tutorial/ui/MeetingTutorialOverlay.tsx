@@ -7,6 +7,7 @@ import {
   type MeetingTutorialStep,
 } from '../model/meetingTutorial.config'
 import { MeetingTutorialFrame } from './MeetingTutorialFrame'
+import { MeetingTutorialNavigation } from './MeetingTutorialNavigation'
 
 export type MeetingTutorialOverlayProps = {
   open?: boolean
@@ -14,6 +15,7 @@ export type MeetingTutorialOverlayProps = {
   step: MeetingTutorialStep
   dontShowAgain?: boolean
   onDontShowAgainChange?: (checked: boolean) => void
+  onComplete?: () => void
   onStepChange?: (step: MeetingTutorialStep) => void
   onSkip?: () => void
 }
@@ -46,6 +48,7 @@ export function MeetingTutorialOverlay({
   step,
   dontShowAgain = false,
   onDontShowAgainChange,
+  onComplete,
   onStepChange,
   onSkip,
 }: MeetingTutorialOverlayProps) {
@@ -288,6 +291,7 @@ export function MeetingTutorialOverlay({
         onDontShowAgainChange={onDontShowAgainChange}
         onSkip={onSkip}
         scale={renderScale}
+        showSkip={step !== meetingTutorialSteps.at(-1)}
       />
 
       <div
@@ -336,31 +340,12 @@ export function MeetingTutorialOverlay({
         </p>
       </div>
 
-      <nav
-        aria-label="튜토리얼 단계"
-        className="absolute left-1/2 flex -translate-x-1/2 items-center bg-surface-elevated"
-        style={{
-          borderRadius: 100 * renderScale,
-          gap: 6 * renderScale,
-          padding: `${8 * renderScale}px ${24 * renderScale}px`,
-          top: `${(970 / VIEWBOX_HEIGHT) * 100}%`,
-        }}
-      >
-        {meetingTutorialSteps.map((targetStep) => (
-          <button
-            aria-current={targetStep === step ? 'step' : undefined}
-            aria-label={`${targetStep}단계로 이동`}
-            className={cn(
-              'rounded-full transition-colors',
-              targetStep === step ? 'bg-brand-primary' : 'bg-line-strong hover:bg-gray-500',
-            )}
-            key={targetStep}
-            onClick={() => onStepChange?.(targetStep)}
-            style={{ height: 6 * renderScale, width: 6 * renderScale }}
-            type="button"
-          />
-        ))}
-      </nav>
+      <MeetingTutorialNavigation
+        onComplete={() => onComplete?.()}
+        onStepChange={(nextStep) => onStepChange?.(nextStep)}
+        scale={renderScale}
+        step={step}
+      />
     </section>
   )
 }

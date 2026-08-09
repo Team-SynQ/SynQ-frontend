@@ -1,10 +1,11 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import App from '../../App'
 import * as meetingMockService from '../../shared/api/mock/services/meeting.mock'
 import { projectMockActorFixture } from '../../shared/api/mock/fixtures/projects.fixture'
+import { authService } from '../../shared/api/services/auth.service'
 
 function renderAppAt(path: string) {
   window.history.pushState({}, '', path)
@@ -13,7 +14,10 @@ function renderAppAt(path: string) {
 
 afterEach(() => {
   vi.restoreAllMocks()
+  vi.unstubAllEnvs()
   vi.useRealTimers()
+  window.sessionStorage.clear()
+  window.localStorage.clear()
   window.history.pushState({}, '', '/')
 })
 
@@ -52,13 +56,50 @@ describe('AppRouter', () => {
     expect(window.location.pathname).toBe('/login')
   })
 
-  it('bypasses social login and opens role setup', async () => {
+  it('stores an OAuth state before starting Kakao login', async () => {
     const user = userEvent.setup()
+    vi.stubEnv('VITE_KAKAO_CLIENT_ID', 'test-kakao-client')
+    vi.stubEnv('VITE_KAKAO_REDIRECT_URI', 'http://localhost:5173/login/callback')
     renderAppAt('/login')
 
     await user.click(screen.getByRole('button', { name: '카카오로 계속하기' }))
 
-    expect(window.location.pathname).toBe('/setup/role')
+    expect(window.sessionStorage.getItem('kakaoOAuthState')).toMatch(/^[0-9a-f]{64}$/)
+  })
+
+  it('rejects a Kakao callback whose OAuth state does not match', async () => {
+    const kakaoLogin = vi.spyOn(authService, 'kakaoLogin')
+    window.sessionStorage.setItem('kakaoOAuthState', 'expected-state')
+
+    renderAppAt('/login/callback?code=test-code&state=unexpected-state')
+
+    await waitFor(() => {
+      expect(screen.getByText('소셜 인증 실패')).toBeInTheDocument()
+    })
+    expect(kakaoLogin).not.toHaveBeenCalled()
+    expect(window.sessionStorage.getItem('kakaoOAuthState')).toBeNull()
+  })
+
+  it('submits a Kakao code only when the OAuth state matches', async () => {
+    const kakaoLogin = vi.spyOn(authService, 'kakaoLogin').mockResolvedValue({
+      isSuccess: true,
+      code: 'COMMON200',
+      message: '성공입니다.',
+      result: {
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
+        isNewUser: true,
+        onboardingCompleted: false,
+      },
+    })
+    window.sessionStorage.setItem('kakaoOAuthState', 'matching-state')
+
+    renderAppAt('/login/callback?code=test-code&state=matching-state')
+
+    await waitFor(() => {
+      expect(kakaoLogin).toHaveBeenCalledWith({ code: 'test-code' })
+    })
+    expect(window.sessionStorage.getItem('kakaoOAuthState')).toBeNull()
   })
 
   it('redirects the setup index route to role selection', () => {
@@ -154,10 +195,10 @@ describe('AppRouter', () => {
   })
 
   it('opens the existing live meeting page directly', async () => {
-    renderAppAt('/meetings/demo/live')
+    renderAppAt('/meetings/1/live')
 
     expect(await screen.findByRole('button', { name: '회의 종료' })).toBeInTheDocument()
-    expect(window.location.pathname).toBe('/meetings/demo/live')
+    expect(window.location.pathname).toBe('/meetings/1/live')
   })
 
   it('opens the implemented meeting detail using the route record id', async () => {
@@ -172,6 +213,108 @@ describe('AppRouter', () => {
     ).toBeInTheDocument()
     expect(fetchMeetingDetail).toHaveBeenCalledWith('meeting-record-999')
     expect(window.location.pathname).toBe('/meetings/meeting-record-999/detail')
+  })
+
+  it('uses the route record id when editing a meeting detail title', async () => {
+    const user = userEvent.setup()
+    const updateMeetingTitle = vi
+      .spyOn(meetingMockService, 'updateMeetingTitle')
+      .mockResolvedValue(true)
+
+    renderAppAt('/meetings/meeting-record-999/detail')
+
+    expect(
+      await screen.findByRole('heading', {
+        name: '신규 온보딩 개선 및 출시 일정 논의',
+      }),
+    ).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '더보기 메뉴' }))
+    await user.click(screen.getByRole('button', { name: '회의 제목 수정하기' }))
+    const titleInput = screen.getByPlaceholderText('회의 제목을 입력해 주세요')
+    await user.clear(titleInput)
+    await user.type(titleInput, '변경된 상세 제목')
+    await user.click(screen.getByRole('button', { name: '제목 변경하기' }))
+
+    expect(await screen.findByRole('heading', { name: '변경된 상세 제목' })).toBeInTheDocument()
+    expect(updateMeetingTitle).toHaveBeenCalledWith('meeting-record-999', '변경된 상세 제목')
+  })
+
+  it('keeps the active meeting state isolated from a stale title update', async () => {
+    const user = userEvent.setup()
+    const firstMeeting = await meetingMockService.fetchMeetingDetail('meeting-record-first')
+    const secondMeeting = {
+      ...firstMeeting,
+      recordId: 'meeting-record-second',
+      meetingTitle: '두 번째 회의 상세',
+    }
+    let resolveTitleUpdate: ((updated: boolean) => void) | undefined
+
+    vi.spyOn(meetingMockService, 'fetchMeetingDetail').mockImplementation((recordId) =>
+      Promise.resolve(recordId === secondMeeting.recordId ? secondMeeting : firstMeeting),
+    )
+    const updateMeetingTitle = vi
+      .spyOn(meetingMockService, 'updateMeetingTitle')
+      .mockImplementation(
+        () =>
+          new Promise<boolean>((resolve) => {
+            resolveTitleUpdate = resolve
+          }),
+      )
+
+    renderAppAt('/meetings/meeting-record-first/detail')
+
+    expect(
+      await screen.findByRole('heading', { name: firstMeeting.meetingTitle }),
+    ).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '더보기 메뉴' }))
+    await user.click(screen.getByRole('button', { name: '회의 제목 수정하기' }))
+    const titleInput = screen.getByPlaceholderText('회의 제목을 입력해 주세요')
+    await user.clear(titleInput)
+    await user.type(titleInput, '첫 번째 회의 변경 제목')
+    await user.click(screen.getByRole('button', { name: '제목 변경하기' }))
+    expect(updateMeetingTitle).toHaveBeenCalledWith(
+      'meeting-record-first',
+      '첫 번째 회의 변경 제목',
+    )
+    if (!resolveTitleUpdate) throw new Error('title update was not started')
+    const finishTitleUpdate = resolveTitleUpdate
+
+    act(() => {
+      window.history.pushState({}, '', '/meetings/meeting-record-second/detail')
+      window.dispatchEvent(new PopStateEvent('popstate'))
+    })
+
+    expect(
+      await screen.findByRole('heading', { name: secondMeeting.meetingTitle }),
+    ).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '더보기 메뉴' }))
+    await user.click(screen.getByRole('button', { name: '회의 제목 수정하기' }))
+    const secondTitleInput = screen.getByPlaceholderText('회의 제목을 입력해 주세요')
+    await user.clear(secondTitleInput)
+    await user.type(secondTitleInput, '두 번째 회의 편집 중')
+
+    await act(async () => {
+      finishTitleUpdate(true)
+    })
+
+    expect(screen.getByRole('heading', { name: secondMeeting.meetingTitle })).toBeInTheDocument()
+    expect(
+      screen.queryByRole('heading', { name: '첫 번째 회의 변경 제목' }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByPlaceholderText('회의 제목을 입력해 주세요')).toHaveValue(
+      '두 번째 회의 편집 중',
+    )
+  })
+
+  it('shows a recoverable error when a meeting detail cannot be loaded', async () => {
+    vi.spyOn(meetingMockService, 'fetchMeetingDetail').mockRejectedValueOnce(
+      new Error('meeting record not found'),
+    )
+
+    renderAppAt('/meetings/deleted-record/detail')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('회의 기록을 불러오지 못했습니다.')
+    expect(screen.getByRole('button', { name: '메인보드로 이동' })).toBeInTheDocument()
   })
 
   it('allows direct access to a setup step without stored selections', () => {
