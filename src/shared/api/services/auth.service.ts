@@ -1,4 +1,8 @@
-import type { KakaoLoginRequest, RefreshTokenRequest, AuthResponse } from '../contracts/auth.contracts'
+import type {
+  KakaoLoginRequest,
+  RefreshTokenRequest,
+  AuthResponse,
+} from '../contracts/auth.contracts'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://synq-api.duckdns.org'
 
