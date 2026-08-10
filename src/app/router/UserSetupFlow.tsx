@@ -4,6 +4,8 @@ import { Outlet, useNavigate, useOutletContext } from 'react-router-dom'
 import UserPerspectiveSetupPage from '../../pages/UserPerspectiveSetupPage'
 import UserRoleSetupPage from '../../pages/UserRoleSetupPage'
 import UserSetupPreviewPage from '../../pages/UserSetupPreviewPage'
+import { userService } from '../../shared/api/services/user.service'
+import { PERSPECTIVE_ENUM_MAP, ROLE_ENUM_MAP } from '../../shared/lib/onboardingMapper'
 
 const ROLE_LABEL_MAP: Record<string, string> = {
   pm: '기획/운영',
@@ -107,7 +109,35 @@ export function UserPerspectiveSetupRoute() {
 export function UserSetupPreviewRoute() {
   const navigate = useNavigate()
   const { perspectives, roleData } = useUserSetupContext()
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const selectedRole = roleData?.selectedRole ?? ''
+
+  const handleComplete = async () => {
+    if (isSubmitting || !roleData) return
+    setIsSubmitting(true)
+
+    const roleEnum = ROLE_ENUM_MAP[roleData.selectedRole] ?? roleData.selectedRole
+    const perspectivesEnum = perspectives.map((id) => PERSPECTIVE_ENUM_MAP[id] ?? id)
+
+    const trimmedDetail = roleData.detailRole?.trim() ?? ''
+    const detailRolePayload = roleEnum === 'ETC' ? trimmedDetail : ''
+
+    try {
+      const response = await userService.createRoleProfile({
+        role: roleEnum,
+        detailRole: detailRolePayload,
+        perspectives: perspectivesEnum,
+      })
+
+      if (response.isSuccess) {
+        navigate('/projects')
+      }
+    } catch (error) {
+      console.error('역할/관점 저장 실패:', error)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   return (
     <UserSetupPreviewPage
@@ -116,13 +146,7 @@ export function UserSetupPreviewRoute() {
       detailRole={roleData?.detailRole}
       selectedPerspectiveLabels={perspectives.map((id) => PERSPECTIVE_LABEL_MAP[id] ?? id)}
       onPrev={() => navigate('/setup/perspectives')}
-      onComplete={() => {
-        console.log('최종 온보딩 완료 데이터:', {
-          ...roleData,
-          perspectives,
-        })
-        navigate('/projects')
-      }}
+      onComplete={handleComplete}
     />
   )
 }
