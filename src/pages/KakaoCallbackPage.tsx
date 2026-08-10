@@ -17,6 +17,19 @@ export const KakaoCallbackPage: React.FC = () => {
   const [toastDescription, setToastDescription] = useState('')
 
   const isSubmitted = useRef(false)
+  const toastTimerIdsRef = useRef<number[]>([])
+
+  const scheduleToastTimer = useCallback((handler: () => void, delayMs: number) => {
+    toastTimerIdsRef.current.push(window.setTimeout(handler, delayMs))
+  }, [])
+
+  // unmount 후 navigate가 실행되지 않도록 예약된 토스트 타이머를 정리합니다.
+  useEffect(() => {
+    const timerIds = toastTimerIdsRef.current
+    return () => {
+      timerIds.forEach((timerId) => window.clearTimeout(timerId))
+    }
+  }, [])
 
   const triggerSuccessToast = useCallback(
     (targetPath: string) => {
@@ -26,16 +39,16 @@ export const KakaoCallbackPage: React.FC = () => {
       setShowToast(true)
       setToastOpacity(1)
 
-      setTimeout(() => {
+      scheduleToastTimer(() => {
         setToastOpacity(0)
       }, 1200)
 
-      setTimeout(() => {
+      scheduleToastTimer(() => {
         setShowToast(false)
         navigate(targetPath)
       }, 1500)
     },
-    [navigate],
+    [navigate, scheduleToastTimer],
   )
 
   const triggerErrorToast = useCallback(() => {
@@ -45,15 +58,15 @@ export const KakaoCallbackPage: React.FC = () => {
     setShowToast(true)
     setToastOpacity(1)
 
-    setTimeout(() => {
+    scheduleToastTimer(() => {
       setToastOpacity(0)
     }, 2200)
 
-    setTimeout(() => {
+    scheduleToastTimer(() => {
       setShowToast(false)
       navigate('/login')
     }, 2500)
-  }, [navigate])
+  }, [navigate, scheduleToastTimer])
 
   useEffect(() => {
     if (isSubmitted.current) return

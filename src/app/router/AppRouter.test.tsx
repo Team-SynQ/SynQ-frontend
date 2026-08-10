@@ -123,7 +123,7 @@ describe('AppRouter', () => {
   it('redirects the setup index route to role selection', async () => {
     await renderAppAt('/setup')
 
-    expect(window.location.pathname).toBe('/setup/role')
+    await waitFor(() => expect(window.location.pathname).toBe('/setup/role'))
   })
 
   it('moves role and perspective selections to the preview URL', async () => {
@@ -136,19 +136,19 @@ describe('AppRouter', () => {
     await user.click(roleButton!)
     await user.click(screen.getByRole('button', { name: '다음' }))
 
-    expect(window.location.pathname).toBe('/setup/perspectives')
+    await waitFor(() => expect(window.location.pathname).toBe('/setup/perspectives'))
 
     await user.click(screen.getByRole('button', { name: '일정' }))
     await user.click(screen.getByRole('button', { name: '다음' }))
 
-    expect(window.location.pathname).toBe('/setup/preview')
+    await waitFor(() => expect(window.location.pathname).toBe('/setup/preview'))
     expect(screen.getByRole('heading', { name: '선택 결과 미리보기' })).toBeInTheDocument()
     expect(screen.getByText('개발/기술')).toBeInTheDocument()
     expect(screen.getByText('일정')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '설정 완료' }))
 
-    expect(window.location.pathname).toBe('/projects')
+    await waitFor(() => expect(window.location.pathname).toBe('/projects'))
   })
 
   it('opens the empty project mainboard directly', async () => {
