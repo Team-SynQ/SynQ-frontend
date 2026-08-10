@@ -2,7 +2,10 @@ import { axiosInstance } from '../../../shared/api/axiosInstance'
 import type { ApiResponse } from '../../../shared/api/contracts/api.contracts'
 import type {
   CreateProjectRequest,
+  ProjectInvitationInfoResponse,
   ProjectInvitationResponse,
+  ProjectJoinRequest,
+  ProjectJoinResponse,
   ProjectLinkReferenceResponse,
   ProjectListItemResponse,
   ProjectMemberListResponse,
@@ -32,6 +35,8 @@ export type ProjectApi = {
   getProjectMembers(projectId: number): Promise<ProjectMemberListResponse>
   createProjectInvitation(projectId: number): Promise<ProjectInvitationResponse>
   deleteProjectMember(projectId: number, memberId: number): Promise<void>
+  getProjectInvitationInfo(inviteToken: string): Promise<ProjectInvitationInfoResponse>
+  joinProject(request: ProjectJoinRequest): Promise<ProjectJoinResponse>
 }
 
 export const projectApi: ProjectApi = {
@@ -97,6 +102,19 @@ export const projectApi: ProjectApi = {
   },
   async deleteProjectMember(projectId, memberId) {
     await axiosInstance.delete(`/projects/${projectId}/members/${memberId}`)
+  },
+  async getProjectInvitationInfo(inviteToken) {
+    const response = await axiosInstance.get<ApiResponse<ProjectInvitationInfoResponse>>(
+      `/projects/invitations/${inviteToken}`,
+    )
+    return response.data.result
+  },
+  async joinProject(request) {
+    const response = await axiosInstance.post<ApiResponse<ProjectJoinResponse>>(
+      '/projects/join',
+      request,
+    )
+    return response.data.result
   },
 }
 

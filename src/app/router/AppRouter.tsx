@@ -12,11 +12,18 @@ import { MeetingTutorialPage } from '../../pages/MeetingTutorialPage'
 import { NaverCallbackPage } from '../../pages/NaverCallbackPage'
 import { PolicyDocumentsPage } from '../../pages/PolicyDocumentsPage'
 import { PrivacyPage } from '../../pages/PrivacyPage'
+import { ProjectInvitePage } from '../../pages/ProjectInvitePage'
 import { ProjectMainboardPage } from '../../pages/ProjectMainboardPage'
 import { TermsPage } from '../../pages/TermsPage'
 import { changeMyName, loadCurrentUser, type CurrentUser } from '../../entities/user'
 import { readAccessToken } from '../../shared/lib/authStorage'
 import { LandingRoute, OnboardingRoute } from './EntryFlowRoutes'
+import {
+  ProjectJoinPerspectiveSetupRoute,
+  ProjectJoinPreviewRoute,
+  ProjectJoinRoleSetupRoute,
+  ProjectJoinSetupFlow,
+} from './ProjectJoinSetupFlow'
 import {
   UserPerspectiveSetupRoute,
   UserRoleSetupRoute,
@@ -110,6 +117,13 @@ export function AppRoutes() {
       <Route element={<NaverCallbackPage />} path="/login/callback/naver" />
       <Route element={<TermsPage />} path="/terms" />
       <Route element={<PrivacyPage />} path="/privacy" />
+      <Route element={<ProjectJoinSetupFlow />} path="/invite/setup">
+        <Route index element={<Navigate replace to="role" />} />
+        <Route element={<ProjectJoinRoleSetupRoute />} path="role" />
+        <Route element={<ProjectJoinPerspectiveSetupRoute />} path="perspectives" />
+        <Route element={<ProjectJoinPreviewRoute />} path="preview" />
+      </Route>
+      <Route element={<ProjectInvitePage />} path="/invite/:inviteToken" />
       <Route element={<AuthenticatedLayout />}>
         <Route element={<ProjectMainboardRoute />} path="/projects" />
         <Route element={<AccountSettingsRoute />} path="/settings/account" />

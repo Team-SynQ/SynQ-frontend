@@ -7,7 +7,6 @@ import { projectApi } from '../../entities/project'
 import { userApi } from '../../entities/user'
 import * as meetingMockService from '../../shared/api/mock/services/meeting.mock'
 import { projectMockActorFixture } from '../../shared/api/mock/fixtures/projects.fixture'
-import * as meetingMockService from '../../shared/api/mock/services/meeting.mock'
 import { authService } from '../../shared/api/services/auth.service'
 import { userService } from '../../shared/api/services/user.service'
 

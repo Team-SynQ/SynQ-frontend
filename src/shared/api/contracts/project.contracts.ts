@@ -109,3 +109,25 @@ export type ProjectInvitationResponse = {
   inviteUrl: string
   expiresAt: string
 }
+
+export type ProjectInvitationInfoResponse = {
+  projectId: number
+  title: string
+  description: string | null
+  currentMemberCount: number
+  maxMemberCount: number
+  alreadyJoined: boolean
+  expiresAt: string
+}
+
+export type ProjectJoinRequest = {
+  inviteToken: string
+}
+
+export type ProjectJoinResponse = {
+  projectId: number
+  title: string
+  description: string | null
+  memberRole: string
+  joinedAt: string
+}

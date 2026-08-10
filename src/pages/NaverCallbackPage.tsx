@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
+import { consumePendingInviteToken } from '../features/project-invite'
 import { authService } from '../shared/api/services/auth.service'
 import { Toast } from '../shared/ui/Toast'
 
@@ -87,7 +88,14 @@ export const NaverCallbackPage: React.FC = () => {
           localStorage.setItem('accessToken', accessToken)
           localStorage.setItem('refreshToken', refreshToken)
 
-          const targetPath = isNewUser || !onboardingCompleted ? '/setup/role' : '/projects'
+          // 초대 링크에서 로그인으로 넘어온 경우, 온보딩이 끝난 사용자는 초대 화면으로 복귀합니다.
+          const needsSetup = isNewUser || !onboardingCompleted
+          const pendingInviteToken = needsSetup ? null : consumePendingInviteToken()
+          const targetPath = needsSetup
+            ? '/setup/role'
+            : pendingInviteToken
+              ? `/invite/${pendingInviteToken}`
+              : '/projects'
           triggerSuccessToast(targetPath)
         } else {
           triggerErrorToast()

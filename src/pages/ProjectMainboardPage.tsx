@@ -238,6 +238,7 @@ export function ProjectMainboardPage({
     useState<ProjectReferenceFeedback>()
   const creationSuccessToast = useTransientVisibility()
   const projectReferenceFeedbackToast = useTransientVisibility()
+  const roleProfileSavedToast = useTransientVisibility()
   const showProjectReferenceFeedbackToast = projectReferenceFeedbackToast.show
   const showProjectReferenceFeedback = useCallback(
     (feedback: ProjectReferenceFeedback) => {
@@ -249,6 +250,11 @@ export function ProjectMainboardPage({
   const requestedActiveProjectId = navigationState?.activeProjectId
   const requestedOpenCreateProject = navigationState?.openCreateProject
   const [requestedProcessingRecordId] = useState(() => navigationState?.processingMeetingRecordId)
+  const requestedRoleProfileSaved = navigationState?.roleProfileSaved === true
+  const showRoleProfileSavedToast = roleProfileSavedToast.show
+  useEffect(() => {
+    if (requestedRoleProfileSaved) showRoleProfileSavedToast()
+  }, [requestedRoleProfileSaved, showRoleProfileSavedToast])
   const {
     dismissCompletion,
     phase: meetingProcessingPhase,
@@ -819,6 +825,16 @@ export function ProjectMainboardPage({
           title={projectReferenceFeedback.title}
           type={projectReferenceFeedback.type}
           visible={projectReferenceFeedbackToast.isVisible}
+        />
+      ) : null}
+      {roleProfileSavedToast.isMounted ? (
+        <Toast
+          className="top-[20px]!"
+          description="역할·관점 설정이 저장되었습니다."
+          position="topCenter"
+          title="역할·관점 저장 성공"
+          type="success"
+          visible={roleProfileSavedToast.isVisible}
         />
       ) : null}
     </main>

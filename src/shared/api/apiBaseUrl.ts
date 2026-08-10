@@ -4,8 +4,7 @@
  * VITE_API_BASE_URL을 지정하면 그 값이 항상 우선합니다.
  */
 export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  (import.meta.env.DEV ? '/api' : 'https://synq-api.duckdns.org')
+  import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? '/api' : 'https://api.synqai.co.kr')
 
 export const API_PROXY_PREFIX = '/api'
-export const API_ORIGIN = 'https://synq-api.duckdns.org'
+export const API_ORIGIN = 'https://api.synqai.co.kr'
