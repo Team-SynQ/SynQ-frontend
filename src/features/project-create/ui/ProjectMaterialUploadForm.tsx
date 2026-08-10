@@ -8,6 +8,7 @@ import {
   type KeyboardEvent,
 } from 'react'
 
+import { ApiError } from '../../../shared/api/apiError'
 import chevronLeftIcon from '../../../shared/assets/icons/chevron-left.svg'
 import closeIcon from '../../../shared/assets/icons/close.svg'
 import uploadIcon from '../../../shared/assets/icons/upload.svg'
@@ -76,6 +77,7 @@ export function ProjectMaterialUploadForm({
   const [isDragging, setIsDragging] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [errorCode, setErrorCode] = useState<ProjectMaterialUploadErrorCode>('upload-failed')
+  const [submissionErrorDetail, setSubmissionErrorDetail] = useState<string>()
   const uploadErrorToast = useTransientVisibility()
   const creationErrorToast = useTransientVisibility()
 
@@ -201,7 +203,8 @@ export function ProjectMaterialUploadForm({
         files: fileItems.map((item) => item.file),
         links: nextLinks.map((item) => item.name),
       })
-    } catch {
+    } catch (error) {
+      setSubmissionErrorDetail(error instanceof ApiError ? error.message : undefined)
       creationErrorToast.show()
     } finally {
       setIsCreating(false)
@@ -442,7 +445,7 @@ export function ProjectMaterialUploadForm({
       {creationErrorToast.isMounted ? (
         <Toast
           className="top-[20px]! z-[70]!"
-          description={submissionErrorMessage.description}
+          description={submissionErrorDetail ?? submissionErrorMessage.description}
           position="topCenter"
           title={submissionErrorMessage.title}
           type="error"

@@ -11,6 +11,18 @@ export type ProjectResponse = {
   createdAt: string
 }
 
+export type ProjectUpdateRequest = {
+  title?: string
+  description?: string
+}
+
+export type ProjectUpdateResponse = {
+  projectId: number
+  title: string
+  description: string | null
+  updatedAt: string
+}
+
 export type ProjectListItemResponse = {
   projectId: number
   title: string
@@ -72,4 +84,28 @@ export type ProjectLinkReferenceResponse = {
   uploaderId: number
   uploaderName: string
   createdAt: string
+}
+
+export type ProjectMemberResponse = {
+  memberId: number
+  userId: number
+  nickname: string
+  /** 프로젝트 권한(OWNER/MEMBER)입니다. 화면에 쓰는 직무 역할과 다릅니다. */
+  role: string
+  isMe: boolean
+  joinedAt: string
+}
+
+export type ProjectMemberListResponse = {
+  projectId: number
+  ownerId: number
+  title: string
+  currentMemberCount: number
+  maxMemberCount: number
+  members: ProjectMemberResponse[]
+}
+
+export type ProjectInvitationResponse = {
+  inviteUrl: string
+  expiresAt: string
 }

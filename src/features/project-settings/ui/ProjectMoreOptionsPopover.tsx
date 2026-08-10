@@ -18,6 +18,8 @@ type ProjectMoreOptionsPopoverProps = {
   id?: string
   joinRequestCount: number
   members: ProjectMember[]
+  memberCount?: number
+  maxMemberCount?: number
   open: boolean
   onClose: () => void
   onDeleteProject?: () => void
@@ -31,6 +33,8 @@ export function ProjectMoreOptionsPopover({
   id = 'project-more-options-popover',
   joinRequestCount,
   members,
+  memberCount,
+  maxMemberCount = 10,
   open,
   onClose,
   onDeleteProject,
@@ -80,9 +84,9 @@ export function ProjectMoreOptionsPopover({
             멤버
           </h2>
           <div className="flex min-w-0 flex-1 items-center gap-[2px] whitespace-nowrap">
-            <span className="typo-body-02 text-fg-secondary">{members.length}</span>
+            <span className="typo-body-02 text-fg-secondary">{memberCount ?? ''}</span>
             <span className="typo-caption text-gray-500">/</span>
-            <span className="typo-caption text-gray-500">10</span>
+            <span className="typo-caption text-gray-500">{maxMemberCount}</span>
           </div>
           <Button
             className="h-[32px] px-xs text-brand-primary! hover:bg-primary-100 hover:text-brand-primary!"

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
 import { authService } from '../shared/api/services/auth.service'
+import { saveAuthTokens } from '../shared/lib/authStorage'
 import { consumeKakaoOAuthState } from '../shared/lib/kakaoOAuthState'
 import { Toast } from '../shared/ui/Toast'
 
@@ -73,8 +74,7 @@ export const KakaoCallbackPage: React.FC = () => {
         if (response.isSuccess && response.result) {
           const { accessToken, refreshToken, isNewUser, onboardingCompleted } = response.result
 
-          localStorage.setItem('accessToken', accessToken)
-          localStorage.setItem('refreshToken', refreshToken)
+          saveAuthTokens({ accessToken, refreshToken })
 
           const targetPath = isNewUser || !onboardingCompleted ? '/setup/role' : '/projects'
           triggerSuccessToast(targetPath)

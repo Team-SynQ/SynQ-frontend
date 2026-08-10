@@ -5,8 +5,6 @@ import type {
   ProjectReferenceStatus,
   ProjectResponse,
 } from '../../contracts/project.contracts'
-import { projectFixtures } from '../fixtures/projects.fixture'
-
 type ProjectRecord = {
   project: ProjectResponse
   updatedAt: string
@@ -29,15 +27,6 @@ export function resetProjectMockDb() {
   records.clear()
   nextProjectId = 1
   nextReferenceId = 1
-
-  projectFixtures.forEach((project) => {
-    records.set(project.projectId, {
-      project: cloneProject(project),
-      updatedAt: project.createdAt,
-      references: [],
-    })
-    nextProjectId = Math.max(nextProjectId, project.projectId + 1)
-  })
 }
 
 resetProjectMockDb()

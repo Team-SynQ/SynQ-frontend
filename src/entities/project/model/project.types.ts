@@ -14,5 +14,6 @@ export type ProjectSummary = {
   overview: string
   perspectiveLabel: string
   perspectiveDescription: string
-  materials: ProjectReferenceMaterial[]
+  /** 아직 불러오지 않았으면 undefined입니다. 빈 배열은 등록된 자료가 없다는 뜻입니다. */
+  materials?: ProjectReferenceMaterial[]
 }

@@ -6,7 +6,7 @@ export type MeetingProcessingPhase =
 
 export type MeetingHistoryPresentation = {
   recordId: string
-  status: 'processing' | 'completed'
+  status: 'processing' | 'completed' | 'failed'
 }
 
 export type ProjectNavigationState = {

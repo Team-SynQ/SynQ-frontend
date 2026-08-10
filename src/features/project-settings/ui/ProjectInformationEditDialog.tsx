@@ -15,7 +15,7 @@ import type {
 } from '../model/projectInformation.types'
 import { ProjectInformationPerspectiveSelect } from './ProjectInformationPerspectiveSelect'
 
-const PROJECT_NAME_MAX_LENGTH = 50
+const PROJECT_NAME_MAX_LENGTH = 30
 const PROJECT_OVERVIEW_MAX_LENGTH = 500
 
 type Props = {

@@ -1,6 +1,5 @@
 import type { KakaoLoginRequest, AuthResponse } from '../contracts/auth.contracts'
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://synq-api.duckdns.org'
+import { API_BASE_URL } from '../apiBaseUrl'
 
 export const authService = {
   kakaoLogin: async (data: KakaoLoginRequest): Promise<AuthResponse> => {

@@ -1,4 +1,5 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { BrowserRouter, Navigate, Outlet, Route, Routes, useOutletContext } from 'react-router-dom'
 
 import { AccountSettingsPage } from '../../pages/AccountSettingsPage'
 import { HelpPage } from '../../pages/HelpPage'
@@ -12,7 +13,8 @@ import { PolicyDocumentsPage } from '../../pages/PolicyDocumentsPage'
 import { PrivacyPage } from '../../pages/PrivacyPage'
 import { ProjectMainboardPage } from '../../pages/ProjectMainboardPage'
 import { TermsPage } from '../../pages/TermsPage'
-import { projectMockActorFixture } from '../../shared/api/mock/fixtures/projects.fixture'
+import { changeMyName, loadCurrentUser, type CurrentUser } from '../../entities/user'
+import { readAccessToken } from '../../shared/lib/authStorage'
 import { LandingRoute, OnboardingRoute } from './EntryFlowRoutes'
 import {
   UserPerspectiveSetupRoute,
@@ -20,6 +22,82 @@ import {
   UserSetupFlow,
   UserSetupPreviewRoute,
 } from './UserSetupFlow'
+
+type AuthenticatedOutletContext = {
+  user: CurrentUser
+  onUserChange: (user: CurrentUser) => void
+}
+
+function useAuthenticatedContext() {
+  return useOutletContext<AuthenticatedOutletContext>()
+}
+
+function useAuthenticatedUser() {
+  return useAuthenticatedContext().user
+}
+
+/**
+ * 로그인이 필요한 화면의 공통 진입점입니다.
+ * 토큰이 없으면 곧바로, 토큰이 만료됐으면 /users/me 실패 시 로그인 화면으로 보냅니다.
+ */
+function AuthenticatedLayout() {
+  const [user, setUser] = useState<CurrentUser>()
+  const [isRejected, setIsRejected] = useState(false)
+  const hasAccessToken = Boolean(readAccessToken())
+
+  useEffect(() => {
+    if (!hasAccessToken) return
+
+    let isSubscribed = true
+    void loadCurrentUser()
+      .then((currentUser) => {
+        if (!isSubscribed) return
+        setUser(currentUser)
+      })
+      .catch(() => {
+        if (!isSubscribed) return
+        setIsRejected(true)
+      })
+
+    return () => {
+      isSubscribed = false
+    }
+  }, [hasAccessToken])
+
+  if (!hasAccessToken || isRejected) return <Navigate replace to="/login" />
+  if (!user) return null
+
+  return <Outlet context={{ user, onUserChange: setUser } satisfies AuthenticatedOutletContext} />
+}
+
+function ProjectMainboardRoute() {
+  return <ProjectMainboardPage user={useAuthenticatedUser()} />
+}
+
+function AccountSettingsRoute() {
+  const { user, onUserChange } = useAuthenticatedContext()
+
+  return (
+    <AccountSettingsPage
+      onSaveName={async (name) => {
+        onUserChange(await changeMyName(name))
+      }}
+      user={user}
+    />
+  )
+}
+
+function HelpRoute() {
+  return <HelpPage user={useAuthenticatedUser()} />
+}
+
+function PolicyDocumentsRoute() {
+  return <PolicyDocumentsPage user={useAuthenticatedUser()} />
+}
+
+function MeetingDetailRoute() {
+  return <MeetingDetailPage user={useAuthenticatedUser()} />
+}
 
 export function AppRoutes() {
   return (
@@ -30,29 +108,22 @@ export function AppRoutes() {
       <Route element={<KakaoCallbackPage />} path="/login/callback" />
       <Route element={<TermsPage />} path="/terms" />
       <Route element={<PrivacyPage />} path="/privacy" />
-      <Route element={<ProjectMainboardPage user={projectMockActorFixture} />} path="/projects" />
-      <Route
-        element={<AccountSettingsPage user={projectMockActorFixture} />}
-        path="/settings/account"
-      />
-      <Route element={<HelpPage user={projectMockActorFixture} />} path="/settings/help" />
-      <Route
-        element={<PolicyDocumentsPage user={projectMockActorFixture} />}
-        path="/settings/policy"
-      />
-      <Route element={<UserSetupFlow />} path="/setup">
-        <Route index element={<Navigate replace to="role" />} />
-        <Route element={<UserRoleSetupRoute />} path="role" />
-        <Route element={<UserPerspectiveSetupRoute />} path="perspectives" />
-        <Route element={<UserSetupPreviewRoute />} path="preview" />
+      <Route element={<AuthenticatedLayout />}>
+        <Route element={<ProjectMainboardRoute />} path="/projects" />
+        <Route element={<AccountSettingsRoute />} path="/settings/account" />
+        <Route element={<HelpRoute />} path="/settings/help" />
+        <Route element={<PolicyDocumentsRoute />} path="/settings/policy" />
+        <Route element={<UserSetupFlow />} path="/setup">
+          <Route index element={<Navigate replace to="role" />} />
+          <Route element={<UserRoleSetupRoute />} path="role" />
+          <Route element={<UserPerspectiveSetupRoute />} path="perspectives" />
+          <Route element={<UserSetupPreviewRoute />} path="preview" />
+        </Route>
+        <Route element={<MeetingStartPage />} path="/meetings/:meetingId/start" />
+        <Route element={<MeetingTutorialPage />} path="/meetings/:meetingId/tutorial" />
+        <Route element={<MeetingPage />} path="/meetings/:meetingId/live" />
+        <Route element={<MeetingDetailRoute />} path="/meetings/:meetingRecordId/detail" />
       </Route>
-      <Route element={<MeetingStartPage />} path="/meetings/:meetingId/start" />
-      <Route element={<MeetingTutorialPage />} path="/meetings/:meetingId/tutorial" />
-      <Route element={<MeetingPage />} path="/meetings/:meetingId/live" />
-      <Route
-        element={<MeetingDetailPage user={projectMockActorFixture} />}
-        path="/meetings/:meetingRecordId/detail"
-      />
       <Route element={<Navigate replace to="/" />} path="*" />
     </Routes>
   )

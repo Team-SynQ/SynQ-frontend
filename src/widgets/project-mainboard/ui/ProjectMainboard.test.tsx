@@ -1,9 +1,13 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, useLocation } from 'react-router-dom'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { PROJECT_REFERENCE_MAX_MATERIALS, type ProjectSummary } from '../../../entities/project'
+import {
+  PROJECT_REFERENCE_MAX_MATERIALS,
+  projectApi,
+  type ProjectSummary,
+} from '../../../entities/project'
 import { ProjectMainboard } from './ProjectMainboard'
 
 const project: ProjectSummary = {
@@ -22,6 +26,43 @@ const project: ProjectSummary = {
     },
   ],
 }
+
+const OWNER_USER_ID = 12
+const EXPORT_FAILURE_MEMBER_ID = 3
+
+const memberResponses = [
+  { memberId: 1, userId: OWNER_USER_ID, nickname: '윤금서', role: 'Design', isMe: true },
+  { memberId: 2, userId: 21, nickname: '캐서디', role: '딜러', isMe: false },
+  { memberId: EXPORT_FAILURE_MEMBER_ID, userId: 22, nickname: '애쉬', role: '딜러', isMe: false },
+  { memberId: 4, userId: 23, nickname: '캐서디', role: '딜러', isMe: false },
+  { memberId: 5, userId: 24, nickname: '캐서디', role: '딜러', isMe: false },
+  { memberId: 6, userId: 25, nickname: '애쉬', role: '딜러', isMe: false },
+  { memberId: 7, userId: 26, nickname: '캐서디', role: '딜러', isMe: false },
+  { memberId: 8, userId: 27, nickname: '애쉬', role: '딜러', isMe: false },
+  { memberId: 9, userId: 28, nickname: '애쉬', role: '딜러', isMe: false },
+].map((member) => ({ ...member, joinedAt: '2026-05-01T00:00:00.000Z' }))
+
+beforeEach(() => {
+  vi.spyOn(projectApi, 'getProjectMembers').mockResolvedValue({
+    projectId: 1,
+    ownerId: OWNER_USER_ID,
+    title: '서비스 디자인',
+    currentMemberCount: memberResponses.length,
+    maxMemberCount: 10,
+    members: memberResponses,
+  })
+  vi.spyOn(projectApi, 'createProjectInvitation').mockResolvedValue({
+    inviteUrl: 'https://synq.kr/invite/project-demo',
+    expiresAt: '2026-12-31T00:00:00.000Z',
+  })
+  vi.spyOn(projectApi, 'deleteProjectMember').mockImplementation(async (_projectId, memberId) => {
+    if (memberId === EXPORT_FAILURE_MEMBER_ID) throw new Error('export failed')
+  })
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 function createProjectWithMaterialCount(materialCount: number): ProjectSummary {
   return {
@@ -83,12 +124,12 @@ describe('ProjectMainboard', () => {
     const options = within(projectOptions)
     expect(projectOptions).toHaveClass('right-0', 'top-0', 'w-[340px]', 'gap-l', 'rounded-l', 'p-m')
     expect(options.getByRole('heading', { name: '멤버' })).toBeInTheDocument()
-    expect(options.getAllByText('10')).toHaveLength(2)
-    expect(options.getByText('윤금서/Design (you)')).toBeInTheDocument()
+    expect(await options.findByText('윤금서/Design (you)')).toBeInTheDocument()
+    expect(options.getByText('9')).toBeInTheDocument()
+    expect(options.getByText('10')).toBeInTheDocument()
     expect(options.getByText('소유자')).toBeInTheDocument()
-    expect(options.getAllByRole('listitem')).toHaveLength(10)
+    expect(options.getAllByRole('listitem')).toHaveLength(9)
     expect(options.getAllByText('애쉬/딜러')).toHaveLength(4)
-    expect(options.getByText('도로롱')).toBeInTheDocument()
     expect(options.getByRole('button', { name: '초대' })).toBeInTheDocument()
     expect(options.getByRole('button', { name: '멤버 관리' })).toBeInTheDocument()
     expect(options.getByRole('button', { name: '프로젝트 정보 수정하기' })).toBeInTheDocument()
@@ -96,17 +137,14 @@ describe('ProjectMainboard', () => {
 
     const membersIcon = options.getByTestId('project-members-icon')
     const inviteIcon = options.getByTestId('project-invite-icon')
-    const customAvatar = options.getByTestId('project-member-avatar-member-current')
-    const defaultAvatar = options.getByTestId('project-member-avatar-member-cassidy-1')
+    const memberAvatar = options.getByTestId('project-member-avatar-1')
     expect(membersIcon).toHaveClass('size-[28px]')
     expect(membersIcon.querySelectorAll('img')).toHaveLength(2)
     expect(inviteIcon).toHaveClass('size-[24px]')
     expect(inviteIcon.querySelector('img')).toHaveAttribute('height', '16.2')
     expect(inviteIcon.querySelector('img')).toHaveAttribute('width', '15.2625')
-    expect(customAvatar).toHaveAttribute('height', '24')
-    expect(customAvatar).toHaveAttribute('width', '24')
-    expect(defaultAvatar).toHaveClass('size-[24px]')
-    expect(defaultAvatar.querySelectorAll('img')).toHaveLength(2)
+    expect(memberAvatar).toHaveClass('size-[24px]')
+    expect(memberAvatar.querySelectorAll('img')).toHaveLength(2)
 
     await user.click(options.getByRole('button', { name: '프로젝트 설정 및 멤버 관리 닫기' }))
 
@@ -603,7 +641,7 @@ describe('ProjectMainboard', () => {
     )
 
     let management = within(screen.getByRole('dialog', { name: '멤버 관리' }))
-    const memberRow = within(management.getByTestId('project-member-row-member-cassidy-1'))
+    const memberRow = within(management.getByTestId('project-member-row-2'))
     await user.click(memberRow.getByRole('button', { name: '캐서디 멤버 관리' }))
 
     const memberMenu = await screen.findByRole('menu', { name: '캐서디 멤버 메뉴' })
@@ -623,10 +661,10 @@ describe('ProjectMainboard', () => {
 
     await user.click(within(exportDialog).getByRole('button', { name: '취소' }))
     management = within(await screen.findByRole('dialog', { name: '멤버 관리' }))
-    expect(management.getByTestId('project-member-row-member-cassidy-1')).toBeInTheDocument()
+    expect(management.getByTestId('project-member-row-2')).toBeInTheDocument()
 
     await user.click(
-      within(management.getByTestId('project-member-row-member-cassidy-1')).getByRole('button', {
+      within(management.getByTestId('project-member-row-2')).getByRole('button', {
         name: '캐서디 멤버 관리',
       }),
     )
@@ -642,7 +680,7 @@ describe('ProjectMainboard', () => {
     await user.click(within(exportDialog).getByRole('button', { name: '내보내기' }))
 
     management = within(await screen.findByRole('dialog', { name: '멤버 관리' }))
-    expect(management.queryByTestId('project-member-row-member-cassidy-1')).not.toBeInTheDocument()
+    expect(management.queryByTestId('project-member-row-2')).not.toBeInTheDocument()
     expect(management.getByText('8')).toBeInTheDocument()
     expect(await screen.findByRole('status', { name: '멤버 삭제 성공' })).toHaveTextContent(
       '멤버를 성공적으로 내보냈습니다.',
@@ -667,7 +705,7 @@ describe('ProjectMainboard', () => {
     )
 
     let management = within(screen.getByRole('dialog', { name: '멤버 관리' }))
-    const failingMemberRow = within(management.getByTestId('project-member-row-member-ashe-1'))
+    const failingMemberRow = within(management.getByTestId('project-member-row-3'))
     await user.click(failingMemberRow.getByRole('button', { name: '애쉬 멤버 관리' }))
     await user.click(
       within(await screen.findByRole('menu', { name: '애쉬 멤버 메뉴' })).getByRole('menuitem', {
@@ -681,7 +719,7 @@ describe('ProjectMainboard', () => {
     await user.click(within(exportDialog).getByRole('button', { name: '내보내기' }))
 
     management = within(await screen.findByRole('dialog', { name: '멤버 관리' }))
-    expect(management.getByTestId('project-member-row-member-ashe-1')).toBeInTheDocument()
+    expect(management.getByTestId('project-member-row-3')).toBeInTheDocument()
     expect(management.getByText('9')).toBeInTheDocument()
     expect(await screen.findByRole('status', { name: '멤버 삭제 실패' })).toHaveTextContent(
       '멤버를 삭제하지 못했습니다. 다시 시도해 주세요.',

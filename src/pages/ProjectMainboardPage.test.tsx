@@ -27,10 +27,22 @@ function renderProjectMainboardPage(
   props: ComponentProps<typeof ProjectMainboardPage> = {},
   initialEntry: string | { pathname: string; state: unknown } = '/projects',
 ) {
+  const resolvedProps = {
+    loadProjects: () => Promise.resolve([]),
+    // 실제 API 기본값이 붙은 prop 들은 테스트에서 명시적으로 막습니다.
+    loadProjectReferences: () => Promise.resolve([]),
+    loadRoleProfiles: () => Promise.resolve([]),
+    addProjectReferences: vi.fn(),
+    deleteProjectReference: vi.fn(),
+    updateProject: vi.fn(),
+    deleteProject: vi.fn(),
+    ...props,
+  }
+
   return render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
-        <Route element={<ProjectMainboardPage {...props} />} path="/projects" />
+        <Route element={<ProjectMainboardPage {...resolvedProps} />} path="/projects" />
         <Route element={<NavigationDestination />} path="/settings/help" />
         <Route element={<NavigationDestination />} path="/settings/policy" />
         <Route element={<NavigationDestination />} path="/meetings/:meetingId/tutorial" />
@@ -443,7 +455,7 @@ describe('ProjectMainboardPage', () => {
     renderProjectMainboardPage()
 
     expect(
-      screen.getByRole('button', {
+      await screen.findByRole('button', {
         name: '\uD504\uB85C\uC81D\uD2B8 \uC0DD\uC131\uD558\uAE30',
       }),
     ).toBeInTheDocument()
