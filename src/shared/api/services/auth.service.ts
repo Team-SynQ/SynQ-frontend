@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '../apiBaseUrl'
+import { getAccessToken } from '../lib/apiClient'
 import type {
   KakaoLoginRequest,
   RefreshTokenRequest,
@@ -53,7 +54,7 @@ export const authService = {
     message: string
     result: string
   }> => {
-    const token = localStorage.getItem('accessToken')
+    const token = getAccessToken()
 
     const response = await fetch(`${API_BASE_URL}/auth/logout`, {
       method: 'POST',

@@ -1,4 +1,4 @@
-import { formatElapsedTime } from '../../../entities/meeting'
+import { formatTranscriptTime } from '../../../entities/meeting'
 import editIcon from '../../../shared/assets/icons/edit.svg'
 import { cn } from '../../../shared/lib/cn'
 import { Button } from '../../../shared/ui'
@@ -9,6 +9,8 @@ import { TranscriptHintCard } from './TranscriptHintCard'
 
 export type TranscriptItemProps = {
   segment: TranscriptSegment
+  /** 회의 시작 시각. 있으면 전사 시각을 벽시계로 표시한다. */
+  meetingStartedAt?: string | null
   isSelected: boolean
   editState: TranscriptEditState
   hintState: TranscriptHintState
@@ -24,6 +26,7 @@ export type TranscriptItemProps = {
 
 export function TranscriptItem({
   segment,
+  meetingStartedAt,
   isSelected,
   editState,
   hintState,
@@ -51,11 +54,11 @@ export function TranscriptItem({
         <div className="flex min-h-[32px] items-center justify-between gap-s">
           <div className="flex items-center gap-xs">
             <time className="typo-body-01 text-gray-400">
-              {formatElapsedTime(segment.startedAtSeconds)}
+              {formatTranscriptTime(segment.startedAtSeconds, meetingStartedAt)}
             </time>
             {segment.isEdited ? <span className="typo-caption text-gray-500">수정됨</span> : null}
           </div>
-          {isSelected && !isEditing ? (
+          {isSelected && !isEditing && !segment.isInterim ? (
             <div className="flex items-center gap-s">
               <Button
                 aria-label="전사 수정"
@@ -85,7 +88,11 @@ export function TranscriptItem({
         ) : (
           <button
             aria-pressed={isSelected}
-            className="mt-xs w-full text-left typo-transcription-body-01 text-fg-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
+            className={cn(
+              'mt-xs w-full text-left typo-transcription-body-01 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary',
+              segment.isInterim ? 'text-gray-400' : 'text-fg-primary',
+            )}
+            disabled={segment.isInterim}
             onClick={() => onSelect?.(segment.id)}
             type="button"
           >

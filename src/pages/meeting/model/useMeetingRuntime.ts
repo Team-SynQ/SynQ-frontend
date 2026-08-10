@@ -14,6 +14,8 @@ type UseMeetingRuntimeOptions = {
   enabled: boolean
   meetingId: string
   restoreConnection: (meetingId: number) => Promise<void>
+  /** 전사 전송 채널이 끊겼을 때 true. 연결 복구 중과 같은 규칙으로 다룬다. */
+  channelDegraded?: boolean
 }
 
 const RESTORED_NOTICE_DURATION_MS = 3000
@@ -22,6 +24,7 @@ export function useMeetingRuntime({
   enabled,
   meetingId,
   restoreConnection,
+  channelDegraded = false,
 }: UseMeetingRuntimeOptions) {
   const [initialRuntime] = useState(() => readMeetingRuntime(meetingId))
   const [activeSeconds, setActiveSeconds] = useState(initialRuntime?.activeSeconds ?? 0)
@@ -96,8 +99,14 @@ export function useMeetingRuntime({
     }
   }, [enabled, meetingId])
 
+  // 전사 채널이 끊긴 것도 사용자에게는 연결 불안정과 같은 상황이다.
+  const effectiveConnectionState: ConnectionState =
+    channelDegraded && connectionState === 'connected' ? 'reconnecting' : connectionState
+  const effectiveConnectionNotice: ConnectionNotice =
+    channelDegraded && connectionState === 'connected' ? 'unstable' : connectionNotice
+
   const canProgress =
-    enabled && !ending && recordingState === 'recording' && connectionState === 'connected'
+    enabled && !ending && recordingState === 'recording' && effectiveConnectionState === 'connected'
 
   useEffect(() => {
     if (!canProgress) return
@@ -113,9 +122,9 @@ export function useMeetingRuntime({
   }, [activeSeconds, enabled, meetingId, recordingState])
 
   const toggleRecording = useCallback(() => {
-    if (ending || connectionState !== 'connected') return
+    if (ending || effectiveConnectionState !== 'connected') return
     setRecordingState((current) => (current === 'recording' ? 'paused' : 'recording'))
-  }, [connectionState, ending])
+  }, [effectiveConnectionState, ending])
 
   const freezeForEnd = useCallback(() => {
     if (frozenDurationRef.current !== null) return frozenDurationRef.current
@@ -133,8 +142,8 @@ export function useMeetingRuntime({
     activeSeconds,
     canProgress,
     clear,
-    connectionNotice,
-    connectionState,
+    connectionNotice: effectiveConnectionNotice,
+    connectionState: effectiveConnectionState,
     freezeForEnd,
     recordingState,
     toggleRecording,

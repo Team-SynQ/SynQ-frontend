@@ -58,6 +58,7 @@ export function TranscriptPanel({ state, actions }: TranscriptPanelProps) {
                     onEditDraftChange={actions.onEditDraftChange}
                     onRetryHint={actions.onRetryHint}
                     onSaveEdit={actions.onSaveEdit}
+                    meetingStartedAt={state.meetingStartedAt}
                     onSelect={editing ? undefined : actions.onSelectSegment}
                     onStartEdit={actions.onStartEdit}
                     segment={segment}

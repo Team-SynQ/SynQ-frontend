@@ -80,6 +80,7 @@ export const meetingLifecycleMockDb = {
       status: record.created.status,
       role: record.role,
       joinedAt: record.joinedAt,
+      startedAt: record.created.startedAt,
       wsUrl: record.created.wsUrl,
     }
   },

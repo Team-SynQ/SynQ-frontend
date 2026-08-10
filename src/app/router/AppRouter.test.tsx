@@ -7,7 +7,9 @@ import { projectApi } from '../../entities/project'
 import { userApi } from '../../entities/user'
 import * as meetingMockService from '../../shared/api/mock/services/meeting.mock'
 import { projectMockActorFixture } from '../../shared/api/mock/fixtures/projects.fixture'
+import * as meetingMockService from '../../shared/api/mock/services/meeting.mock'
 import { authService } from '../../shared/api/services/auth.service'
+import { userService } from '../../shared/api/services/user.service'
 
 async function renderAppAt(path: string) {
   window.history.pushState({}, '', path)
@@ -99,6 +101,7 @@ describe('AppRouter', () => {
   })
 
   it('submits a Kakao code only when the OAuth state matches', async () => {
+    vi.stubEnv('VITE_KAKAO_REDIRECT_URI', 'http://localhost:5173/login/callback')
     const kakaoLogin = vi.spyOn(authService, 'kakaoLogin').mockResolvedValue({
       isSuccess: true,
       code: 'COMMON200',
@@ -115,7 +118,10 @@ describe('AppRouter', () => {
     await renderAppAt('/login/callback?code=test-code&state=matching-state')
 
     await waitFor(() => {
-      expect(kakaoLogin).toHaveBeenCalledWith({ code: 'test-code' })
+      expect(kakaoLogin).toHaveBeenCalledWith({
+        code: 'test-code',
+        redirectUri: 'http://localhost:5173/login/callback',
+      })
     })
     expect(window.sessionStorage.getItem('kakaoOAuthState')).toBeNull()
   })
@@ -127,6 +133,19 @@ describe('AppRouter', () => {
   })
 
   it('moves role and perspective selections to the preview URL', async () => {
+    vi.spyOn(userService, 'createRoleProfile').mockResolvedValue({
+      isSuccess: true,
+      code: 'COMMON201',
+      message: '성공적으로 응답이 생성되었습니다.',
+      result: {
+        id: 1,
+        isDefault: false,
+        role: '개발/기술',
+        detailRole: '개발/기술',
+        perspectives: ['일정'],
+      },
+    })
+
     const user = userEvent.setup()
     await renderAppAt('/setup/role')
 

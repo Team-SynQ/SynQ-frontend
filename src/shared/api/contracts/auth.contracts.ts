@@ -1,5 +1,7 @@
 export interface KakaoLoginRequest {
   code: string
+  /** 인가 요청에 사용한 redirect URI. 생략하면 백엔드 설정값으로 폴백한다. */
+  redirectUri?: string
 }
 
 export interface RefreshTokenRequest {
@@ -20,6 +22,8 @@ export interface NaverStateResponse {
 export interface NaverLoginRequest {
   code: string
   state: string
+  /** 인가 요청에 사용한 redirect URI. 생략하면 백엔드 설정값으로 폴백한다. */
+  redirectUri?: string
 }
 
 export interface AuthResult {
