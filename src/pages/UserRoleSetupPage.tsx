@@ -98,7 +98,7 @@ const UserRoleSetupPage: React.FC<UserRoleSetupPageProps> = ({
           회의에서 어떤 역할로 참여하시나요?
         </h1>
         <p className="text-xs md:text-sm text-gray-400">
-          "회의에서 나는 어떤 사람인가"를 의미해요.
+          내가 맡은 역할에 맞는 정보를 제공하기 위해 사용해요.
         </p>
       </div>
 

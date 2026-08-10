@@ -51,7 +51,7 @@ const UserPerspectiveSetupPage: React.FC<UserPerspectiveSetupPageProps> = ({ onN
           SynQ가 어떤 관점으로 회의를 봐주면 좋을까요?
         </h1>
         <p className="text-xs md:text-sm text-gray-400">
-          관점은 "회의 내용을 어떤 기준으로 보고 싶은가"를 의미해요.
+          선택한 관점에 따라 AI Hint와 회의 정리가 달라져요.
         </p>
       </div>
 
