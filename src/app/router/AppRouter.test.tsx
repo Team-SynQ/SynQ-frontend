@@ -3,9 +3,10 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import App from '../../App'
-import * as meetingMockService from '../../shared/api/mock/services/meeting.mock'
 import { projectMockActorFixture } from '../../shared/api/mock/fixtures/projects.fixture'
+import * as meetingMockService from '../../shared/api/mock/services/meeting.mock'
 import { authService } from '../../shared/api/services/auth.service'
+import { userService } from '../../shared/api/services/user.service'
 
 function renderAppAt(path: string) {
   window.history.pushState({}, '', path)
@@ -113,6 +114,19 @@ describe('AppRouter', () => {
   })
 
   it('moves role and perspective selections to the preview URL', async () => {
+    vi.spyOn(userService, 'createRoleProfile').mockResolvedValue({
+      isSuccess: true,
+      code: 'COMMON201',
+      message: '성공적으로 응답이 생성되었습니다.',
+      result: {
+        id: 1,
+        isDefault: false,
+        role: '개발/기술',
+        detailRole: '개발/기술',
+        perspectives: ['일정'],
+      },
+    })
+
     const user = userEvent.setup()
     renderAppAt('/setup/role')
 
@@ -134,7 +148,9 @@ describe('AppRouter', () => {
 
     await user.click(screen.getByRole('button', { name: '설정 완료' }))
 
-    expect(window.location.pathname).toBe('/projects')
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/projects')
+    })
   })
 
   it('opens the empty project mainboard directly', () => {
