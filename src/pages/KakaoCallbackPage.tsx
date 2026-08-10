@@ -68,7 +68,7 @@ export const KakaoCallbackPage: React.FC = () => {
     }
 
     authService
-      .kakaoLogin({ code })
+      .kakaoLogin({ code, redirectUri: import.meta.env.VITE_KAKAO_REDIRECT_URI })
       .then((response) => {
         if (response.isSuccess && response.result) {
           const { accessToken, refreshToken, isNewUser, onboardingCompleted } = response.result

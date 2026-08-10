@@ -44,7 +44,7 @@ SynQ는 이렇게 같이 들었지만 다르게 이해하는 순간을 줄이기
 | Server State    | TanStack Query             |
 | API Client      | Axios                      |
 | Architecture    | FSD(Feature-Sliced Design) |
-| Deployment      | Vercel                     |
+| Deployment      | AWS S3 + CloudFront        |
 | Version Control | Git, GitHub                |
 
 - 로컬 개발 서버는 `pnpm run dev`로 실행합니다.
@@ -172,7 +172,25 @@ pnpm run build
 
 ### 배포
 
-배포는 Vercel을 기준으로 진행합니다.
+프로덕션 배포는 `main` 브랜치에 머지되는 순간 GitHub Actions가 자동으로 수행합니다. 로컬에서 수동으로 배포하지 않습니다.
+
+```text
+develop -> main PR 머지
+  -> .github/workflows/deploy-production.yml 실행
+  -> Vite 프로덕션 빌드
+  -> AWS S3 동기화
+  -> CloudFront 캐시 무효화
+```
+
+| 항목          | 값                                        |
+| ------------- | ----------------------------------------- |
+| 프로덕션 URL  | https://synqai.co.kr                      |
+| 호스팅        | AWS S3(원본) + CloudFront(CDN, HTTPS)     |
+| 배포 워크플로 | `.github/workflows/deploy-production.yml` |
+
+SPA 라우팅은 CloudFront Function이 처리합니다. 확장자가 없는 경로를 `/index.html`로 rewrite하므로 `/login` 같은 주소를 직접 열거나 새로고침해도 앱이 정상적으로 로드됩니다. 저장소에 별도의 rewrite 설정 파일은 두지 않습니다.
+
+빌드 시 주입되는 환경변수는 GitHub 저장소의 `Settings -> Secrets and variables -> Actions`에서 관리합니다.
 
 ## 화면 목록 및 플로우
 
