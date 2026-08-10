@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 
+import { authService } from '../shared/api/services/auth.service'
 import { createKakaoOAuthState } from '../shared/lib/kakaoOAuthState'
 import { Toast } from '../shared/ui/Toast'
 
@@ -29,8 +30,34 @@ const LoginPage: React.FC = () => {
     window.location.href = kakaoAuthUrl
   }
 
+  const handleNaverLogin = async () => {
+    const clientId = import.meta.env.VITE_NAVER_CLIENT_ID
+    const redirectUri = import.meta.env.VITE_NAVER_REDIRECT_URI
+
+    if (!clientId || !redirectUri) {
+      console.error(
+        '.env 파일에 네이버 설정 정보(VITE_NAVER_CLIENT_ID, VITE_NAVER_REDIRECT_URI)가 존재하지 않습니다.',
+      )
+      return
+    }
+
+    try {
+      const response = await authService.getNaverState()
+
+      if (response.isSuccess && response.result.state) {
+        const state = response.result.state
+        const naverAuthUrl = `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(
+          redirectUri,
+        )}&state=${encodeURIComponent(state)}`
+
+        window.location.href = naverAuthUrl
+      }
+    } catch (error) {
+      console.error('네이버 로그인 요청 실패:', error)
+    }
+  }
+
   const handleOtherSocialLogin = () => {
-    // TODO: 네이버/구글 로그인 구현 시 연동 처리
     navigate('/setup/role')
   }
 
@@ -108,7 +135,7 @@ const LoginPage: React.FC = () => {
           </button>
 
           <button
-            onClick={handleOtherSocialLogin}
+            onClick={handleNaverLogin}
             className="flex items-center justify-center w-full h-12 bg-[#03C75A] hover:bg-[#02B34F] text-white font-semibold text-sm rounded-xl transition-colors relative cursor-pointer"
           >
             <img

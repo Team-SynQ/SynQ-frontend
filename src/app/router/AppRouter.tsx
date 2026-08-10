@@ -9,6 +9,7 @@ import { MeetingDetailPage } from '../../pages/MeetingDetailPage'
 import { MeetingPage } from '../../pages/MeetingPage'
 import { MeetingStartPage } from '../../pages/MeetingStartPage'
 import { MeetingTutorialPage } from '../../pages/MeetingTutorialPage'
+import { NaverCallbackPage } from '../../pages/NaverCallbackPage'
 import { PolicyDocumentsPage } from '../../pages/PolicyDocumentsPage'
 import { PrivacyPage } from '../../pages/PrivacyPage'
 import { ProjectMainboardPage } from '../../pages/ProjectMainboardPage'
@@ -106,6 +107,7 @@ export function AppRoutes() {
       <Route element={<OnboardingRoute />} path="/onboarding" />
       <Route element={<LoginPage />} path="/login" />
       <Route element={<KakaoCallbackPage />} path="/login/callback" />
+      <Route element={<NaverCallbackPage />} path="/login/callback/naver" />
       <Route element={<TermsPage />} path="/terms" />
       <Route element={<PrivacyPage />} path="/privacy" />
       <Route element={<AuthenticatedLayout />}>
