@@ -66,7 +66,7 @@ export const NaverCallbackPage: React.FC = () => {
     }
 
     authService
-      .naverLogin({ code, state })
+      .naverLogin({ code, state, redirectUri: import.meta.env.VITE_NAVER_REDIRECT_URI })
       .then((response) => {
         if (response.isSuccess && response.result) {
           const { accessToken, refreshToken, isNewUser, onboardingCompleted } = response.result
