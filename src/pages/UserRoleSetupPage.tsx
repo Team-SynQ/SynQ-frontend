@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { userService } from '../shared/api/services/user.service'
 import { Toast } from '../shared/ui/Toast'
 
 const ROLE_OPTIONS = [
@@ -23,6 +24,7 @@ const UserRoleSetupPage: React.FC<UserRoleSetupPageProps> = ({
   onNext,
   onPrev,
 }) => {
+  const [displayName, setDisplayName] = useState<string>(username !== 'username' ? username : '')
   const [selectedRole, setSelectedRole] = useState<string | null>(null)
   const [detailRole, setDetailRole] = useState('')
   const [showToast, setShowToast] = useState(false)
@@ -30,6 +32,19 @@ const UserRoleSetupPage: React.FC<UserRoleSetupPageProps> = ({
 
   const isEtcSelected = selectedRole === 'etc'
   const isNextEnabled = selectedRole !== null
+
+  useEffect(() => {
+    userService
+      .getMe()
+      .then((response) => {
+        if (response.isSuccess && response.result?.name) {
+          setDisplayName(response.result.name)
+        }
+      })
+      .catch((error) => {
+        console.error('사용자 정보 조회 실패:', error)
+      })
+  }, [])
 
   useEffect(() => {
     if (!showToast) return
@@ -92,7 +107,7 @@ const UserRoleSetupPage: React.FC<UserRoleSetupPageProps> = ({
 
       <div className="text-center mb-8">
         <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-1">
-          [{username}]님 반갑습니다.
+          {displayName ? `${displayName}님 반갑습니다.` : '반갑습니다.'}
         </h2>
         <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 mb-2">
           회의에서 어떤 역할로 참여하시나요?
