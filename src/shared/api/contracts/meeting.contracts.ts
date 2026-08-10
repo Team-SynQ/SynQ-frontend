@@ -25,6 +25,8 @@ export type MeetingJoinResponse = {
   status: string
   role: string
   joinedAt: string
+  /** 회의 시작 시각. 전사 세그먼트의 startMs가 이 시각 기준이다. */
+  startedAt: string
   wsUrl: string
 }
 

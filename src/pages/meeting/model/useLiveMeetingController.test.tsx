@@ -103,6 +103,7 @@ describe('useLiveMeetingController async boundaries', () => {
       status: 'IN_PROGRESS',
       role: 'MEMBER',
       joinedAt: '2026-08-05T00:00:00.000Z',
+      startedAt: '2026-08-05T00:00:00.000Z',
       wsUrl: 'wss://mock.synq/meetings/1',
     })
 

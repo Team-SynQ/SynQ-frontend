@@ -11,6 +11,7 @@ import {
   type LiveMeetingAiPinnedContext,
   type LiveMeetingProjectContext,
   type LiveMeetingTranscriptHint,
+  type TranscriptionChannelStatus,
 } from '../../../entities/meeting'
 import type {
   AiChatContentProps,
@@ -21,8 +22,14 @@ import type {
   TranscriptEditState,
   TranscriptHintState,
   TranscriptPanelProps,
+  TranscriptSegment,
 } from '../../../features/live-transcription'
+import { USE_REAL_MEETING_API } from '../../../shared/api/lib/apiClient'
+import { transcriptService } from '../../../shared/api/services/transcript.service'
+import { useLiveTranscription } from './useLiveTranscription'
 import { useMeetingRuntime } from './useMeetingRuntime'
+
+const INTERIM_SEGMENT_ID = 'interim'
 
 type ReadyController = {
   status: 'ready'
@@ -59,6 +66,8 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
   const [loadError, setLoadError] = useState<{ meetingId: string; message: string } | null>(null)
   const [meetingTitle, setMeetingTitle] = useState('')
   const [role, setRole] = useState<'host' | 'participant'>('host')
+  const [wsUrl, setWsUrl] = useState<string | null>(null)
+  const [meetingStartedAt, setMeetingStartedAt] = useState<string | null>(null)
   const [selectedSegmentId, setSelectedSegmentId] = useState<string | null>(null)
   const [hintState, setHintState] = useState<TranscriptHintState>({ status: 'idle' })
   const [editState, setEditState] = useState<TranscriptEditState>({ status: 'idle' })
@@ -77,13 +86,30 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
     meetingId: string
     endedAt: string
   } | null>(null)
+  const [channelStatus, setChannelStatus] = useState<TranscriptionChannelStatus>('connecting')
+  // 진행자만 전송 채널을 쓴다. 끊긴 채널은 연결 복구 중과 같은 규칙으로 다룬다.
+  const isChannelDegraded =
+    USE_REAL_MEETING_API &&
+    role === 'host' &&
+    (channelStatus === 'error' || channelStatus === 'closed')
   const runtime = useMeetingRuntime({
     enabled: meeting?.meetingId === meetingId,
     meetingId,
     restoreConnection: meetingConnectionGateway.restoreConnection,
+    channelDegraded: isChannelDegraded,
   })
   const apiMeetingId = Number(meetingId)
   const hasValidMeetingId = Number.isSafeInteger(apiMeetingId) && apiMeetingId > 0
+  const liveTranscription = useLiveTranscription({
+    enabled: USE_REAL_MEETING_API && hasValidMeetingId && meeting?.meetingId === meetingId,
+    meetingId: apiMeetingId,
+    role,
+    wsUrl,
+    isRecording: runtime.recordingState === 'recording',
+    channelStatus,
+    onChannelStatusChange: setChannelStatus,
+    editingSegmentId: editState.status === 'editing' ? editState.transcriptId : null,
+  })
 
   const isCurrentMeetingSession = useCallback(
     (requestMeetingId: string, requestSequence: number) =>
@@ -122,6 +148,8 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
         setLoadError(null)
         setMeetingTitle(joinResponse.title)
         setRole(joinedAsHost ? 'host' : 'participant')
+        setWsUrl(joinResponse.wsUrl ?? null)
+        setMeetingStartedAt(joinResponse.startedAt ?? null)
         setSelectedSegmentId(null)
         setHintState({ status: 'idle' })
         setEditState({ status: 'idle' })
@@ -209,6 +237,31 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
     return { status: 'loading' }
   }
 
+  // 실제 연동에서는 전사를 WebSocket·조회 API에서 받는다. mock 스냅샷은 참여자·AI 채팅에만 쓴다.
+  const interimSegment =
+    USE_REAL_MEETING_API && liveTranscription.interimText
+      ? [
+          {
+            id: INTERIM_SEGMENT_ID,
+            sequenceIndex: Number.MAX_SAFE_INTEGER,
+            startedAtSeconds: runtime.activeSeconds,
+            text: liveTranscription.interimText,
+            isEdited: false,
+            editedAt: null,
+            isInterim: true,
+          },
+        ]
+      : []
+  const displaySegments: TranscriptSegment[] = USE_REAL_MEETING_API
+    ? [...liveTranscription.segments, ...interimSegment]
+    : meeting.transcript.segments
+  const isTranscriptWaiting = USE_REAL_MEETING_API
+    ? displaySegments.length === 0
+    : meeting.transcript.status === 'waiting'
+  const isSpeaking =
+    runtime.canProgress &&
+    (USE_REAL_MEETING_API ? interimSegment.length > 0 : meeting.transcript.isSpeaking)
+
   const selectSegment = (segmentId: string) => {
     if (editState.status === 'editing') return
 
@@ -217,8 +270,8 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
   }
 
   const startEdit = (segmentId: string) => {
-    const segment = meeting.transcript.segments.find((candidate) => candidate.id === segmentId)
-    if (!segment) return
+    const segment = displaySegments.find((candidate) => candidate.id === segmentId)
+    if (!segment || segment.isInterim) return
 
     setEditState({
       status: 'editing',
@@ -242,11 +295,20 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
     setEditState(savingState)
 
     try {
-      const updated = await liveMeetingSnapshotGateway.updateTranscript({
-        meetingId,
-        segmentId: savingState.transcriptId,
-        text: savingState.draftText,
-      })
+      if (USE_REAL_MEETING_API) {
+        await transcriptService.updateSegment(
+          apiMeetingId,
+          Number(savingState.transcriptId),
+          savingState.draftText,
+        )
+      }
+      const updated = USE_REAL_MEETING_API
+        ? null
+        : await liveMeetingSnapshotGateway.updateTranscript({
+            meetingId,
+            segmentId: savingState.transcriptId,
+            text: savingState.draftText,
+          })
       if (!isCurrentMeetingSession(requestMeetingId, requestSessionSequence)) return
       hintCacheRef.current.delete(savingState.transcriptId)
       hintRequestSequenceRef.current += 1
@@ -255,19 +317,23 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
           ? { status: 'idle' }
           : current,
       )
-      setMeeting((current) =>
-        current?.meetingId === requestMeetingId
-          ? {
-              ...current,
-              transcript: {
-                ...current.transcript,
-                segments: current.transcript.segments.map((segment) =>
-                  segment.id === updated.id ? updated : segment,
-                ),
-              },
-            }
-          : current,
-      )
+      if (updated) {
+        setMeeting((current) =>
+          current?.meetingId === requestMeetingId
+            ? {
+                ...current,
+                transcript: {
+                  ...current.transcript,
+                  segments: current.transcript.segments.map((segment) =>
+                    segment.id === updated.id ? updated : segment,
+                  ),
+                },
+              }
+            : current,
+        )
+      } else {
+        liveTranscription.applyEdit(savingState.transcriptId, savingState.draftText)
+      }
       setEditState({ status: 'idle' })
     } catch (error) {
       if (!isCurrentMeetingSession(requestMeetingId, requestSessionSequence)) return
@@ -280,8 +346,8 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
   }
 
   const askAi = (segmentId: string) => {
-    const segment = meeting.transcript.segments.find((candidate) => candidate.id === segmentId)
-    if (!segment) return
+    const segment = displaySegments.find((candidate) => candidate.id === segmentId)
+    if (!segment || segment.isInterim) return
 
     setPinnedContext({ transcriptId: segment.id, text: segment.text })
     setDraft('')
@@ -387,6 +453,8 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
         ),
       onRefresh: () => {
         if (!runtime.canProgress) return
+        // 실제 연동에서는 WebSocket과 폴링이 갱신을 담당하므로 mock 재조회를 하지 않는다.
+        if (USE_REAL_MEETING_API) return
         const requestMeetingId = meetingId
         const requestSessionSequence = meetingSessionRef.current.sequence
         void liveMeetingSnapshotGateway
@@ -411,17 +479,17 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
       onSelectSegment: selectSegment,
       onStartEdit: startEdit,
     },
-    state:
-      meeting.transcript.status === 'waiting'
-        ? { kind: 'waiting' }
-        : {
-            kind: 'active',
-            editState,
-            hintState,
-            isSpeaking: runtime.canProgress && meeting.transcript.isSpeaking,
-            segments: meeting.transcript.segments,
-            selectedSegmentId,
-          },
+    state: isTranscriptWaiting
+      ? { kind: 'waiting' }
+      : {
+          kind: 'active',
+          editState,
+          hintState,
+          isSpeaking,
+          meetingStartedAt,
+          segments: displaySegments,
+          selectedSegmentId,
+        },
   }
 
   const aiChat: AiChatContentProps = {

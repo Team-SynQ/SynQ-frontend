@@ -27,6 +27,7 @@ describe('meetingLifecycleMockService', () => {
       status: 'IN_PROGRESS',
       role: 'HOST',
       joinedAt: expect.any(String),
+      startedAt: created.startedAt,
       wsUrl: created.wsUrl,
     })
 
