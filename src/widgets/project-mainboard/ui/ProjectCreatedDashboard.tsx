@@ -203,6 +203,10 @@ function ProjectReferenceMaterials({
   const materials = project.materials ?? []
 
   const handleAddMaterials = async (nextDraft: ProjectMaterialDraft) => {
+    // 기존 자료 수를 모르는 상태에서는 개수 검사가 부정확하고, 뒤늦게 도착한 조회 결과가
+    // 방금 추가한 자료를 덮어쓸 수 있습니다.
+    if (isMaterialsLoading) return
+
     const nextMaterialCount = nextDraft.files.length + nextDraft.links.length
     if (materials.length + nextMaterialCount > PROJECT_REFERENCE_MAX_MATERIALS) {
       materialLimitToast.show()
@@ -214,6 +218,8 @@ function ProjectReferenceMaterials({
   }
 
   const handleOpenUploadModal = () => {
+    if (isMaterialsLoading) return
+
     if (materials.length >= PROJECT_REFERENCE_MAX_MATERIALS) {
       materialLimitToast.show()
       return
@@ -244,6 +250,7 @@ function ProjectReferenceMaterials({
           <Button
             aria-label="AI 참고 자료 추가"
             className="size-[32px] px-0"
+            disabled={isMaterialsLoading}
             onClick={handleOpenUploadModal}
             size="small"
             variant="basic"

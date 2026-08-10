@@ -1,4 +1,5 @@
 export { createProjectWithMaterials } from './api/createProjectWithMaterials'
+export { createRoleProfileOption } from './api/roleProfile.api'
 export { ProjectCreateModal } from './ui/ProjectCreateModal'
 export { ProjectRolePerspectiveForm } from './ui/ProjectRolePerspectiveForm'
 export { ProjectMaterialUploadForm } from './ui/ProjectMaterialUploadForm'

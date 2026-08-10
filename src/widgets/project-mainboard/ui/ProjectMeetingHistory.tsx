@@ -135,11 +135,11 @@ export function ProjectMeetingHistory({
                         </span>
                       </span>
                     </button>
-                    {status === 'failed' ? (
+                    {status === 'failed' && onRetryMeetingSummary ? (
                       <Button
                         aria-label={`${meeting.meetingTitle} 정리 다시 시도`}
                         className="size-[32px] px-0"
-                        onClick={() => onRetryMeetingSummary?.(meeting.recordId)}
+                        onClick={() => onRetryMeetingSummary(meeting.recordId)}
                         size="small"
                         variant="basic"
                       >
@@ -165,7 +165,13 @@ export function ProjectMeetingHistory({
               })}
             </ul>
           ) : isLoading ? (
-            <div aria-busy="true" aria-label="회의 기록 불러오는 중" className="h-[200px]" />
+            <p
+              aria-busy="true"
+              className="flex h-[200px] items-center justify-center typo-body-01 text-gray-500"
+              role="status"
+            >
+              회의 기록을 불러오는 중입니다
+            </p>
           ) : (
             <p className="flex h-[200px] items-center justify-center whitespace-pre-line text-center typo-body-01 text-gray-500">
               {'아직 회의 기록이 없습니다\n‘새 회의 시작’을 통해 기록을 시작해 보세요'}

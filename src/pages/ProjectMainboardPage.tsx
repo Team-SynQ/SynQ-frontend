@@ -22,18 +22,17 @@ import {
   type ProjectReferenceMaterial,
   type ProjectSummary,
 } from '../entities/project'
-import {
-  changeDefaultRoleProfile,
-  loadMyRoleProfiles,
-  type RoleProfile,
-} from '../entities/user'
+import { changeDefaultRoleProfile, loadMyRoleProfiles, type RoleProfile } from '../entities/user'
 import {
   createProjectWithMaterials,
+  createRoleProfileOption,
   getProjectCreationSuccessMessage,
   ProjectCreateModal,
+  toProjectPerspectiveOption,
   type ProjectCreateDraft,
   type ProjectMaterialDraft,
-  toProjectPerspectiveOption,
+  type ProjectPerspectiveOption,
+  type ProjectRolePerspectiveDraft,
 } from '../features/project-create'
 import {
   useMeetingProcessingFlow,
@@ -55,6 +54,7 @@ type ProjectMainboardPageProps = {
   loadProjects?: () => Promise<ProjectSummary[]>
   loadProjectReferences?: (apiProjectId: number) => Promise<ProjectReferenceMaterial[]>
   loadRoleProfiles?: () => Promise<RoleProfile[]>
+  addRoleProfile?: (draft: ProjectRolePerspectiveDraft) => Promise<ProjectPerspectiveOption>
   onSubmitProject?: (
     draft: ProjectCreateDraft,
     materials: ProjectMaterialDraft,
@@ -199,6 +199,7 @@ export function ProjectMainboardPage({
   loadProjects = listProjectSummaries,
   loadProjectReferences = loadProjectReferenceMaterials,
   loadRoleProfiles = loadMyRoleProfiles,
+  addRoleProfile = createRoleProfileOption,
   onSubmitProject,
   addProjectReferences = addProjectReferenceMaterials,
   deleteProjectReference = deleteProjectReferenceMaterial,
@@ -476,6 +477,13 @@ export function ProjectMainboardPage({
     setMeetingEntryVariant(null)
   }
 
+  const handleAddRoleProfile = async (draft: ProjectRolePerspectiveDraft) => {
+    const created = await addRoleProfile(draft)
+    // 새 프로필이 목록·기본 관점에 바로 반영되도록 서버 상태를 다시 읽습니다.
+    setRoleProfiles(await loadRoleProfiles())
+    return created
+  }
+
   const handleProjectCreated = async (
     draft: ProjectCreateDraft,
     materials: ProjectMaterialDraft,
@@ -672,7 +680,9 @@ export function ProjectMainboardPage({
     }))
   }
 
-  const perspectiveOptions = roleProfiles.map(toProjectPerspectiveOption)
+  const roleProfileOptions = roleProfiles.map(toProjectPerspectiveOption)
+  // 프로필이 아직 없거나 조회에 실패하면 화면 기본 관점 목록으로 되돌립니다.
+  const perspectiveOptions = roleProfileOptions.length > 0 ? roleProfileOptions : undefined
   const defaultProfile = roleProfiles.find((profile) => profile.isDefault)
   const defaultPerspective = defaultProfile ? toProjectPerspectiveOption(defaultProfile) : undefined
   const selectedProject = projects.find((project) => project.id === activeProjectId)
@@ -689,8 +699,8 @@ export function ProjectMainboardPage({
     : []
   const isMeetingHistoryLoading = Boolean(
     activeProjectId &&
-      !(activeProjectId in completedMeetingsByProject) &&
-      activeProjectId !== meetingHistoryErrorProjectId,
+    !(activeProjectId in completedMeetingsByProject) &&
+    activeProjectId !== meetingHistoryErrorProjectId,
   )
   const visibleMeetings =
     meetingProcessingPhase === 'summaryProcessing'
@@ -731,7 +741,7 @@ export function ProjectMainboardPage({
         user={user}
       />
       <ProjectMainboard
-        perspectiveOptions={perspectiveOptions.map((option) => ({
+        perspectiveOptions={perspectiveOptions?.map((option) => ({
           label: option.label,
           description: option.selectedDescription,
         }))}
@@ -769,9 +779,11 @@ export function ProjectMainboardPage({
         project={activeProject}
       />
       <ProjectCreateModal
+        onAddPerspective={handleAddRoleProfile}
         onClose={() => setIsCreateModalOpen(false)}
         onCreate={handleProjectCreated}
         open={isCreateModalOpen}
+        perspectiveOptions={perspectiveOptions}
       />
       {meetingEntryVariant ? (
         <MeetingEntryModal
