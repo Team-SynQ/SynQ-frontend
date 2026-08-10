@@ -81,6 +81,7 @@ describe('AppRouter', () => {
   })
 
   it('submits a Kakao code only when the OAuth state matches', async () => {
+    vi.stubEnv('VITE_KAKAO_REDIRECT_URI', 'http://localhost:5173/login/callback')
     const kakaoLogin = vi.spyOn(authService, 'kakaoLogin').mockResolvedValue({
       isSuccess: true,
       code: 'COMMON200',
@@ -97,7 +98,10 @@ describe('AppRouter', () => {
     renderAppAt('/login/callback?code=test-code&state=matching-state')
 
     await waitFor(() => {
-      expect(kakaoLogin).toHaveBeenCalledWith({ code: 'test-code' })
+      expect(kakaoLogin).toHaveBeenCalledWith({
+        code: 'test-code',
+        redirectUri: 'http://localhost:5173/login/callback',
+      })
     })
     expect(window.sessionStorage.getItem('kakaoOAuthState')).toBeNull()
   })
