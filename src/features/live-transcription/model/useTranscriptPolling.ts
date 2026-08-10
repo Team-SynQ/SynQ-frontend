@@ -43,10 +43,10 @@ function getErrorMessage(cause: unknown) {
 }
 
 /**
- * 참여자 화면이 확정된 전사를 따라가기 위한 주기 재조회.
+ * WebSocket이 끊긴 동안 전사를 따라가기 위한 폴백 경로.
  *
- * 조회 API에 증분 파라미터가 없어 매번 전체 목록을 받는다. 백엔드에 afterSequenceIndex가
- * 추가되면 이 훅의 요청만 바꾸면 되고 병합 로직은 그대로 쓸 수 있다.
+ * 단절 중에는 어디까지 받았는지 기준점을 신뢰할 수 없으므로 afterSequenceIndex를 쓰지 않고
+ * 매번 전체 목록으로 재동기화한다. 정상 연결 상태의 증분 조회는 useLiveTranscription이 담당한다.
  */
 export function useTranscriptPolling({
   enabled,

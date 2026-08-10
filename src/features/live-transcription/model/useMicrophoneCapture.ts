@@ -7,7 +7,11 @@ export const MICROPHONE_CHUNK_INTERVAL_MS = 1000
 
 export type MicrophoneCaptureStatus = 'idle' | 'starting' | 'recording' | 'paused' | 'error'
 export type MicrophoneCaptureErrorReason =
-  'unsupported' | 'mime-type-unsupported' | 'permission-denied'
+  | 'unsupported'
+  | 'mime-type-unsupported'
+  | 'permission-denied'
+  /** 녹음 도중 레코더가 죽거나 마이크 장치가 분리된 경우. */
+  | 'recorder-failed'
 
 type UseMicrophoneCaptureOptions = {
   /** 진행자이고 전송 채널이 열려 있을 때만 true. 마이크 확보와 해제를 결정한다. */
@@ -119,6 +123,16 @@ export function useMicrophoneCapture({
           onChunkRef.current(chunk)
         })
       }
+      // 녹음이 시작된 뒤 레코더가 죽거나 장치가 빠지면 ondataavailable만 조용히 멈춘다.
+      // 진행자가 전사 중단을 알 수 있도록 오류로 올린다.
+      recorder.onerror = () => {
+        if (!cancelled) fail('recorder-failed')
+      }
+      stream.getTracks().forEach((track) => {
+        track.onended = () => {
+          if (!cancelled) fail('recorder-failed')
+        }
+      })
       recorder.start(timesliceMs)
       recorderRef.current = recorder
       // 정지 상태로 진입하면 첫 청크가 나가기 전에 멈춘다.

@@ -244,7 +244,17 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
           {
             id: INTERIM_SEGMENT_ID,
             sequenceIndex: Number.MAX_SAFE_INTEGER,
-            startedAtSeconds: runtime.activeSeconds,
+            // 확정 세그먼트는 회의 시작 기준이고 activeSeconds는 일시정지를 제외한 누적 시간이라
+            // 축이 다르다. 회의 시작 시각을 알면 수신 시각을 같은 축으로 환산한다.
+            startedAtSeconds: meetingStartedAt
+              ? Math.max(
+                  0,
+                  Math.round(
+                    (liveTranscription.interimReceivedAt - new Date(meetingStartedAt).getTime()) /
+                      1000,
+                  ),
+                )
+              : runtime.activeSeconds,
             text: liveTranscription.interimText,
             isEdited: false,
             editedAt: null,

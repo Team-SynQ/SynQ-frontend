@@ -10,14 +10,20 @@ type RecorderInstance = {
   pause: ReturnType<typeof vi.fn>
   resume: ReturnType<typeof vi.fn>
   ondataavailable: ((event: { data: Blob }) => void) | null
+  onerror: (() => void) | null
   mimeType: string
 }
 
+type FakeTrack = { stop: ReturnType<typeof vi.fn>; onended: (() => void) | null }
+
 const recorderInstances: RecorderInstance[] = []
+const trackInstances: FakeTrack[] = []
 const stopTrack = vi.fn()
 
 function createStream() {
-  return { getTracks: () => [{ stop: stopTrack }] } as unknown as MediaStream
+  const track: FakeTrack = { stop: stopTrack, onended: null }
+  trackInstances.push(track)
+  return { getTracks: () => [track] } as unknown as MediaStream
 }
 
 function installMediaRecorder(isTypeSupported = true) {
@@ -25,6 +31,7 @@ function installMediaRecorder(isTypeSupported = true) {
     static isTypeSupported = vi.fn().mockReturnValue(isTypeSupported)
     state = 'inactive'
     ondataavailable: ((event: { data: Blob }) => void) | null = null
+    onerror: (() => void) | null = null
     mimeType: string
     start = vi.fn(() => {
       this.state = 'recording'
@@ -59,6 +66,7 @@ function installMediaDevices(getUserMedia = vi.fn().mockResolvedValue(createStre
 describe('useMicrophoneCapture', () => {
   beforeEach(() => {
     recorderInstances.length = 0
+    trackInstances.length = 0
     stopTrack.mockClear()
   })
 
@@ -182,6 +190,35 @@ describe('useMicrophoneCapture', () => {
     expect(recorderInstances[0].resume).toHaveBeenCalled()
     expect(recorderInstances[0].start).toHaveBeenCalledTimes(1)
     expect(result.current.status).toBe('recording')
+  })
+
+  it('녹음 중 레코더가 죽으면 recorder-failed로 알린다', async () => {
+    installMediaRecorder()
+    installMediaDevices()
+    const onError = vi.fn()
+
+    const { result } = renderHook(() =>
+      useMicrophoneCapture({ enabled: true, onChunk: vi.fn(), onError }),
+    )
+    await waitFor(() => expect(result.current.status).toBe('recording'))
+
+    recorderInstances[0].onerror?.()
+
+    await waitFor(() => expect(result.current.status).toBe('error'))
+    expect(result.current.errorReason).toBe('recorder-failed')
+    expect(onError).toHaveBeenCalledWith('recorder-failed')
+  })
+
+  it('마이크 장치가 분리되면 recorder-failed로 알린다', async () => {
+    installMediaRecorder()
+    installMediaDevices()
+
+    const { result } = renderHook(() => useMicrophoneCapture({ enabled: true, onChunk: vi.fn() }))
+    await waitFor(() => expect(result.current.status).toBe('recording'))
+
+    trackInstances[0].onended?.()
+
+    await waitFor(() => expect(result.current.errorReason).toBe('recorder-failed'))
   })
 
   it('권한이 거부되면 permission-denied로 알린다', async () => {

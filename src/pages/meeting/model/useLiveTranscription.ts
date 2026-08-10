@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import {
   meetingTranscriptionGateway,
@@ -37,6 +37,8 @@ type UseLiveTranscriptionResult = {
   segments: TranscriptSegment[]
   /** 확정 전 중간 인식. 서버가 진행자에게만 보낸다. */
   interimText: string
+  /** 중간 인식을 받은 시각(epoch ms). 확정 세그먼트와 같은 축으로 표시 시각을 계산할 때 쓴다. */
+  interimReceivedAt: number
   microphoneStatus: MicrophoneCaptureStatus
   error: string | null
   applyEdit: (segmentId: string, text: string) => void
@@ -75,7 +77,10 @@ export function useLiveTranscription({
     meetingId,
     segments: EMPTY_SEGMENTS,
   }))
-  const [interimText, setInterimText] = useState('')
+  const [interim, setInterim] = useState<{ text: string; receivedAt: number }>({
+    text: '',
+    receivedAt: 0,
+  })
   const [error, setError] = useState<string | null>(null)
   const channelRef = useRef<TranscriptionChannel | null>(null)
   const onChannelStatusChangeRef = useRef(onChannelStatusChange)
@@ -157,10 +162,11 @@ export function useLiveTranscription({
       },
       onMessage: (message) => {
         if (message.kind === 'interim') {
-          setInterimText(message.text)
+          // 표시 시각은 렌더가 아니라 수신 시점에 확정한다. 렌더 중 현재 시각을 읽으면 순수하지 않다.
+          setInterim({ text: message.text, receivedAt: Date.now() })
           return
         }
-        setInterimText('')
+        setInterim({ text: '', receivedAt: 0 })
         appendSegments(meetingId, [message.segment])
       },
     })
@@ -234,22 +240,21 @@ export function useLiveTranscription({
     editingSegmentId,
   })
 
-  const currentSegments = state.meetingId === meetingId ? state.segments : EMPTY_SEGMENTS
-  const segments = useMemo(
-    () =>
-      fallback.segments.length === 0
-        ? currentSegments
-        : mergeTranscriptSegments({
-            current: currentSegments,
-            incoming: fallback.segments,
-            protectedSegmentId: editingSegmentId,
-          }),
-    [currentSegments, editingSegmentId, fallback.segments],
-  )
+  /**
+   * 폴백으로 받은 세그먼트는 주 목록에 한 번 흡수한다.
+   *
+   * 렌더마다 병합하면 채널이 복구된 뒤에도 폴링이 마지막으로 들고 있던 결과가 계속 덮어써서,
+   * 편집 저장으로 반영한 텍스트가 예전 값으로 되돌아간다.
+   */
+  useEffect(() => {
+    if (fallback.segments.length === 0) return
+    appendSegments(meetingId, fallback.segments)
+  }, [appendSegments, fallback.segments, meetingId])
 
   return {
-    segments,
-    interimText: isHost ? interimText : '',
+    segments: state.meetingId === meetingId ? state.segments : EMPTY_SEGMENTS,
+    interimText: isHost ? interim.text : '',
+    interimReceivedAt: interim.receivedAt,
     microphoneStatus: capture.status,
     error: error ?? fallback.error,
     applyEdit,
