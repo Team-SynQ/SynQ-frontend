@@ -3,7 +3,10 @@ import type {
   TranscriptSegmentResponse,
 } from '../../../shared/api/contracts/meeting.contracts'
 
-export type TranscriptSegment = TranscriptSegmentResponse
+export type TranscriptSegment = TranscriptSegmentResponse & {
+  /** 확정 전 중간 인식. 저장되지 않으며 화면에 흐리게 표시하고 선택·편집을 막는다. */
+  isInterim?: boolean
+}
 
 export type TranscriptHintState =
   | { status: 'idle' }
@@ -38,6 +41,8 @@ export type TranscriptPanelState =
       kind: 'active'
       segments: TranscriptSegment[]
       isSpeaking: boolean
+      /** 회의 시작 시각. 있으면 전사 시각을 벽시계로 표시한다. */
+      meetingStartedAt?: string | null
       selectedSegmentId?: string | null
       hintState?: TranscriptHintState
       editState?: TranscriptEditState

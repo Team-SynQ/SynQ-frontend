@@ -5,8 +5,7 @@ import type {
   NaverLoginRequest,
   AuthResponse,
 } from '../contracts/auth.contracts'
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://synq-api.duckdns.org'
+import { API_BASE_URL, getAccessToken } from '../lib/apiClient'
 
 export const authService = {
   kakaoLogin: async (data: KakaoLoginRequest): Promise<AuthResponse> => {
@@ -54,7 +53,7 @@ export const authService = {
     message: string
     result: string
   }> => {
-    const token = localStorage.getItem('accessToken')
+    const token = getAccessToken()
 
     const response = await fetch(`${API_BASE_URL}/auth/logout`, {
       method: 'POST',
