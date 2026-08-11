@@ -1,134 +1,148 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { ApiError } from '../apiError'
 import { transcriptService } from './transcript.service'
 
-function mockJsonResponse(body: unknown, ok = true) {
+const axiosMocks = vi.hoisted(() => ({
+  get: vi.fn(),
+  patch: vi.fn(),
+}))
+
+vi.mock('../axiosInstance', () => ({
+  axiosInstance: axiosMocks,
+}))
+
+function mockEnvelope(result: unknown) {
   return {
-    ok,
-    json: async () => body,
-  } as Response
+    status: 200,
+    data: { isSuccess: true, code: 'COMMON200', message: 'success', result },
+  }
 }
 
-const listBody = {
-  isSuccess: true,
-  code: 'COMMON200',
-  message: 'success',
-  result: {
-    meetingId: 7,
-    segments: [
-      {
-        segmentId: 1,
-        sequenceIndex: 0,
-        startMs: 1000,
-        endMs: 2000,
-        content: '안녕하세요',
-        speakerLabel: null,
-        isModified: false,
-      },
-    ],
-  },
+const listResult = {
+  meetingId: 7,
+  segments: [
+    {
+      segmentId: 1,
+      sequenceIndex: 0,
+      startMs: 1000,
+      endMs: 2000,
+      content: '안녕하세요',
+      speakerLabel: null,
+      isModified: false,
+    },
+  ],
 }
 
 describe('transcriptService', () => {
   beforeEach(() => {
-    localStorage.clear()
-  })
-
-  afterEach(() => {
-    vi.restoreAllMocks()
-    localStorage.clear()
+    axiosMocks.get.mockReset()
+    axiosMocks.patch.mockReset()
   })
 
   it('세그먼트 목록을 조회하고 봉투에서 result만 꺼낸다', async () => {
-    localStorage.setItem('accessToken', 'test-token')
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockJsonResponse(listBody))
+    axiosMocks.get.mockResolvedValue(mockEnvelope(listResult))
 
     const result = await transcriptService.listSegments(7)
 
-    expect(result).toEqual(listBody.result)
-    const [url, init] = fetchSpy.mock.calls[0]
-    expect(String(url)).toContain('/meetings/7/transcript-segments')
-    expect(init?.method).toBe('GET')
-    expect((init?.headers as Record<string, string>).Authorization).toBe('Bearer test-token')
+    expect(result).toEqual(listResult)
+    expect(axiosMocks.get).toHaveBeenCalledWith('/meetings/7/transcript-segments', {
+      params: undefined,
+    })
   })
 
-  it('afterSequenceIndex를 주면 증분 조회 쿼리를 붙인다', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockJsonResponse(listBody))
+  it('afterSequenceIndex를 주면 증분 조회 파라미터를 붙인다', async () => {
+    axiosMocks.get.mockResolvedValue(mockEnvelope(listResult))
 
     await transcriptService.listSegments(7, 12)
 
-    expect(String(fetchSpy.mock.calls[0][0])).toContain(
-      '/meetings/7/transcript-segments?afterSequenceIndex=12',
-    )
+    expect(axiosMocks.get).toHaveBeenCalledWith('/meetings/7/transcript-segments', {
+      params: { afterSequenceIndex: 12 },
+    })
   })
 
-  it('afterSequenceIndex가 0이어도 쿼리를 붙인다', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockJsonResponse(listBody))
+  it('afterSequenceIndex가 0이어도 파라미터를 붙인다', async () => {
+    axiosMocks.get.mockResolvedValue(mockEnvelope(listResult))
 
     await transcriptService.listSegments(7, 0)
 
-    expect(String(fetchSpy.mock.calls[0][0])).toContain('afterSequenceIndex=0')
-  })
-
-  it('afterSequenceIndex가 없으면 전체를 조회한다', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockJsonResponse(listBody))
-
-    await transcriptService.listSegments(7)
-
-    expect(String(fetchSpy.mock.calls[0][0])).not.toContain('afterSequenceIndex')
-  })
-
-  it('토큰이 없으면 Authorization 헤더를 붙이지 않는다', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockJsonResponse(listBody))
-
-    await transcriptService.listSegments(7)
-
-    const [, init] = fetchSpy.mock.calls[0]
-    expect((init?.headers as Record<string, string>).Authorization).toBeUndefined()
+    expect(axiosMocks.get).toHaveBeenCalledWith('/meetings/7/transcript-segments', {
+      params: { afterSequenceIndex: 0 },
+    })
   })
 
   it('세그먼트를 PATCH로 수정한다', async () => {
     const updated = {
-      isSuccess: true,
-      code: 'COMMON200',
-      message: 'success',
-      result: {
-        segmentId: 3,
-        meetingId: 7,
-        content: '수정된 텍스트',
-        isModified: true,
-        updatedAt: '2026-08-10T05:00:00Z',
-      },
+      segmentId: 3,
+      meetingId: 7,
+      content: '수정된 텍스트',
+      isModified: true,
+      updatedAt: '2026-08-10T05:00:00Z',
     }
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockJsonResponse(updated))
+    axiosMocks.patch.mockResolvedValue(mockEnvelope(updated))
 
     const result = await transcriptService.updateSegment(7, 3, '수정된 텍스트')
 
-    expect(result).toEqual(updated.result)
-    const [url, init] = fetchSpy.mock.calls[0]
-    expect(String(url)).toContain('/meetings/7/transcript-segments/3')
-    expect(init?.method).toBe('PATCH')
-    expect(init?.body).toBe(JSON.stringify({ content: '수정된 텍스트' }))
+    expect(result).toEqual(updated)
+    expect(axiosMocks.patch).toHaveBeenCalledWith('/meetings/7/transcript-segments/3', {
+      content: '수정된 텍스트',
+    })
   })
 
-  it('HTTP 실패면 예외를 던진다', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockJsonResponse({}, false))
+  it('서버가 준 실패 사유는 그대로 올라온다', async () => {
+    axiosMocks.get.mockRejectedValue(new ApiError(500, 'COMMON500', '서버 오류입니다.'))
+
+    await expect(transcriptService.listSegments(7)).rejects.toThrow('서버 오류입니다.')
+  })
+
+  it('네트워크 오류 문구는 도메인 문구로 덮지 않는다', async () => {
+    axiosMocks.get.mockRejectedValue(
+      new ApiError(0, 'NETWORK_ERROR', '네트워크 연결을 확인해 주세요.'),
+    )
 
     await expect(transcriptService.listSegments(7)).rejects.toThrow(
-      '전사 세그먼트를 불러오지 못했습니다.',
+      '네트워크 연결을 확인해 주세요.',
     )
   })
 
-  it('isSuccess가 false면 서버 메시지로 예외를 던진다', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      mockJsonResponse({
+  it('서버가 사유를 주지 않은 HTTP 실패는 도메인 문구로 바꿔 던진다', async () => {
+    axiosMocks.get.mockRejectedValue(
+      new ApiError(500, 'UNKNOWN_ERROR', '요청을 처리하지 못했습니다.'),
+    )
+
+    await expect(transcriptService.listSegments(7)).rejects.toMatchObject({
+      name: 'ApiError',
+      status: 500,
+      message: '전사 세그먼트를 불러오지 못했습니다.',
+    })
+  })
+
+  it('isSuccess가 false면 서버 메시지로 ApiError를 던진다', async () => {
+    axiosMocks.get.mockResolvedValue({
+      status: 200,
+      data: {
         isSuccess: false,
         code: 'MEETING4041',
         message: '회의를 찾을 수 없습니다.',
         result: null,
-      }),
-    )
+      },
+    })
 
-    await expect(transcriptService.listSegments(7)).rejects.toThrow('회의를 찾을 수 없습니다.')
+    await expect(transcriptService.listSegments(7)).rejects.toMatchObject({
+      name: 'ApiError',
+      code: 'MEETING4041',
+      message: '회의를 찾을 수 없습니다.',
+    })
+  })
+
+  it('서버가 메시지를 주지 않으면 호출부의 실패 문구를 쓴다', async () => {
+    axiosMocks.get.mockResolvedValue({
+      status: 200,
+      data: { isSuccess: false, code: '', message: '', result: null },
+    })
+
+    await expect(transcriptService.listSegments(7)).rejects.toThrow(
+      '전사 세그먼트를 불러오지 못했습니다.',
+    )
   })
 })
