@@ -15,8 +15,10 @@ import {
   type MeetingParticipant,
 } from '../features/meeting-controls'
 import { MeetingRoom } from '../widgets/meeting-room'
+import { clearMeetingProjectContext } from './meeting/model/meetingProjectContext.storage'
 import { useLiveMeetingController } from './meeting/model/useLiveMeetingController'
 import { useMeetingExitGuard } from './meeting/model/useMeetingExitGuard'
+import { useMeetingProjectContext } from './meeting/model/useMeetingProjectContext'
 
 type ActiveMeetingControl =
   | 'idle'
@@ -44,6 +46,10 @@ export function MeetingPage({ user }: MeetingPageProps = {}) {
   const { meetingId = 'demo' } = useParams()
   const controller = useLiveMeetingController(meetingId, user?.userId ?? null)
   const exitGuard = useMeetingExitGuard({ enabled: controller.status === 'ready' })
+  const knownProjectContext = useMeetingProjectContext(
+    meetingId,
+    location.state as Partial<LiveMeetingProjectContext> | null,
+  )
   const [lastAction, setLastAction] = useState('회의 진행 화면 준비 완료')
   const [activeControl, setActiveControl] = useState<ActiveMeetingControl>('idle')
   const [completedMeeting, setCompletedMeeting] = useState<CompletedMeeting | null>(null)
@@ -90,10 +96,9 @@ export function MeetingPage({ user }: MeetingPageProps = {}) {
     setLastAction(aiChatModeAnnouncements[mode])
   }
 
-  const locationState = location.state as Partial<LiveMeetingProjectContext> | null
-  const projectContext: LiveMeetingProjectContext = {
-    projectId: locationState?.projectId ?? controller.meeting.projectId,
-    projectTitle: locationState?.projectTitle ?? controller.meeting.projectTitle,
+  const projectContext: LiveMeetingProjectContext = knownProjectContext ?? {
+    projectId: controller.meeting.projectId,
+    projectTitle: controller.meeting.projectTitle,
   }
 
   const returnToProject = () => {
@@ -143,6 +148,8 @@ export function MeetingPage({ user }: MeetingPageProps = {}) {
     setActiveControl('saving')
     try {
       const completed = await controller.completeMeeting(projectContext)
+      // 이후 이동은 저장된 기록이 들고 있다. 끝난 회의의 값을 탭에 남겨 둘 이유가 없다.
+      clearMeetingProjectContext(meetingId)
       setCompletedMeeting(completed)
       setActiveControl('save-success')
     } catch {

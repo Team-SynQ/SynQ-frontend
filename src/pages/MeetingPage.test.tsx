@@ -16,6 +16,10 @@ import type { ProjectNavigationState } from '../features/meeting-processing'
 import { resetLiveMeetingMockDb } from '../shared/api/mock/db/liveMeeting.mockDb'
 import { meetingService } from '../shared/api/services/meeting.service'
 import { transcriptService } from '../shared/api/services/transcript.service'
+import {
+  readMeetingProjectContext,
+  writeMeetingProjectContext,
+} from './meeting/model/meetingProjectContext.storage'
 import { writeMeetingRuntime } from './meeting/model/meetingRuntime.storage'
 import { MeetingPage } from './MeetingPage'
 
@@ -148,6 +152,35 @@ describe('MeetingPage controls', () => {
     })
 
     expect(screen.getByTitle('테스트용')).toBeInTheDocument()
+    expect(readMeetingProjectContext('1')).toEqual({
+      projectId: 'project-9',
+      projectTitle: '테스트용',
+    })
+  })
+
+  // 새로고침하면 라우터 state가 사라진다. 저장해 둔 값이 없으면 mock 이름이 뜬다.
+  it('새로고침으로 라우터 state를 잃어도 저장된 프로젝트 이름을 복원한다', async () => {
+    writeMeetingProjectContext('1', { projectId: 'project-9', projectTitle: '테스트용' })
+
+    await renderMeetingPage()
+
+    expect(screen.getByTitle('테스트용')).toBeInTheDocument()
+  })
+
+  it('복원한 프로젝트로 회의를 종료하고 돌아간다', async () => {
+    writeMeetingProjectContext('1', { projectId: 'project-9', projectTitle: '테스트용' })
+    const user = userEvent.setup()
+    await renderMeetingPage()
+
+    await user.click(screen.getByRole('button', { name: '회의 종료' }))
+    await user.click(screen.getByRole('button', { name: '종료하기' }))
+
+    const dialog = await screen.findByRole('dialog', { name: '회의가 종료되었습니다.' })
+    await user.click(within(dialog).getByRole('button', { name: '닫기' }))
+
+    expect(await screen.findByText('프로젝트 메인 project-9')).toBeInTheDocument()
+    // 끝난 회의의 값을 탭에 남겨 두지 않는다.
+    expect(readMeetingProjectContext('1')).toBeNull()
   })
 
   it('opens and dismisses the participant list', async () => {
