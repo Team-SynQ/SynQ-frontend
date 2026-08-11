@@ -221,6 +221,9 @@ export function useLiveMeetingController(
         setSendError(null)
         setAiChatDisplayMode('docked')
         endedMeetingRef.current = null
+
+        // 서버는 입장 시점에 참여자를 기록한다. 입장보다 먼저 조회하면 본인이 빠진 목록을 받는다.
+        void loadParticipants(requestSessionSequence, () => active)
       })
       .catch((error: unknown) => {
         if (!active || !isCurrentMeetingSession(meetingId, requestSessionSequence)) return
@@ -242,7 +245,6 @@ export function useLiveMeetingController(
       })
       .catch(() => {})
 
-    void loadParticipants(requestSessionSequence, () => active)
     void loadAiChat(requestSessionSequence, () => active)
 
     return () => {
@@ -458,7 +460,17 @@ export function useLiveMeetingController(
   }
 
   const completeMeeting = async (context: LiveMeetingProjectContext): Promise<CompletedMeeting> => {
-    const host = participants.find((participant) => participant.isHost)
+    /**
+     * 화면은 참여자 조회를 기다리지 않고 뜬다. 들어오자마자 종료하거나 조회가 실패했다면
+     * 목록이 비어 있어 진행자를 못 찾는다. 종료를 막지 않도록 이 시점에 한 번 더 확인한다.
+     */
+    let host = participants.find((participant) => participant.isHost)
+    if (!host) {
+      const list = await meetingParticipantApi
+        .listParticipants(apiMeetingId, currentUserId)
+        .catch(() => [])
+      host = list.find((participant) => participant.isHost)
+    }
     if (!host) {
       throw new Error('회의 진행자 정보를 찾을 수 없습니다.')
     }

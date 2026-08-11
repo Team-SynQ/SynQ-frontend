@@ -214,6 +214,60 @@ describe('useLiveMeetingController async boundaries', () => {
     expect(result.current.participants.find((item) => item.isCurrentUser)?.name).toBe('윤금서')
   })
 
+  // 서버는 입장 시점에 참여자를 기록한다. 먼저 조회하면 본인이 빠진 목록을 받는다.
+  it('입장이 끝난 뒤에 참여자를 조회한다', async () => {
+    const joined = deferred<Awaited<ReturnType<typeof meetingLifecycleApi.joinMeeting>>>()
+    vi.spyOn(meetingLifecycleApi, 'joinMeeting').mockReturnValue(joined.promise)
+    const listParticipants = vi.spyOn(meetingParticipantApi, 'listParticipants')
+
+    renderHook(() => useLiveMeetingController('1', 7))
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(listParticipants).not.toHaveBeenCalled()
+
+    await act(async () => {
+      joined.resolve({
+        meetingId: 1,
+        title: '2차 대면회의',
+        status: 'IN_PROGRESS',
+        role: 'HOST',
+        joinedAt: '2026-08-05T00:00:00.000Z',
+        startedAt: '2026-08-05T00:00:00.000Z',
+        wsUrl: 'wss://api.example.com/ws/meetings/1/stt',
+      })
+      await Promise.resolve()
+    })
+
+    await waitFor(() => expect(listParticipants).toHaveBeenCalledWith(1, 7))
+  })
+
+  // 목록이 아직 비어 있어도 진행자가 회의를 끝낼 수 있어야 한다.
+  it('참여자 목록이 비어 있으면 종료 직전에 다시 조회한다', async () => {
+    const listParticipants = vi
+      .spyOn(meetingParticipantApi, 'listParticipants')
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        { id: '7', name: '윤금서', profileImageUrl: null, isCurrentUser: true, isHost: true },
+      ])
+    const { result } = await renderReadyController()
+
+    await waitFor(() => expect(listParticipants).toHaveBeenCalledTimes(1))
+
+    let completedMeeting
+    await act(async () => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      completedMeeting = await result.current.completeMeeting({
+        projectId: 'project-1',
+        projectTitle: '서비스 디자인',
+      })
+    })
+
+    expect(listParticipants).toHaveBeenCalledTimes(2)
+    expect(completedMeeting).toMatchObject({ host: { id: '7', name: '윤금서' } })
+  })
+
   it('참여자 조회에 실패해도 회의 화면은 뜬다', async () => {
     vi.spyOn(meetingParticipantApi, 'listParticipants').mockRejectedValue(new Error('실패'))
     const { result } = await renderReadyController()
