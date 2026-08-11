@@ -89,10 +89,32 @@ describe('transcriptService', () => {
     })
   })
 
-  it('전송 실패는 인터셉터가 만든 ApiError가 그대로 올라온다', async () => {
+  it('서버가 준 실패 사유는 그대로 올라온다', async () => {
     axiosMocks.get.mockRejectedValue(new ApiError(500, 'COMMON500', '서버 오류입니다.'))
 
     await expect(transcriptService.listSegments(7)).rejects.toThrow('서버 오류입니다.')
+  })
+
+  it('네트워크 오류 문구는 도메인 문구로 덮지 않는다', async () => {
+    axiosMocks.get.mockRejectedValue(
+      new ApiError(0, 'NETWORK_ERROR', '네트워크 연결을 확인해 주세요.'),
+    )
+
+    await expect(transcriptService.listSegments(7)).rejects.toThrow(
+      '네트워크 연결을 확인해 주세요.',
+    )
+  })
+
+  it('서버가 사유를 주지 않은 HTTP 실패는 도메인 문구로 바꿔 던진다', async () => {
+    axiosMocks.get.mockRejectedValue(
+      new ApiError(500, 'UNKNOWN_ERROR', '요청을 처리하지 못했습니다.'),
+    )
+
+    await expect(transcriptService.listSegments(7)).rejects.toMatchObject({
+      name: 'ApiError',
+      status: 500,
+      message: '전사 세그먼트를 불러오지 못했습니다.',
+    })
   })
 
   it('isSuccess가 false면 서버 메시지로 ApiError를 던진다', async () => {
