@@ -5,7 +5,7 @@ import UserPerspectiveSetupPage from '../../pages/UserPerspectiveSetupPage'
 import UserRoleSetupPage from '../../pages/UserRoleSetupPage'
 import UserSetupPreviewPage from '../../pages/UserSetupPreviewPage'
 import { userService } from '../../shared/api/services/user.service'
-import { PERSPECTIVE_ENUM_MAP, ROLE_ENUM_MAP } from '../../shared/lib/onboardingMapper'
+import { toPerspectiveEnums, toRoleEnum } from '../../shared/lib/onboardingMapper'
 import {
   PERSPECTIVE_LABEL_MAP,
   ROLE_ICON_MAP,
@@ -82,13 +82,12 @@ export function UserSetupPreviewRoute() {
     if (isSubmitting || !roleData) return
     setIsSubmitting(true)
 
-    const roleEnum = ROLE_ENUM_MAP[roleData.selectedRole] ?? roleData.selectedRole
-    const perspectivesEnum = perspectives.map((id) => PERSPECTIVE_ENUM_MAP[id] ?? id)
-
-    const trimmedDetail = roleData.detailRole?.trim() ?? ''
-    const detailRolePayload = roleEnum === 'ETC' ? trimmedDetail : ''
-
     try {
+      const roleEnum = toRoleEnum(roleData.selectedRole)
+      const perspectivesEnum = toPerspectiveEnums(perspectives)
+      const trimmedDetail = roleData.detailRole?.trim() ?? ''
+      const detailRolePayload = roleEnum === 'ETC' ? trimmedDetail : ''
+
       const response = await userService.createRoleProfile({
         role: roleEnum,
         detailRole: detailRolePayload,

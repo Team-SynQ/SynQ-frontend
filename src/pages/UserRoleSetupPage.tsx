@@ -2,16 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { userService } from '../shared/api/services/user.service'
 import { Toast } from '../shared/ui/Toast'
 
-const ROLE_OPTIONS = [
-  { id: 'pm', label: '기획/운영', icon: '/assets/images/role-pm.png' },
-  { id: 'design', label: '디자인/콘텐츠', icon: '/assets/images/role-design.png' },
-  { id: 'dev', label: '개발/기술', icon: '/assets/images/role-dev.png' },
-  { id: 'marketing', label: '마케팅/브랜딩', icon: '/assets/images/role-marketing.png' },
-  { id: 'sales', label: '영업/고객', icon: '/assets/images/role-sales.png' },
-  { id: 'data', label: '데이터/리서치', icon: '/assets/images/role-data.png' },
-  { id: 'exec', label: '경영/전략', icon: '/assets/images/role-exec.png' },
-  { id: 'etc', label: '기타', icon: '/assets/images/role-etc.png' },
-]
+import { ROLE_OPTIONS } from './userSetupOptions'
 
 interface UserRoleSetupPageProps {
   username?: string
