@@ -28,10 +28,15 @@ export function AiChatMarkdown({ content }: { content: string }) {
           code: ({ children }) => (
             <code className="rounded-xs bg-surface-muted px-[4px] py-[1px]">{children}</code>
           ),
-          h1: ({ children }) => <strong className="block">{children}</strong>,
-          h2: ({ children }) => <strong className="block">{children}</strong>,
-          h3: ({ children }) => <strong className="block">{children}</strong>,
+          // 말풍선 안에서는 제목을 키우지 않는다. 태그는 유지해 문서 구조를 남긴다.
+          h1: ({ children }) => <h1 className="m-0 font-bold typo-body-01">{children}</h1>,
+          h2: ({ children }) => <h2 className="m-0 font-bold typo-body-01">{children}</h2>,
+          h3: ({ children }) => <h3 className="m-0 font-bold typo-body-01">{children}</h3>,
           ol: ({ children }) => <ol className="m-0 list-decimal pl-[20px]">{children}</ol>,
+          // 긴 코드 한 줄이 말풍선을 밀지 않도록 블록 안에서만 가로 스크롤한다.
+          pre: ({ children }) => (
+            <pre className="m-0 overflow-x-auto rounded-xs bg-surface-muted p-xs">{children}</pre>
+          ),
           table: ({ children }) => (
             <div className="overflow-x-auto">
               <table className="w-full border-collapse">{children}</table>

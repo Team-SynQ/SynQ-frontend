@@ -35,6 +35,19 @@ describe('AiChatMarkdown', () => {
     expect(link).toHaveAttribute('rel', 'noopener noreferrer')
   })
 
+  it('제목 태그를 유지해 문서 구조를 남긴다', () => {
+    render(<AiChatMarkdown content="## 결정 사항" />)
+
+    expect(screen.getByRole('heading', { level: 2, name: '결정 사항' })).toBeInTheDocument()
+  })
+
+  // 긴 코드 한 줄이 말풍선을 밀면 안 된다.
+  it('코드 블록 안에서만 가로 스크롤한다', () => {
+    const { container } = render(<AiChatMarkdown content={'```\nnpm run build\n```'} />)
+
+    expect(container.querySelector('pre')).toHaveClass('overflow-x-auto')
+  })
+
   // 서버 답변에 태그가 섞여 와도 실행되면 안 된다.
   it('원문의 HTML을 실행하지 않는다', () => {
     const { container } = render(
