@@ -1,17 +1,6 @@
 import React, { useState } from 'react'
 
-const PERSPECTIVE_OPTIONS = [
-  { id: 'schedule', label: '일정' },
-  { id: 'scope', label: '기능 범위' },
-  { id: 'decision', label: '의사 결정' },
-  { id: 'ux', label: '사용자 경험' },
-  { id: 'tech_risk', label: '기술 리스크' },
-  { id: 'cost_performance', label: '비용/성과' },
-  { id: 'customer_feedback', label: '고객 반응' },
-  { id: 'ops_issue', label: '운영 이슈' },
-  { id: 'action_item', label: '액션 아이템' },
-  { id: 'team_qna', label: '팀 질문' },
-]
+import { PERSPECTIVE_OPTIONS } from './userSetupOptions'
 
 interface UserPerspectiveSetupPageProps {
   /** 초대로 참여한 프로젝트 이름. 있으면 프로젝트 참여용 문구로 바뀝니다. */
