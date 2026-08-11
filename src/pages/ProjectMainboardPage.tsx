@@ -434,7 +434,13 @@ export function ProjectMainboardPage({
       void loadOngoingMeeting(activeProjectId)
         .then((meeting) => {
           if (!isSubscribed) return
-          setOngoingMeetingByProject((current) => ({ ...current, [activeProjectId]: meeting }))
+          setOngoingMeetingByProject((current) => {
+            // 대부분의 주기는 결과가 같다. 그대로 담으면 15초마다 화면 전체가 다시 그려진다.
+            const previous = current[activeProjectId] ?? null
+            if (previous?.meetingId === meeting?.meetingId) return current
+
+            return { ...current, [activeProjectId]: meeting }
+          })
         })
         .catch(() => {
           // 보조 정보다. 실패해도 화면을 막지 않고 다음 주기에 다시 시도한다.

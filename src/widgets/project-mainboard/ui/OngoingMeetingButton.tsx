@@ -32,10 +32,11 @@ export function OngoingMeetingButton({ startedAt, onJoin }: OngoingMeetingButton
     return () => window.clearInterval(timerId)
   }, [])
 
+  // 한 시간을 넘기면 경과 시간이 HH:MM:SS로 길어진다. 시안 너비는 최소값으로 두고 넘치면 늘어나게 한다.
   return (
     <button
       aria-label="진행 중인 회의 참가하기"
-      className="inline-flex h-[52px] w-[178px] shrink-0 items-center justify-center gap-xs whitespace-nowrap rounded-m bg-primary-700 px-s text-fg-inverse typo-title-02 transition-colors"
+      className="inline-flex h-[52px] min-w-[178px] shrink-0 items-center justify-center gap-xs whitespace-nowrap rounded-m bg-primary-700 px-s text-fg-inverse typo-title-02 transition-colors"
       onClick={onJoin}
       type="button"
     >
