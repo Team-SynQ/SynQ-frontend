@@ -59,31 +59,7 @@ export const liveMeetingFixture = {
       },
     ],
   },
-  aiChat: {
-    messages: [
-      {
-        id: 'assistant-welcome',
-        role: 'assistant',
-        content:
-          '회의가 시작되었습니다. 프로젝트 자료와 지난 회의 맥락을 바탕으로 언제든 답변해 드립니다.',
-        context: null,
-      },
-    ],
-    suggestions: [
-      {
-        id: 'previous-scope',
-        label: '지난 회의에서는 이 범위 어디까지 정했어?',
-      },
-      {
-        id: 'my-role',
-        label: '오늘 내가 맡은 부분은?',
-      },
-    ],
-  },
 } as const satisfies LiveMeetingResponse
-
-export const liveMeetingAiAnswerFixture =
-  '선택한 전사와 프로젝트 맥락을 기준으로 보면, 온보딩 개선의 우선순위와 완료 기준을 먼저 합의하는 것이 좋습니다.'
 
 export const completedMeetingSummaryFixture = {
   overview: '온보딩 개선 우선순위와 완료 기준을 중심으로 논의',

@@ -107,10 +107,6 @@ export type LiveMeetingResponse = {
     isSpeaking: boolean
     segments: TranscriptSegmentResponse[]
   }
-  aiChat: {
-    messages: MeetingAiChatMessageResponse[]
-    suggestions: MeetingAiChatSuggestionResponse[]
-  }
 }
 
 export type LiveMeetingSnapshotResponse = Omit<

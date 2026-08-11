@@ -2,13 +2,14 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import {
   liveMeetingSnapshotGateway,
-  meetingAiMockGateway,
+  meetingAiChatApi,
   meetingConnectionGateway,
   meetingHintApi,
   meetingLifecycleApi,
   meetingRecordGateway,
   type CompletedMeeting,
   type LiveMeeting,
+  type LiveMeetingAiChatSuggestion,
   type LiveMeetingAiPinnedContext,
   type LiveMeetingProjectContext,
   type LiveMeetingTranscriptHint,
@@ -72,6 +73,7 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
   const [sendError, setSendError] = useState<string | null>(null)
   const [pinnedContext, setPinnedContext] = useState<LiveMeetingAiPinnedContext | null>(null)
   const [aiChatDisplayMode, setAiChatDisplayMode] = useState<AiChatDisplayMode>('docked')
+  const [suggestions, setSuggestions] = useState<LiveMeetingAiChatSuggestion[]>([])
   const hintCacheRef = useRef(new Map<string, LiveMeetingTranscriptHint>())
   const hintRequestSequenceRef = useRef(0)
   const composerInputRef = useRef<HTMLInputElement>(null)
@@ -154,13 +156,6 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
         setSendError(null)
         setAiChatDisplayMode('docked')
         endedMeetingRef.current = null
-        setMessages(
-          response.aiChat.messages.map(({ id, role, content }) => ({
-            id,
-            role,
-            content,
-          })),
-        )
       })
       .catch((error: unknown) => {
         if (!active || !isCurrentMeetingSession(meetingId, requestSessionSequence)) return
@@ -179,6 +174,18 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
         for (const record of records) {
           hintCacheRef.current.set(record.transcriptId, record)
         }
+      })
+      .catch(() => {})
+
+    // 환영 문구·추천 질문과 기존 대화를 함께 채운다. 둘 다 실패해도 질문 전송은 막지 않는다.
+    void Promise.all([
+      meetingAiChatApi.loadWelcome(apiMeetingId),
+      meetingAiChatApi.loadHistory(apiMeetingId).catch(() => []),
+    ])
+      .then(([welcome, history]) => {
+        if (!active || !isCurrentMeetingSession(meetingId, requestSessionSequence)) return
+        setMessages([...welcome.messages, ...history])
+        setSuggestions(welcome.suggestions)
       })
       .catch(() => {})
 
@@ -357,25 +364,15 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
     setIsSending(true)
     setSendError(null)
     try {
-      const response = await meetingAiMockGateway.sendMeetingAiQuestion({
-        meetingId,
+      const response = await meetingAiChatApi.sendQuestion(
+        apiMeetingId,
         question,
-        context: pinnedContext,
-      })
+        pinnedContext?.transcriptId ?? null,
+      )
       if (!isCurrentMeetingSession(requestMeetingId, requestSessionSequence)) return
-      setMessages((current) => [
-        ...current,
-        {
-          id: `user-${response.id}`,
-          role: 'user',
-          content: question,
-        },
-        {
-          id: response.id,
-          role: response.role,
-          content: response.content,
-        },
-      ])
+      setMessages((current) => [...current, ...response.messages])
+      // 서버가 답변마다 후속 질문을 준다. 주지 않으면 기존 추천을 유지한다.
+      if (response.suggestions) setSuggestions(response.suggestions)
       setDraft('')
     } catch {
       if (!isCurrentMeetingSession(requestMeetingId, requestSessionSequence)) return
@@ -468,7 +465,7 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
         setSendError(null)
       },
       onSelectSuggestion: (suggestionId) => {
-        const suggestion = meeting.aiChat.suggestions.find((item) => item.id === suggestionId)
+        const suggestion = suggestions.find((item) => item.id === suggestionId)
         if (suggestion) {
           setDraft(suggestion.label)
           setSendError(null)
@@ -483,7 +480,7 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
       sendError,
       messages,
       pinnedContext,
-      suggestions: meeting.aiChat.suggestions,
+      suggestions: suggestions,
     },
   }
 
