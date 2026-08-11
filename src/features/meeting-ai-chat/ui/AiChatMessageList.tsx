@@ -1,5 +1,6 @@
 import { cn } from '../../../shared/lib/cn'
 import type { AiChatMessage } from '../model/aiChat.types'
+import { AiChatMarkdown } from './AiChatMarkdown'
 
 export type AiChatMessageListProps = {
   messages: AiChatMessage[]
@@ -34,7 +35,12 @@ export function AiChatMessageList({ messages, variant }: AiChatMessageListProps)
           )}
           key={message.id}
         >
-          {message.content}
+          {/* 답변만 마크다운으로 해석한다. 사용자가 입력한 질문은 적은 그대로 보여준다. */}
+          {message.role === 'assistant' ? (
+            <AiChatMarkdown content={message.content} />
+          ) : (
+            message.content
+          )}
         </article>
       ))}
     </div>
