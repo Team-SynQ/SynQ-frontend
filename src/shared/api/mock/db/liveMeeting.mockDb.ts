@@ -1,7 +1,6 @@
 import type {
   CompletedMeetingSummary,
   LiveMeetingResponse,
-  MeetingAiChatMessageResponse,
 } from '../../contracts/meeting.contracts'
 import {
   createLiveMeetingScenarios,
@@ -76,18 +75,9 @@ export const liveMeetingMockDb = {
 
     return {
       meeting: cloneMeeting(record.meeting),
-      aiAnswer: record.aiAnswer,
       transcriptEditFails: record.transcriptEditFails,
       completionFails: record.completionFails,
     }
-  },
-
-  appendMessages(meetingId: string, messages: MeetingAiChatMessageResponse[]): boolean {
-    const record = requireRecord(meetingId)
-    if (!record) return false
-
-    record.meeting.aiChat.messages.push(...structuredClone(messages))
-    return true
   },
 
   addCompletedMeeting(record: Omit<CompletedMeetingSummary, 'recordId'>): CompletedMeetingSummary {

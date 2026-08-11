@@ -22,8 +22,9 @@ export function AiChatMessageList({ messages, variant }: AiChatMessageListProps)
       {messages.map((message) => (
         <article
           className={cn(
-            'rounded-m p-s typo-transcription-body-01',
-            variant === 'floating' ? 'max-w-[300px]' : 'max-w-[400px]',
+            // 폭은 패널 기준 상대값으로 잡는다. 고정 px이면 패널이 좁아질 때 말풍선이 밖으로 넘친다.
+            'rounded-m p-s break-words whitespace-pre-wrap typo-transcription-body-01',
+            variant === 'floating' ? 'max-w-[min(300px,85%)]' : 'max-w-[min(400px,85%)]',
             message.role === 'assistant'
               ? cn(
                   'self-start rounded-bl-none border bg-surface-elevated text-gray-700',

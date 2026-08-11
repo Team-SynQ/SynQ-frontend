@@ -2,17 +2,15 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
-  meetingAiMockGateway,
+  meetingAiChatApi,
   meetingHintApi,
   meetingLifecycleApi,
   meetingRecordGateway,
   meetingTranscriptionGateway,
   type ConnectTranscriptionOptions,
+  type MeetingAiChatSendResult,
 } from '../../../entities/meeting'
-import type {
-  MeetingAiChatMessageResponse,
-  TranscriptHintResponse,
-} from '../../../shared/api/contracts/meeting.contracts'
+import type { TranscriptHintResponse } from '../../../shared/api/contracts/meeting.contracts'
 import type { UpdateTranscriptSegmentResult } from '../../../shared/api/contracts/transcript.contracts'
 import { resetLiveMeetingMockDb } from '../../../shared/api/mock/db/liveMeeting.mockDb'
 import { transcriptService } from '../../../shared/api/services/transcript.service'
@@ -92,6 +90,18 @@ describe('useLiveMeetingController async boundaries', () => {
       endedAt: '2026-08-05T01:00:00.000Z',
     }))
     vi.spyOn(meetingHintApi, 'listHintRecords').mockResolvedValue([])
+    vi.spyOn(meetingAiChatApi, 'loadWelcome').mockResolvedValue({
+      messages: [
+        {
+          id: 'assistant-welcome',
+          role: 'assistant',
+          content: '회의가 시작되었습니다.',
+          context: null,
+        },
+      ],
+      suggestions: [{ id: 'suggestion-0', label: '지난 회의에서 정한 범위는?' }],
+    })
+    vi.spyOn(meetingAiChatApi, 'loadHistory').mockResolvedValue([])
     vi.spyOn(transcriptService, 'listSegments').mockResolvedValue(listResult)
     vi.spyOn(transcriptService, 'updateSegment').mockImplementation(
       async (meetingId, segmentId, content) => ({
@@ -188,9 +198,7 @@ describe('useLiveMeetingController async boundaries', () => {
   })
 
   it('keeps the AI draft and pinned context while exposing a controlled send error', async () => {
-    vi.spyOn(meetingAiMockGateway, 'sendMeetingAiQuestion').mockRejectedValue(
-      new Error('AI_SEND_FAILED'),
-    )
+    vi.spyOn(meetingAiChatApi, 'sendQuestion').mockRejectedValue(new Error('AI_SEND_FAILED'))
     const { result } = await renderReadyController()
 
     act(() => {
@@ -216,13 +224,11 @@ describe('useLiveMeetingController async boundaries', () => {
 
   it('ignores edit and AI responses from the previous meeting session', async () => {
     const updateRequest = deferred<UpdateTranscriptSegmentResult>()
-    const sendRequest = deferred<MeetingAiChatMessageResponse>()
+    const sendRequest = deferred<MeetingAiChatSendResult>()
     const updateSpy = vi
       .spyOn(transcriptService, 'updateSegment')
       .mockReturnValue(updateRequest.promise)
-    const sendSpy = vi
-      .spyOn(meetingAiMockGateway, 'sendMeetingAiQuestion')
-      .mockReturnValue(sendRequest.promise)
+    const sendSpy = vi.spyOn(meetingAiChatApi, 'sendQuestion').mockReturnValue(sendRequest.promise)
     const { result, rerender } = await renderReadyController()
 
     act(() => {
@@ -269,10 +275,10 @@ describe('useLiveMeetingController async boundaries', () => {
         updatedAt: '2026-07-27T00:00:00.000Z',
       })
       sendRequest.resolve({
-        id: 'stale-assistant',
-        role: 'assistant',
-        content: '이전 회의의 답변',
-        context: null,
+        messages: [
+          { id: 'stale-assistant', role: 'assistant', content: '이전 회의의 답변', context: null },
+        ],
+        suggestions: null,
       })
       await Promise.resolve()
       await Promise.resolve()
