@@ -200,8 +200,9 @@ describe('MeetingPage controls', () => {
     await user.type(titleInput, '3차 회의')
     await user.click(within(dialog).getByRole('button', { name: '제목 변경하기' }))
 
+    // 저장이 끝난 뒤에야 제목이 바뀐다. 동기로 단언하면 저장 전 화면을 볼 수 있다.
+    expect(await screen.findByTitle('3차 회의')).toBeInTheDocument()
     expect(screen.queryByRole('dialog', { name: '회의 제목 수정' })).not.toBeInTheDocument()
-    expect(screen.getByTitle('3차 회의')).toBeInTheDocument()
     // 화면만 바꾸고 저장하지 않으면 회의 기록에는 옛 제목이 남는다.
     expect(meetingService.updateMeetingTitle).toHaveBeenCalledWith(1, '3차 회의')
   })
