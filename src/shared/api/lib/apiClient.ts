@@ -1,6 +1,6 @@
 import type { ApiResponse } from '../contracts/meeting.contracts'
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://synq-api.duckdns.org'
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.synqai.co.kr'
 
 /**
  * 회의·전사를 mock 대신 실제 백엔드에 붙일지 결정한다.

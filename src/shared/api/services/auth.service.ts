@@ -1,3 +1,5 @@
+import { API_BASE_URL } from '../apiBaseUrl'
+import { getAccessToken } from '../lib/apiClient'
 import type {
   KakaoLoginRequest,
   RefreshTokenRequest,
@@ -5,7 +7,6 @@ import type {
   NaverLoginRequest,
   AuthResponse,
 } from '../contracts/auth.contracts'
-import { API_BASE_URL, getAccessToken } from '../lib/apiClient'
 
 export const authService = {
   kakaoLogin: async (data: KakaoLoginRequest): Promise<AuthResponse> => {

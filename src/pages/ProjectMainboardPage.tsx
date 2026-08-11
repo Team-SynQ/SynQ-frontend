@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 
 import {
@@ -15,16 +15,24 @@ import {
 } from '../features/meeting-entry'
 import {
   listProjectSummaries,
+  loadProjectReferenceMaterials,
   PROJECT_REFERENCE_MAX_MATERIALS,
+  projectApi,
+  registerProjectReferenceMaterials,
   type ProjectReferenceMaterial,
   type ProjectSummary,
 } from '../entities/project'
+import { changeDefaultRoleProfile, loadMyRoleProfiles, type RoleProfile } from '../entities/user'
 import {
   createProjectWithMaterials,
+  createRoleProfileOption,
   getProjectCreationSuccessMessage,
   ProjectCreateModal,
+  toProjectPerspectiveOption,
   type ProjectCreateDraft,
   type ProjectMaterialDraft,
+  type ProjectPerspectiveOption,
+  type ProjectRolePerspectiveDraft,
 } from '../features/project-create'
 import {
   useMeetingProcessingFlow,
@@ -44,6 +52,9 @@ type ProjectMainboardPageProps = {
   onAddProject?: () => void
   onToggleSidebar?: () => void
   loadProjects?: () => Promise<ProjectSummary[]>
+  loadProjectReferences?: (apiProjectId: number) => Promise<ProjectReferenceMaterial[]>
+  loadRoleProfiles?: () => Promise<RoleProfile[]>
+  addRoleProfile?: (draft: ProjectRolePerspectiveDraft) => Promise<ProjectPerspectiveOption>
   onSubmitProject?: (
     draft: ProjectCreateDraft,
     materials: ProjectMaterialDraft,
@@ -80,6 +91,73 @@ type ProjectReferenceFeedback = {
 }
 
 let nextClientReferenceId = 0
+
+const addProjectReferenceMaterials = async (projectId: string, materials: ProjectMaterialDraft) => {
+  console.log('[projectReference] 참고자료 추가 시작', {
+    projectId,
+    fileCount: materials.files.length,
+    linkCount: materials.links.length,
+  })
+
+  try {
+    const registered = await registerProjectReferenceMaterials(
+      Number(projectId),
+      materials.files,
+      materials.links,
+    )
+    console.log('[projectReference] 참고자료 추가 성공', {
+      projectId,
+      referenceCount: registered.length,
+    })
+    return registered
+  } catch (error) {
+    console.error('[projectReference] 참고자료 추가 실패', { projectId, error })
+    throw error
+  }
+}
+
+const deleteProjectReferenceMaterial = async (projectId: string, materialId: string) => {
+  const referenceId = Number(materialId)
+
+  // 서버에 등록되지 않은 화면 전용 항목은 삭제할 대상이 없습니다.
+  if (!Number.isInteger(referenceId)) return
+
+  console.log('[projectReference] 참고자료 삭제 시작', { projectId, referenceId })
+  try {
+    await projectApi.deleteProjectReference(Number(projectId), referenceId)
+    console.log('[projectReference] 참고자료 삭제 성공', { projectId, referenceId })
+  } catch (error) {
+    console.error('[projectReference] 참고자료 삭제 실패', { projectId, referenceId, error })
+    throw error
+  }
+}
+
+const updateProjectInformation = async (projectId: string, draft: ProjectInformationDraft) => {
+  console.log('[project] 프로젝트 정보 수정 시작', { projectId })
+
+  try {
+    await projectApi.updateProject(Number(projectId), {
+      title: draft.name,
+      description: draft.overview,
+    })
+    console.log('[project] 프로젝트 정보 수정 성공', { projectId })
+  } catch (error) {
+    console.error('[project] 프로젝트 정보 수정 실패', { projectId, error })
+    throw error
+  }
+}
+
+const deleteProjectById = async (projectId: string) => {
+  console.log('[project] 프로젝트 삭제 시작', { projectId })
+
+  try {
+    await projectApi.deleteProject(Number(projectId))
+    console.log('[project] 프로젝트 삭제 성공', { projectId })
+  } catch (error) {
+    console.error('[project] 프로젝트 삭제 실패', { projectId, error })
+    throw error
+  }
+}
 
 const loadCompletedMeetingHistory = (projectId: string) =>
   meetingRecordGateway.listCompletedMeetings(projectId)
@@ -119,16 +197,19 @@ export function ProjectMainboardPage({
   onAddProject,
   onToggleSidebar,
   loadProjects = listProjectSummaries,
+  loadProjectReferences = loadProjectReferenceMaterials,
+  loadRoleProfiles = loadMyRoleProfiles,
+  addRoleProfile = createRoleProfileOption,
   onSubmitProject,
-  addProjectReferences,
-  deleteProjectReference,
+  addProjectReferences = addProjectReferenceMaterials,
+  deleteProjectReference = deleteProjectReferenceMaterial,
   renameProjectReference,
   loadCompletedMeetings = loadCompletedMeetingHistory,
   updateCompletedMeetingTitle = updateCompletedMeetingHistoryTitle,
   deleteCompletedMeeting = deleteCompletedMeetingHistory,
   loadProjectInformation,
-  updateProject,
-  deleteProject,
+  updateProject = updateProjectInformation,
+  deleteProject = deleteProjectById,
   createMeeting = meetingLifecycleApi.createMeeting,
   requestMicrophonePermission = requestMeetingMicrophonePermission,
 }: ProjectMainboardPageProps) {
@@ -139,7 +220,10 @@ export function ProjectMainboardPage({
     () => navigationState?.openCreateProject === true,
   )
   const [projects, setProjects] = useState<ProjectSummary[]>([])
+  const [isProjectsLoading, setIsProjectsLoading] = useState(true)
+  const [roleProfiles, setRoleProfiles] = useState<RoleProfile[]>([])
   const [activeProjectId, setActiveProjectId] = useState<string>()
+  const requestedReferenceProjectIdsRef = useRef<Set<string>>(new Set())
   const [completedMeetingsByProject, setCompletedMeetingsByProject] = useState<
     Record<string, CompletedMeeting[]>
   >({})
@@ -154,9 +238,23 @@ export function ProjectMainboardPage({
     useState<ProjectReferenceFeedback>()
   const creationSuccessToast = useTransientVisibility()
   const projectReferenceFeedbackToast = useTransientVisibility()
+  const roleProfileSavedToast = useTransientVisibility()
+  const showProjectReferenceFeedbackToast = projectReferenceFeedbackToast.show
+  const showProjectReferenceFeedback = useCallback(
+    (feedback: ProjectReferenceFeedback) => {
+      setProjectReferenceFeedback(feedback)
+      showProjectReferenceFeedbackToast()
+    },
+    [showProjectReferenceFeedbackToast],
+  )
   const requestedActiveProjectId = navigationState?.activeProjectId
   const requestedOpenCreateProject = navigationState?.openCreateProject
   const [requestedProcessingRecordId] = useState(() => navigationState?.processingMeetingRecordId)
+  const requestedRoleProfileSaved = navigationState?.roleProfileSaved === true
+  const showRoleProfileSavedToast = roleProfileSavedToast.show
+  useEffect(() => {
+    if (requestedRoleProfileSaved) showRoleProfileSavedToast()
+  }, [requestedRoleProfileSaved, showRoleProfileSavedToast])
   const {
     dismissCompletion,
     phase: meetingProcessingPhase,
@@ -191,6 +289,23 @@ export function ProjectMainboardPage({
   useEffect(() => {
     let isSubscribed = true
 
+    void loadRoleProfiles()
+      .then((profiles) => {
+        if (!isSubscribed) return
+        setRoleProfiles(profiles)
+      })
+      .catch(() => {
+        // 관점은 보조 정보라 실패해도 화면 진입을 막지 않습니다.
+      })
+
+    return () => {
+      isSubscribed = false
+    }
+  }, [loadRoleProfiles])
+
+  useEffect(() => {
+    let isSubscribed = true
+
     void loadProjects()
       .then((initialProjects) => {
         if (!isSubscribed) return
@@ -214,11 +329,48 @@ export function ProjectMainboardPage({
         showProjectLoadError()
         settleMeetingProcessing()
       })
+      .finally(() => {
+        if (!isSubscribed) return
+        setIsProjectsLoading(false)
+      })
 
     return () => {
       isSubscribed = false
     }
   }, [loadProjects, requestedActiveProjectId, settleMeetingProcessing, showProjectLoadError])
+
+  useEffect(() => {
+    if (!activeProjectId) return
+
+    const activeProject = projects.find((project) => project.id === activeProjectId)
+    if (!activeProject || activeProject.materials) return
+    if (requestedReferenceProjectIdsRef.current.has(activeProjectId)) return
+
+    requestedReferenceProjectIdsRef.current.add(activeProjectId)
+
+    let isSubscribed = true
+    void loadProjectReferences(activeProject.apiProjectId)
+      .then((materials) => {
+        if (!isSubscribed) return
+        setProjects((currentProjects) =>
+          currentProjects.map((project) =>
+            project.id === activeProjectId ? { ...project, materials } : project,
+          ),
+        )
+      })
+      .catch(() => {
+        if (!isSubscribed) return
+        showProjectReferenceFeedback({
+          description: 'AI 참고 자료를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.',
+          title: '자료 불러오기 실패',
+          type: 'error',
+        })
+      })
+
+    return () => {
+      isSubscribed = false
+    }
+  }, [activeProjectId, loadProjectReferences, projects, showProjectReferenceFeedback])
 
   useEffect(() => {
     if (!activeProjectId || activeProjectId in completedMeetingsByProject) return
@@ -331,6 +483,13 @@ export function ProjectMainboardPage({
     setMeetingEntryVariant(null)
   }
 
+  const handleAddRoleProfile = async (draft: ProjectRolePerspectiveDraft) => {
+    const created = await addRoleProfile(draft)
+    // 새 프로필이 목록·기본 관점에 바로 반영되도록 서버 상태를 다시 읽습니다.
+    setRoleProfiles(await loadRoleProfiles())
+    return created
+  }
+
   const handleProjectCreated = async (
     draft: ProjectCreateDraft,
     materials: ProjectMaterialDraft,
@@ -348,11 +507,6 @@ export function ProjectMainboardPage({
     creationSuccessToast.show()
   }
 
-  const showProjectReferenceFeedback = (feedback: ProjectReferenceFeedback) => {
-    setProjectReferenceFeedback(feedback)
-    projectReferenceFeedbackToast.show()
-  }
-
   const handleAddMaterials = async (materials: ProjectMaterialDraft) => {
     if (!activeProjectId) return
 
@@ -365,7 +519,7 @@ export function ProjectMainboardPage({
         project.id === activeProjectId
           ? {
               ...project,
-              materials: [...project.materials, ...nextMaterials].slice(
+              materials: [...(project.materials ?? []), ...nextMaterials].slice(
                 0,
                 PROJECT_REFERENCE_MAX_MATERIALS,
               ),
@@ -390,7 +544,7 @@ export function ProjectMainboardPage({
           project.id === activeProjectId
             ? {
                 ...project,
-                materials: project.materials.map((material) =>
+                materials: project.materials?.map((material) =>
                   material.id === materialId ? { ...material, name: nextName } : material,
                 ),
               }
@@ -416,7 +570,7 @@ export function ProjectMainboardPage({
 
     const material = projects
       .find((project) => project.id === activeProjectId)
-      ?.materials.find((projectMaterial) => projectMaterial.id === materialId)
+      ?.materials?.find((projectMaterial) => projectMaterial.id === materialId)
     if (!material) return
 
     try {
@@ -426,7 +580,7 @@ export function ProjectMainboardPage({
           project.id === activeProjectId
             ? {
                 ...project,
-                materials: project.materials.filter(
+                materials: project.materials?.filter(
                   (projectMaterial) => projectMaterial.id !== materialId,
                 ),
               }
@@ -459,6 +613,21 @@ export function ProjectMainboardPage({
     if (!activeProjectId) return
 
     const submittedProject = await updateProject?.(activeProjectId, draft)
+
+    // 관점은 프로젝트가 아니라 내 역할·관점 프로필에 저장됩니다.
+    const nextProfile = roleProfiles.find((profile) => {
+      const option = toProjectPerspectiveOption(profile)
+      return (
+        option.label === draft.perspectiveLabel &&
+        option.selectedDescription === draft.perspectiveDescription
+      )
+    })
+    if (nextProfile && !nextProfile.isDefault) {
+      await changeDefaultRoleProfile(nextProfile.id)
+      setRoleProfiles((current) =>
+        current.map((profile) => ({ ...profile, isDefault: profile.id === nextProfile.id })),
+      )
+    }
     setProjects((currentProjects) =>
       currentProjects.map((project) =>
         project.id === activeProjectId ? (submittedProject ?? { ...project, ...draft }) : project,
@@ -517,10 +686,28 @@ export function ProjectMainboardPage({
     }))
   }
 
-  const activeProject = projects.find((project) => project.id === activeProjectId)
+  const roleProfileOptions = roleProfiles.map(toProjectPerspectiveOption)
+  // 프로필이 아직 없거나 조회에 실패하면 화면 기본 관점 목록으로 되돌립니다.
+  const perspectiveOptions = roleProfileOptions.length > 0 ? roleProfileOptions : undefined
+  const defaultProfile = roleProfiles.find((profile) => profile.isDefault)
+  const defaultPerspective = defaultProfile ? toProjectPerspectiveOption(defaultProfile) : undefined
+  const selectedProject = projects.find((project) => project.id === activeProjectId)
+  const activeProject =
+    selectedProject && defaultPerspective
+      ? {
+          ...selectedProject,
+          perspectiveLabel: defaultPerspective.label,
+          perspectiveDescription: defaultPerspective.selectedDescription,
+        }
+      : selectedProject
   const activeProjectMeetings = activeProjectId
     ? (completedMeetingsByProject[activeProjectId] ?? [])
     : []
+  const isMeetingHistoryLoading = Boolean(
+    activeProjectId &&
+    !(activeProjectId in completedMeetingsByProject) &&
+    activeProjectId !== meetingHistoryErrorProjectId,
+  )
   const visibleMeetings =
     meetingProcessingPhase === 'summaryProcessing'
       ? activeProjectMeetings.filter((meeting) => meeting.recordId !== processingRecordId)
@@ -560,6 +747,10 @@ export function ProjectMainboardPage({
         user={user}
       />
       <ProjectMainboard
+        perspectiveOptions={perspectiveOptions?.map((option) => ({
+          label: option.label,
+          description: option.selectedDescription,
+        }))}
         meetingHistoryPresentation={meetingHistoryPresentation}
         meetingProcessingOverlayOpen={meetingProcessingPhase === 'summaryProcessing'}
         meetingHistoryError={
@@ -568,6 +759,8 @@ export function ProjectMainboardPage({
             : undefined
         }
         meetings={visibleMeetings}
+        meetingHistoryLoading={isMeetingHistoryLoading}
+        projectsLoading={isProjectsLoading}
         onAddMaterials={handleAddMaterials}
         onCreateProject={handleCreateProject}
         onDeleteProject={handleDeleteProject}
@@ -592,9 +785,11 @@ export function ProjectMainboardPage({
         project={activeProject}
       />
       <ProjectCreateModal
+        onAddPerspective={handleAddRoleProfile}
         onClose={() => setIsCreateModalOpen(false)}
         onCreate={handleProjectCreated}
         open={isCreateModalOpen}
+        perspectiveOptions={perspectiveOptions}
       />
       {meetingEntryVariant ? (
         <MeetingEntryModal
@@ -630,6 +825,16 @@ export function ProjectMainboardPage({
           title={projectReferenceFeedback.title}
           type={projectReferenceFeedback.type}
           visible={projectReferenceFeedbackToast.isVisible}
+        />
+      ) : null}
+      {roleProfileSavedToast.isMounted ? (
+        <Toast
+          className="top-[20px]!"
+          description="역할·관점 설정이 저장되었습니다."
+          position="topCenter"
+          title="역할·관점 저장 성공"
+          type="success"
+          visible={roleProfileSavedToast.isVisible}
         />
       ) : null}
     </main>

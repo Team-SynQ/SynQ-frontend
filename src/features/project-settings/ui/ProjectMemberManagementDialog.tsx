@@ -14,6 +14,7 @@ import { ProjectInviteIcon, ProjectMemberAvatar } from './ProjectMoreOptionsPopo
 type ProjectMemberManagementDialogProps = {
   joinRequests: ProjectJoinRequest[]
   members: ProjectMember[]
+  maxMemberCount?: number
   onApproveRequest: (request: ProjectJoinRequest) => void
   onClose: () => void
   onExportMember: (member: ProjectMember) => void
@@ -26,6 +27,7 @@ type ProjectMemberManagementDialogProps = {
 export function ProjectMemberManagementDialog({
   joinRequests,
   members,
+  maxMemberCount = PROJECT_MEMBER_LIMIT,
   onApproveRequest,
   onClose,
   onExportMember,
@@ -103,7 +105,7 @@ export function ProjectMemberManagementDialog({
             <div className="flex min-w-0 flex-1 items-center gap-[2px] whitespace-nowrap">
               <span className="typo-body-02 text-fg-secondary">{members.length}</span>
               <span className="typo-caption text-gray-500">/</span>
-              <span className="typo-caption text-gray-500">{PROJECT_MEMBER_LIMIT}</span>
+              <span className="typo-caption text-gray-500">{maxMemberCount}</span>
             </div>
             <Button
               className="h-[32px] px-xs text-brand-primary! hover:bg-primary-100 hover:text-brand-primary!"

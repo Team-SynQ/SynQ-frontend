@@ -19,6 +19,7 @@ type ProjectRolePerspectiveFormProps = {
   onBack: () => void
   onClose: () => void
   onSubmit: (draft: ProjectRolePerspectiveDraft) => void
+  pending?: boolean
 }
 
 export function ProjectRolePerspectiveForm({
@@ -29,6 +30,7 @@ export function ProjectRolePerspectiveForm({
   onBack,
   onClose,
   onSubmit,
+  pending = false,
 }: ProjectRolePerspectiveFormProps) {
   const detailRoleInputId = useId()
   const [selectedRoleId, setSelectedRoleId] = useState('')
@@ -174,8 +176,14 @@ export function ProjectRolePerspectiveForm({
         </div>
       </div>
 
-      <Button disabled={!canSubmit} fullWidth size="large" type="submit">
-        새 역할/관점 추가
+      <Button
+        aria-busy={pending}
+        disabled={!canSubmit || pending}
+        fullWidth
+        size="large"
+        type="submit"
+      >
+        {pending ? '역할/관점 저장 중...' : '새 역할/관점 추가'}
       </Button>
 
       <Button

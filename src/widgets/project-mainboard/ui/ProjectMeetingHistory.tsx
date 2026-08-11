@@ -14,13 +14,17 @@ import {
   MeetingProcessingStatusIcon,
   type MeetingHistoryPresentation,
 } from '../../../features/meeting-processing'
+import refreshIcon from '../../../shared/assets/icons/refresh.svg'
 import { useTransientVisibility } from '../../../shared/lib/useTransientVisibility'
+import { Button } from '../../../shared/ui'
 type ProjectMeetingHistoryProps = {
   meetings: CompletedMeeting[]
+  isLoading?: boolean
   presentation?: MeetingHistoryPresentation
   onOpenMeetingDetail?: (recordId: string) => void
   onDeleteMeeting?: (recordId: string) => Promise<void>
   onRenameMeeting?: (recordId: string, nextTitle: string) => Promise<void>
+  onRetryMeetingSummary?: (recordId: string) => void
 }
 
 const historyHeaderGrid =
@@ -31,10 +35,12 @@ const historyContentGrid =
 
 export function ProjectMeetingHistory({
   meetings,
+  isLoading,
   presentation,
   onOpenMeetingDetail,
   onDeleteMeeting,
   onRenameMeeting,
+  onRetryMeetingSummary,
 }: ProjectMeetingHistoryProps) {
   const [deleteFeedback, setDeleteFeedback] = useState<
     { result: 'success'; meetingTitle: string } | { result: 'failure' } | null
@@ -97,9 +103,15 @@ export function ProjectMeetingHistory({
                           <span className="truncate typo-body-01 text-fg-primary">
                             {meeting.meetingTitle}
                           </span>
-                          <span className="truncate whitespace-pre typo-body-02 text-gray-500">
-                            {meeting.keywords.join('  ·  ')}
-                          </span>
+                          {status === 'failed' ? (
+                            <span className="truncate typo-body-02 text-semantic-error">
+                              정리 실패, 다시 시도해 주세요
+                            </span>
+                          ) : (
+                            <span className="truncate whitespace-pre typo-body-02 text-gray-500">
+                              {meeting.keywords.join('  ·  ')}
+                            </span>
+                          )}
                         </span>
                       </span>
                       <span className="text-center typo-body-02 text-fg-secondary">
@@ -123,7 +135,24 @@ export function ProjectMeetingHistory({
                         </span>
                       </span>
                     </button>
-                    {onDeleteMeeting && onRenameMeeting ? (
+                    {status === 'failed' && onRetryMeetingSummary ? (
+                      <Button
+                        aria-label={`${meeting.meetingTitle} 정리 다시 시도`}
+                        className="size-[32px] px-0"
+                        onClick={() => onRetryMeetingSummary(meeting.recordId)}
+                        size="small"
+                        variant="basic"
+                      >
+                        <img
+                          alt=""
+                          aria-hidden="true"
+                          className="size-[24px]"
+                          height="24"
+                          src={refreshIcon}
+                          width="24"
+                        />
+                      </Button>
+                    ) : onDeleteMeeting && onRenameMeeting ? (
                       <MeetingRecordActions
                         disabled={status === 'processing'}
                         meeting={meeting}
@@ -135,6 +164,14 @@ export function ProjectMeetingHistory({
                 )
               })}
             </ul>
+          ) : isLoading ? (
+            <p
+              aria-busy="true"
+              className="flex h-[200px] items-center justify-center typo-body-01 text-gray-500"
+              role="status"
+            >
+              회의 기록을 불러오는 중입니다
+            </p>
           ) : (
             <p className="flex h-[200px] items-center justify-center whitespace-pre-line text-center typo-body-01 text-gray-500">
               {'아직 회의 기록이 없습니다\n‘새 회의 시작’을 통해 기록을 시작해 보세요'}

@@ -15,12 +15,15 @@ const ROLE_OPTIONS = [
 
 interface UserRoleSetupPageProps {
   username?: string
+  /** 초대로 참여한 프로젝트 이름. 있으면 프로젝트 참여용 문구로 바뀝니다. */
+  projectName?: string
   onNext?: (data: { selectedRole: string; detailRole: string }) => void
   onPrev?: () => void
 }
 
 const UserRoleSetupPage: React.FC<UserRoleSetupPageProps> = ({
   username = 'username',
+  projectName,
   onNext,
   onPrev,
 }) => {
@@ -110,10 +113,19 @@ const UserRoleSetupPage: React.FC<UserRoleSetupPageProps> = ({
           {displayName ? `${displayName}님 반갑습니다.` : '반갑습니다.'}
         </h2>
         <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 mb-2">
-          회의에서 어떤 역할로 참여하시나요?
+          {projectName ? (
+            <>
+              {`‘${projectName}’에서는`} <br />
+              어떤 역할로 참여하시나요?
+            </>
+          ) : (
+            '회의에서 어떤 역할로 참여하시나요?'
+          )}
         </h1>
         <p className="text-xs md:text-sm text-gray-400">
-          내가 맡은 역할에 맞는 정보를 제공하기 위해 사용해요.
+          {projectName
+            ? '"회의에서 나는 어떤 사람인가"를 의미해요.'
+            : '내가 맡은 역할에 맞는 정보를 제공하기 위해 사용해요.'}
         </p>
       </div>
 
@@ -188,7 +200,11 @@ const UserRoleSetupPage: React.FC<UserRoleSetupPageProps> = ({
       </div>
 
       <div className="w-full max-w-[580px] flex flex-col items-center">
-        <p className="text-xs text-gray-400 mb-4">모든 설정은 추후 수정 가능합니다.</p>
+        <p className="text-xs text-gray-400 mb-4">
+          {projectName
+            ? '선택한 역할·관점은 계정의 기본 설정으로도 저장되며 추후 수정할 수 있어요.'
+            : '모든 설정은 추후 수정 가능합니다.'}
+        </p>
 
         <div className="flex w-full gap-3">
           <button

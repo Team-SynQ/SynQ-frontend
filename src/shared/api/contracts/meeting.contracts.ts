@@ -36,6 +36,28 @@ export type MeetingEndResponse = {
   endedAt: string
 }
 
+export type MeetingListItemResponse = {
+  meetingId: number
+  title: string
+  status: string
+  createdAt: string
+  /** 회의가 아직 진행 중이면 null이다. */
+  durationSeconds: number | null
+  host: {
+    userId: number
+    name: string
+    profileImageUrl: string | null
+  }
+  /** 요약이 아직 생성되지 않았으면 null이다. */
+  keyTopics: string[] | null
+}
+
+export type MeetingTitleUpdateResponse = {
+  meetingId: number
+  title: string
+  userModified: boolean
+}
+
 export type MeetingParticipantResponse = {
   id: string
   name: string

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
+import { consumePendingInviteToken } from '../features/project-invite'
 import { authService } from '../shared/api/services/auth.service'
 import { Toast } from '../shared/ui/Toast'
 
@@ -15,6 +16,19 @@ export const NaverCallbackPage: React.FC = () => {
   const [toastDescription, setToastDescription] = useState('')
 
   const isSubmitted = useRef(false)
+  const toastTimerIdsRef = useRef<number[]>([])
+
+  const scheduleToastTimer = useCallback((handler: () => void, delayMs: number) => {
+    toastTimerIdsRef.current.push(window.setTimeout(handler, delayMs))
+  }, [])
+
+  // unmount 후 navigate가 실행되지 않도록 예약된 토스트 타이머를 정리합니다.
+  useEffect(() => {
+    const timerIds = toastTimerIdsRef.current
+    return () => {
+      timerIds.forEach((timerId) => window.clearTimeout(timerId))
+    }
+  }, [])
 
   const triggerSuccessToast = useCallback(
     (targetPath: string) => {
@@ -24,16 +38,16 @@ export const NaverCallbackPage: React.FC = () => {
       setShowToast(true)
       setToastOpacity(1)
 
-      setTimeout(() => {
+      scheduleToastTimer(() => {
         setToastOpacity(0)
       }, 1200)
 
-      setTimeout(() => {
+      scheduleToastTimer(() => {
         setShowToast(false)
         navigate(targetPath)
       }, 1500)
     },
-    [navigate],
+    [navigate, scheduleToastTimer],
   )
 
   const triggerErrorToast = useCallback(() => {
@@ -43,15 +57,15 @@ export const NaverCallbackPage: React.FC = () => {
     setShowToast(true)
     setToastOpacity(1)
 
-    setTimeout(() => {
+    scheduleToastTimer(() => {
       setToastOpacity(0)
     }, 2200)
 
-    setTimeout(() => {
+    scheduleToastTimer(() => {
       setShowToast(false)
       navigate('/login')
     }, 2500)
-  }, [navigate])
+  }, [navigate, scheduleToastTimer])
 
   useEffect(() => {
     if (isSubmitted.current) return
@@ -74,7 +88,14 @@ export const NaverCallbackPage: React.FC = () => {
           localStorage.setItem('accessToken', accessToken)
           localStorage.setItem('refreshToken', refreshToken)
 
-          const targetPath = isNewUser || !onboardingCompleted ? '/setup/role' : '/projects'
+          // 초대 링크에서 로그인으로 넘어온 경우, 온보딩이 끝난 사용자는 초대 화면으로 복귀합니다.
+          const needsSetup = isNewUser || !onboardingCompleted
+          const pendingInviteToken = needsSetup ? null : consumePendingInviteToken()
+          const targetPath = needsSetup
+            ? '/setup/role'
+            : pendingInviteToken
+              ? `/invite/${pendingInviteToken}`
+              : '/projects'
           triggerSuccessToast(targetPath)
         } else {
           triggerErrorToast()

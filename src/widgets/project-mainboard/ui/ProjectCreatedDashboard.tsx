@@ -20,6 +20,7 @@ import {
 import {
   ProjectSettingsMenu,
   type ProjectInformationDraft,
+  type ProjectInformationPerspective,
 } from '../../../features/project-settings'
 import {
   MeetingProcessingOverlay,
@@ -43,14 +44,17 @@ type ProjectCreatedDashboardProps = {
   onRenameMeeting?: (recordId: string, nextTitle: string) => Promise<void>
   onDeleteMeeting?: (recordId: string) => Promise<void>
   meetings?: CompletedMeeting[]
+  meetingHistoryLoading?: boolean
   meetingHistoryPresentation?: MeetingHistoryPresentation
   meetingProcessingOverlayOpen?: boolean
   meetingHistoryError?: string
   onRetryMeetingHistory?: () => void
+  onRetryMeetingSummary?: (recordId: string) => void
   onOpenMeetingDetail?: (recordId: string) => void
   onStartMeeting?: () => void
   onLoadProject?: () => Promise<ProjectSummary | void> | ProjectSummary | void
   onUpdateProject?: (draft: ProjectInformationDraft) => Promise<void> | void
+  perspectiveOptions?: ProjectInformationPerspective[]
   onDeleteProject?: () => Promise<void> | void
 }
 
@@ -68,14 +72,17 @@ export function ProjectCreatedDashboard({
   onRenameMeeting,
   onDeleteMeeting,
   meetings = [],
+  meetingHistoryLoading = false,
   meetingHistoryPresentation,
   meetingProcessingOverlayOpen = false,
   meetingHistoryError,
   onRetryMeetingHistory,
+  onRetryMeetingSummary,
   onOpenMeetingDetail,
   onStartMeeting,
   onLoadProject,
   onUpdateProject,
+  perspectiveOptions,
   onDeleteProject,
 }: ProjectCreatedDashboardProps) {
   const navigate = useNavigate()
@@ -98,10 +105,13 @@ export function ProjectCreatedDashboard({
           onDeleteProject={onDeleteProject}
           onLoadProject={onLoadProject}
           onUpdateProject={onUpdateProject}
-          perspectiveOptions={projectPerspectiveOptions.map((option) => ({
-            label: option.label,
-            description: option.selectedDescription,
-          }))}
+          perspectiveOptions={
+            perspectiveOptions ??
+            projectPerspectiveOptions.map((option) => ({
+              label: option.label,
+              description: option.selectedDescription,
+            }))
+          }
           project={project}
         />
       </header>
@@ -159,6 +169,8 @@ export function ProjectCreatedDashboard({
         </section>
       ) : (
         <ProjectMeetingHistory
+          isLoading={meetingHistoryLoading}
+          onRetryMeetingSummary={onRetryMeetingSummary}
           meetings={meetings}
           onDeleteMeeting={onDeleteMeeting}
           onOpenMeetingDetail={onOpenMeetingDetail}
@@ -187,20 +199,28 @@ function ProjectReferenceMaterials({
   const uploadTitleId = useId()
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
   const materialLimitToast = useTransientVisibility()
+  const isMaterialsLoading = project.materials === undefined
+  const materials = project.materials ?? []
 
-  const handleAddMaterials = async (materials: ProjectMaterialDraft) => {
-    const nextMaterialCount = materials.files.length + materials.links.length
-    if (project.materials.length + nextMaterialCount > PROJECT_REFERENCE_MAX_MATERIALS) {
+  const handleAddMaterials = async (nextDraft: ProjectMaterialDraft) => {
+    // 기존 자료 수를 모르는 상태에서는 개수 검사가 부정확하고, 뒤늦게 도착한 조회 결과가
+    // 방금 추가한 자료를 덮어쓸 수 있습니다.
+    if (isMaterialsLoading) return
+
+    const nextMaterialCount = nextDraft.files.length + nextDraft.links.length
+    if (materials.length + nextMaterialCount > PROJECT_REFERENCE_MAX_MATERIALS) {
       materialLimitToast.show()
       return
     }
 
-    await onAddMaterials?.(materials)
+    await onAddMaterials?.(nextDraft)
     setIsUploadModalOpen(false)
   }
 
   const handleOpenUploadModal = () => {
-    if (project.materials.length >= PROJECT_REFERENCE_MAX_MATERIALS) {
+    if (isMaterialsLoading) return
+
+    if (materials.length >= PROJECT_REFERENCE_MAX_MATERIALS) {
       materialLimitToast.show()
       return
     }
@@ -222,12 +242,15 @@ function ProjectReferenceMaterials({
               width="24"
             />
             <h3 className="m-0 typo-body-01 text-fg-primary">AI 참고 자료</h3>
-            <span className="typo-body-02 text-fg-secondary">{project.materials.length}</span>
+            <span className="typo-body-02 text-fg-secondary">
+              {isMaterialsLoading ? '' : materials.length}
+            </span>
             <span className="typo-caption text-gray-500">/ {PROJECT_REFERENCE_MAX_MATERIALS}</span>
           </div>
           <Button
             aria-label="AI 참고 자료 추가"
             className="size-[32px] px-0"
+            disabled={isMaterialsLoading}
             onClick={handleOpenUploadModal}
             size="small"
             variant="basic"
@@ -243,9 +266,9 @@ function ProjectReferenceMaterials({
           </Button>
         </div>
 
-        {project.materials.length > 0 ? (
+        {materials.length > 0 ? (
           <ul className="m-0 flex list-none flex-col p-0">
-            {project.materials.map((material) => (
+            {materials.map((material) => (
               <ProjectReferenceMaterialItem
                 key={material.id}
                 material={material}
@@ -254,6 +277,8 @@ function ProjectReferenceMaterials({
               />
             ))}
           </ul>
+        ) : isMaterialsLoading ? (
+          <div aria-busy="true" aria-label="AI 참고 자료 불러오는 중" className="m-auto" />
         ) : (
           <p className="m-auto typo-body-02 text-gray-500">등록된 AI 참고 자료가 없습니다</p>
         )}

@@ -1,17 +1,35 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import App from '../../App'
-import { projectMockActorFixture } from '../../shared/api/mock/fixtures/projects.fixture'
+import { projectApi } from '../../entities/project'
+import { userApi } from '../../entities/user'
 import * as meetingMockService from '../../shared/api/mock/services/meeting.mock'
+import { projectMockActorFixture } from '../../shared/api/mock/fixtures/projects.fixture'
 import { authService } from '../../shared/api/services/auth.service'
 import { userService } from '../../shared/api/services/user.service'
 
-function renderAppAt(path: string) {
+async function renderAppAt(path: string) {
   window.history.pushState({}, '', path)
-  return render(<App />)
+  const result = render(<App />)
+  // 로그인 가드가 내 정보를 받아올 때까지 한 번 흘려보냅니다.
+  await act(async () => {})
+  return result
 }
+
+beforeEach(() => {
+  window.localStorage.setItem('accessToken', 'test-access-token')
+  vi.spyOn(userApi, 'getMe').mockResolvedValue({
+    userId: projectMockActorFixture.userId,
+    name: projectMockActorFixture.name,
+    email: projectMockActorFixture.email,
+    provider: 'KAKAO',
+    profileImageUrl: null,
+  })
+  vi.spyOn(userApi, 'getMyRoleProfiles').mockResolvedValue([])
+  vi.spyOn(projectApi, 'listProjects').mockResolvedValue([])
+})
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -23,9 +41,9 @@ afterEach(() => {
 })
 
 describe('AppRouter', () => {
-  it('moves landing to onboarding after the existing animation timer', () => {
+  it('moves landing to onboarding after the existing animation timer', async () => {
     vi.useFakeTimers()
-    renderAppAt('/')
+    await renderAppAt('/')
 
     expect(screen.getByAltText('SynQ 심볼 로고')).toBeInTheDocument()
 
@@ -43,7 +61,7 @@ describe('AppRouter', () => {
 
   it('opens onboarding directly and moves to login when skipped', async () => {
     const user = userEvent.setup()
-    renderAppAt('/onboarding')
+    await renderAppAt('/onboarding')
 
     expect(
       screen.getByRole('heading', {
@@ -61,7 +79,7 @@ describe('AppRouter', () => {
     const user = userEvent.setup()
     vi.stubEnv('VITE_KAKAO_CLIENT_ID', 'test-kakao-client')
     vi.stubEnv('VITE_KAKAO_REDIRECT_URI', 'http://localhost:5173/login/callback')
-    renderAppAt('/login')
+    await renderAppAt('/login')
 
     await user.click(screen.getByRole('button', { name: '카카오로 계속하기' }))
 
@@ -72,7 +90,7 @@ describe('AppRouter', () => {
     const kakaoLogin = vi.spyOn(authService, 'kakaoLogin')
     window.sessionStorage.setItem('kakaoOAuthState', 'expected-state')
 
-    renderAppAt('/login/callback?code=test-code&state=unexpected-state')
+    await renderAppAt('/login/callback?code=test-code&state=unexpected-state')
 
     await waitFor(() => {
       expect(screen.getByText('소셜 인증 실패')).toBeInTheDocument()
@@ -96,7 +114,7 @@ describe('AppRouter', () => {
     })
     window.sessionStorage.setItem('kakaoOAuthState', 'matching-state')
 
-    renderAppAt('/login/callback?code=test-code&state=matching-state')
+    await renderAppAt('/login/callback?code=test-code&state=matching-state')
 
     await waitFor(() => {
       expect(kakaoLogin).toHaveBeenCalledWith({
@@ -107,10 +125,10 @@ describe('AppRouter', () => {
     expect(window.sessionStorage.getItem('kakaoOAuthState')).toBeNull()
   })
 
-  it('redirects the setup index route to role selection', () => {
-    renderAppAt('/setup')
+  it('redirects the setup index route to role selection', async () => {
+    await renderAppAt('/setup')
 
-    expect(window.location.pathname).toBe('/setup/role')
+    await waitFor(() => expect(window.location.pathname).toBe('/setup/role'))
   })
 
   it('moves role and perspective selections to the preview URL', async () => {
@@ -128,7 +146,7 @@ describe('AppRouter', () => {
     })
 
     const user = userEvent.setup()
-    renderAppAt('/setup/role')
+    await renderAppAt('/setup/role')
 
     const roleButton = screen.getByAltText('개발/기술').closest('button')
     expect(roleButton).not.toBeNull()
@@ -136,34 +154,34 @@ describe('AppRouter', () => {
     await user.click(roleButton!)
     await user.click(screen.getByRole('button', { name: '다음' }))
 
-    expect(window.location.pathname).toBe('/setup/perspectives')
+    await waitFor(() => expect(window.location.pathname).toBe('/setup/perspectives'))
 
     await user.click(screen.getByRole('button', { name: '일정' }))
     await user.click(screen.getByRole('button', { name: '다음' }))
 
-    expect(window.location.pathname).toBe('/setup/preview')
+    await waitFor(() => expect(window.location.pathname).toBe('/setup/preview'))
     expect(screen.getByRole('heading', { name: '선택 결과 미리보기' })).toBeInTheDocument()
     expect(screen.getByText('개발/기술')).toBeInTheDocument()
     expect(screen.getByText('일정')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '설정 완료' }))
 
-    await waitFor(() => {
-      expect(window.location.pathname).toBe('/projects')
-    })
+    await waitFor(() => expect(window.location.pathname).toBe('/projects'))
   })
 
-  it('opens the empty project mainboard directly', () => {
-    renderAppAt('/projects')
+  it('opens the empty project mainboard directly', async () => {
+    vi.spyOn(projectApi, 'listProjects').mockResolvedValue([])
 
-    expect(screen.getByRole('button', { name: '프로젝트 생성하기' })).toBeInTheDocument()
+    await renderAppAt('/projects')
+
+    expect(await screen.findByRole('button', { name: '프로젝트 생성하기' })).toBeInTheDocument()
     expect(window.location.pathname).toBe('/projects')
     expect(screen.getByText(projectMockActorFixture.name)).toBeInTheDocument()
     expect(screen.getByText(projectMockActorFixture.email)).toBeInTheDocument()
   })
 
-  it('opens account settings directly', () => {
-    renderAppAt('/settings/account')
+  it('opens account settings directly', async () => {
+    await renderAppAt('/settings/account')
 
     expect(screen.getByRole('heading', { name: '계정 정보 및 보안' })).toBeInTheDocument()
     expect(screen.getAllByText(projectMockActorFixture.email)).toHaveLength(2)
@@ -172,7 +190,7 @@ describe('AppRouter', () => {
 
   it('opens help from the account settings panel', async () => {
     const user = userEvent.setup()
-    renderAppAt('/settings/account')
+    await renderAppAt('/settings/account')
 
     await user.click(screen.getByRole('button', { name: '도움말' }))
 
@@ -181,8 +199,8 @@ describe('AppRouter', () => {
     expect(screen.getByRole('button', { name: '도움말' })).toHaveAttribute('aria-current', 'page')
   })
 
-  it('opens policy documents directly', () => {
-    renderAppAt('/settings/policy')
+  it('opens policy documents directly', async () => {
+    await renderAppAt('/settings/policy')
 
     expect(window.location.pathname).toBe('/settings/policy')
     expect(screen.getByRole('heading', { name: '정책 문서' })).toBeInTheDocument()
@@ -191,7 +209,7 @@ describe('AppRouter', () => {
 
   it('opens project creation from the account settings sidebar', async () => {
     const user = userEvent.setup()
-    renderAppAt('/settings/account')
+    await renderAppAt('/settings/account')
 
     await user.click(screen.getByRole('button', { name: '프로젝트 추가' }))
 
@@ -201,7 +219,7 @@ describe('AppRouter', () => {
 
   it('opens account settings from the project sidebar menu', async () => {
     const user = userEvent.setup()
-    renderAppAt('/projects')
+    await renderAppAt('/projects')
 
     await user.click(
       screen.getByRole('button', {
@@ -215,7 +233,7 @@ describe('AppRouter', () => {
   })
 
   it('opens the existing live meeting page directly', async () => {
-    renderAppAt('/meetings/1/live')
+    await renderAppAt('/meetings/1/live')
 
     expect(await screen.findByRole('button', { name: '회의 종료' })).toBeInTheDocument()
     expect(window.location.pathname).toBe('/meetings/1/live')
@@ -224,7 +242,7 @@ describe('AppRouter', () => {
   it('opens the implemented meeting detail using the route record id', async () => {
     const fetchMeetingDetail = vi.spyOn(meetingMockService, 'fetchMeetingDetail')
 
-    renderAppAt('/meetings/meeting-record-999/detail')
+    await renderAppAt('/meetings/meeting-record-999/detail')
 
     expect(
       await screen.findByRole('heading', {
@@ -241,7 +259,7 @@ describe('AppRouter', () => {
       .spyOn(meetingMockService, 'updateMeetingTitle')
       .mockResolvedValue(true)
 
-    renderAppAt('/meetings/meeting-record-999/detail')
+    await renderAppAt('/meetings/meeting-record-999/detail')
 
     expect(
       await screen.findByRole('heading', {
@@ -281,7 +299,7 @@ describe('AppRouter', () => {
           }),
       )
 
-    renderAppAt('/meetings/meeting-record-first/detail')
+    await renderAppAt('/meetings/meeting-record-first/detail')
 
     expect(
       await screen.findByRole('heading', { name: firstMeeting.meetingTitle }),
@@ -331,21 +349,21 @@ describe('AppRouter', () => {
       new Error('meeting record not found'),
     )
 
-    renderAppAt('/meetings/deleted-record/detail')
+    await renderAppAt('/meetings/deleted-record/detail')
 
     expect(await screen.findByRole('alert')).toHaveTextContent('회의 기록을 불러오지 못했습니다.')
     expect(screen.getByRole('button', { name: '메인보드로 이동' })).toBeInTheDocument()
   })
 
-  it('allows direct access to a setup step without stored selections', () => {
-    renderAppAt('/setup/preview')
+  it('allows direct access to a setup step without stored selections', async () => {
+    await renderAppAt('/setup/preview')
 
     expect(screen.getByRole('heading', { name: '선택 결과 미리보기' })).toBeInTheDocument()
     expect(window.location.pathname).toBe('/setup/preview')
   })
 
-  it('redirects unknown URLs to the landing route', () => {
-    renderAppAt('/unknown')
+  it('redirects unknown URLs to the landing route', async () => {
+    await renderAppAt('/unknown')
 
     expect(screen.getByAltText('SynQ 심볼 로고')).toBeInTheDocument()
     expect(window.location.pathname).toBe('/')

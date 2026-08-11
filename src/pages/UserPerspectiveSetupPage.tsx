@@ -14,11 +14,17 @@ const PERSPECTIVE_OPTIONS = [
 ]
 
 interface UserPerspectiveSetupPageProps {
+  /** 초대로 참여한 프로젝트 이름. 있으면 프로젝트 참여용 문구로 바뀝니다. */
+  projectName?: string
   onNext?: (selectedPerspectives: string[]) => void
   onPrev?: () => void
 }
 
-const UserPerspectiveSetupPage: React.FC<UserPerspectiveSetupPageProps> = ({ onNext, onPrev }) => {
+const UserPerspectiveSetupPage: React.FC<UserPerspectiveSetupPageProps> = ({
+  projectName,
+  onNext,
+  onPrev,
+}) => {
   const [selectedPerspectives, setSelectedPerspectives] = useState<string[]>([])
 
   const handleToggle = (id: string) => {
@@ -48,10 +54,19 @@ const UserPerspectiveSetupPage: React.FC<UserPerspectiveSetupPageProps> = ({ onN
 
       <div className="text-center mb-8">
         <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 mb-2">
-          SynQ가 어떤 관점으로 회의를 봐주면 좋을까요?
+          {projectName ? (
+            <>
+              {`‘${projectName}’ 회의에서`} <br />
+              어떤 내용을 중요하게 보고 싶나요?
+            </>
+          ) : (
+            'SynQ가 어떤 관점으로 회의를 봐주면 좋을까요?'
+          )}
         </h1>
         <p className="text-xs md:text-sm text-gray-400">
-          선택한 관점에 따라 AI Hint와 회의 정리가 달라져요.
+          {projectName
+            ? '관점은 "회의 내용을 어떤 기준으로 보고 싶은가"를 의미해요.'
+            : '선택한 관점에 따라 AI Hint와 회의 정리가 달라져요.'}
         </p>
       </div>
 
@@ -107,7 +122,11 @@ const UserPerspectiveSetupPage: React.FC<UserPerspectiveSetupPageProps> = ({ onN
       </div>
 
       <div className="w-full max-w-[540px] flex flex-col items-center">
-        <p className="text-xs text-gray-400 mb-4">모든 설정은 추후 수정 가능합니다.</p>
+        <p className="text-xs text-gray-400 mb-4">
+          {projectName
+            ? '선택한 역할·관점은 계정의 기본 설정으로도 저장되며 추후 수정할 수 있어요.'
+            : '모든 설정은 추후 수정 가능합니다.'}
+        </p>
 
         <div className="flex w-full gap-3">
           <button

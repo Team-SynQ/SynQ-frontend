@@ -1,15 +1,17 @@
-import { useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 
 import type { ProjectSummary } from '../../../entities/project'
 
 import {
-  PROJECT_INVITE_LINK,
+  createProjectInviteLink,
+  loadProjectMembers,
+  removeProjectMember,
+  type ProjectMemberList,
+} from '../api/projectMembers.api'
+import {
   PROJECT_JOIN_REQUEST_MOCK_FAILURE_IDS,
-  PROJECT_MEMBER_EXPORT_MOCK_FAILURE_ID,
   PROJECT_MEMBER_LIMIT,
   projectJoinRequests,
-  projectManagementMembers,
-  projectPopoverMembers,
   type ProjectJoinRequest,
   type ProjectMember,
 } from '../model/projectSettings.mock'
@@ -38,6 +40,9 @@ type ProjectSettingsMenuProps = {
   onLoadProject?: () => Promise<ProjectSummary | void> | ProjectSummary | void
   onUpdateProject?: (draft: ProjectInformationDraft) => Promise<void> | void
   onDeleteProject?: () => Promise<void> | void
+  loadMembers?: (projectId: number) => Promise<ProjectMemberList>
+  createInviteLink?: (projectId: number) => Promise<string>
+  exportMember?: (projectId: number, memberId: number) => Promise<void>
 }
 
 export function ProjectSettingsMenu({
@@ -46,6 +51,9 @@ export function ProjectSettingsMenu({
   onLoadProject,
   onUpdateProject,
   onDeleteProject,
+  loadMembers = loadProjectMembers,
+  createInviteLink = createProjectInviteLink,
+  exportMember = removeProjectMember,
 }: ProjectSettingsMenuProps) {
   const managementTitleId = useId()
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -55,21 +63,53 @@ export function ProjectSettingsMenu({
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [isManagementOpen, setIsManagementOpen] = useState(false)
   const [joinRequests, setJoinRequests] = useState(projectJoinRequests)
-  const [managementMembers, setManagementMembers] = useState(projectManagementMembers)
+  const [memberList, setMemberList] = useState<ProjectMemberList>()
   const [exportCandidate, setExportCandidate] = useState<ProjectMember>()
   const [toastMessage, setToastMessage] = useState<SettingsToast>()
   const settingsToast = useTransientVisibility()
+  const showSettingsToast = settingsToast.show
 
-  const showToast = (message: SettingsToast) => {
-    setToastMessage(message)
-    settingsToast.show()
-  }
+  const showToast = useCallback(
+    (message: SettingsToast) => {
+      setToastMessage(message)
+      showSettingsToast()
+    },
+    [showSettingsToast],
+  )
+
+  const apiProjectId = project.apiProjectId
+  const members = memberList?.members ?? []
+  const maxMemberCount = memberList?.maxCount ?? PROJECT_MEMBER_LIMIT
+
+  useEffect(() => {
+    if (!isPopoverOpen) return
+
+    let isSubscribed = true
+    void loadMembers(apiProjectId)
+      .then((list) => {
+        if (!isSubscribed) return
+        setMemberList(list)
+      })
+      .catch(() => {
+        if (!isSubscribed) return
+        showToast({
+          title: '멤버 목록 조회 실패',
+          description: '멤버 목록을 불러오지 못했습니다. 다시 시도해 주세요.',
+          type: 'error',
+        })
+      })
+
+    return () => {
+      isSubscribed = false
+    }
+  }, [apiProjectId, isPopoverOpen, loadMembers, showToast])
 
   const handleCopyInviteLink = async () => {
     try {
       if (!navigator.clipboard) throw new Error('Clipboard API is unavailable')
 
-      await navigator.clipboard.writeText(PROJECT_INVITE_LINK)
+      const inviteUrl = await createInviteLink(apiProjectId)
+      await navigator.clipboard.writeText(inviteUrl)
       showToast({
         title: '초대 링크 복사 완료',
         description: '링크를 복사 완료했습니다.',
@@ -150,7 +190,7 @@ export function ProjectSettingsMenu({
       return
     }
 
-    if (managementMembers.length >= PROJECT_MEMBER_LIMIT) {
+    if (members.length >= maxMemberCount) {
       showToast({
         title: '프로젝트 최대 인원 도달',
         description: '프로젝트 최대 인원에 도달해 요청을 승인할 수 없습니다.',
@@ -160,13 +200,19 @@ export function ProjectSettingsMenu({
     }
 
     setJoinRequests((current) => current.filter((item) => item.id !== request.id))
-    setManagementMembers((current) => {
+    setMemberList((current) => {
+      if (!current) return current
+
       const approvedMember: ProjectMember = {
         id: `member-${request.id}`,
         name: request.name,
         role: request.role,
       }
-      return [...current, approvedMember]
+      return {
+        ...current,
+        members: [...current.members, approvedMember],
+        currentCount: current.currentCount + 1,
+      }
     })
     showToast({
       title: '멤버 승인 완료',
@@ -201,27 +247,45 @@ export function ProjectSettingsMenu({
     setIsManagementOpen(true)
   }
 
-  const handleConfirmMemberExport = () => {
+  const handleConfirmMemberExport = async () => {
     if (!exportCandidate) return
 
-    if (exportCandidate.id === PROJECT_MEMBER_EXPORT_MOCK_FAILURE_ID) {
-      setExportCandidate(undefined)
-      setIsManagementOpen(true)
+    const memberId = Number(exportCandidate.id)
+    const removedId = exportCandidate.id
+    setExportCandidate(undefined)
+    setIsManagementOpen(true)
+
+    const removeFromList = () =>
+      setMemberList((current) =>
+        current
+          ? {
+              ...current,
+              members: current.members.filter((member) => member.id !== removedId),
+              currentCount: Math.max(0, current.currentCount - 1),
+            }
+          : current,
+      )
+
+    // 서버에 등록되지 않은 화면 전용 항목은 내보낼 대상이 없습니다.
+    if (!Number.isInteger(memberId)) {
+      removeFromList()
+      return
+    }
+
+    try {
+      await exportMember(apiProjectId, memberId)
+      removeFromList()
+      showToast({
+        title: '멤버 삭제 성공',
+        description: '멤버를 성공적으로 내보냈습니다.',
+      })
+    } catch {
       showToast({
         title: '멤버 삭제 실패',
         description: '멤버를 삭제하지 못했습니다. 다시 시도해 주세요.',
         type: 'error',
       })
-      return
     }
-
-    setManagementMembers((current) => current.filter((member) => member.id !== exportCandidate.id))
-    setExportCandidate(undefined)
-    setIsManagementOpen(true)
-    showToast({
-      title: '멤버 삭제 성공',
-      description: '멤버를 성공적으로 내보냈습니다.',
-    })
   }
 
   return (
@@ -250,7 +314,9 @@ export function ProjectSettingsMenu({
 
         <ProjectMoreOptionsPopover
           joinRequestCount={joinRequests.length}
-          members={projectPopoverMembers}
+          maxMemberCount={maxMemberCount}
+          memberCount={memberList?.currentCount}
+          members={members}
           onClose={() => setIsPopoverOpen(false)}
           onInviteMembers={() => void handleCopyInviteLink()}
           onManageMembers={handleOpenManagement}
@@ -277,7 +343,8 @@ export function ProjectSettingsMenu({
 
       <ProjectMemberManagementDialog
         joinRequests={joinRequests}
-        members={managementMembers}
+        maxMemberCount={maxMemberCount}
+        members={members}
         onApproveRequest={handleApproveRequest}
         onClose={handleCloseManagement}
         onExportMember={handleRequestMemberExport}
@@ -290,7 +357,7 @@ export function ProjectSettingsMenu({
       <ProjectMemberExportDialog
         member={exportCandidate}
         onCancel={handleCancelMemberExport}
-        onConfirm={handleConfirmMemberExport}
+        onConfirm={() => void handleConfirmMemberExport()}
         open={Boolean(exportCandidate)}
       />
 

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { resetProjectMockDb } from '../../../shared/api/mock/db/projects.mockDb'
-import { projectApi } from '../../../entities/project'
+import { projectMockService } from '../../../shared/api/mock/services/projects.mock'
 import { createProjectWithMaterials } from './createProjectWithMaterials'
 
 describe('createProjectWithMaterials', () => {
@@ -22,6 +22,7 @@ describe('createProjectWithMaterials', () => {
         files: [file],
         links: ['https://www.notion.so/example'],
       },
+      projectMockService,
     )
 
     expect(project).toMatchObject({
@@ -32,7 +33,9 @@ describe('createProjectWithMaterials', () => {
         { id: '2', kind: 'link', name: 'www.notion.so' },
       ],
     })
-    await expect(projectApi.getProjectReferences(Number(project.id))).resolves.toMatchObject({
+    await expect(
+      projectMockService.getProjectReferences(Number(project.id)),
+    ).resolves.toMatchObject({
       currentCount: 2,
     })
   })
@@ -53,9 +56,10 @@ describe('createProjectWithMaterials', () => {
           files: [unsupportedFile],
           links: [],
         },
+        projectMockService,
       ),
     ).rejects.toMatchObject({ status: 415 })
 
-    await expect(projectApi.listProjects()).resolves.toEqual([])
+    await expect(projectMockService.listProjects()).resolves.toEqual([])
   })
 })
