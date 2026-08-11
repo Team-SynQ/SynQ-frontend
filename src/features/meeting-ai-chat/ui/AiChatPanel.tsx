@@ -89,7 +89,14 @@ export function AiChatPanel(props: AiChatPanelProps) {
       {model.pinnedContext ? (
         <AiChatPinnedContext context={model.pinnedContext} onClear={actions.onClearContext} />
       ) : null}
-      <AiChatMessageList messages={model.messages} variant={variant} />
+      <AiChatMessageList
+        isAwaitingAnswer={model.isAwaitingAnswer}
+        isLoading={model.isLoading}
+        loadError={model.loadError}
+        messages={model.messages}
+        onRetryLoad={actions.onRetryLoad}
+        variant={variant}
+      />
       <AiChatComposer actions={actions} inputRef={composerInputRef} model={model} />
     </aside>
   )

@@ -275,6 +275,7 @@ describe('useLiveMeetingController async boundaries', () => {
         updatedAt: '2026-07-27T00:00:00.000Z',
       })
       sendRequest.resolve({
+        isAnswerPending: false,
         messages: [
           { id: 'stale-assistant', role: 'assistant', content: '이전 회의의 답변', context: null },
         ],
@@ -324,6 +325,104 @@ describe('useLiveMeetingController async boundaries', () => {
         throw new Error('transcript is not active')
       }
       expect(result.current.transcript.state.hintState?.status).toBe('idle')
+    })
+  })
+
+  // 입장 응답이 먼저 끝나면 화면은 이미 새 회의다. 그 사이 이전 대화가 보이면 안 된다.
+  it('회의를 옮기면 이전 회의의 대화와 추천 질문을 즉시 비운다', async () => {
+    const { result, rerender } = await renderReadyController()
+
+    await waitFor(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      expect(result.current.aiChat.model.messages).toHaveLength(1)
+    })
+
+    const nextWelcome = deferred<Awaited<ReturnType<typeof meetingAiChatApi.loadWelcome>>>()
+    vi.spyOn(meetingAiChatApi, 'loadWelcome').mockReturnValue(nextWelcome.promise)
+    vi.spyOn(transcriptService, 'listSegments').mockResolvedValue({
+      meetingId: 2,
+      segments: [transcriptDto(9, '다음 회의의 문장')],
+    })
+
+    rerender({ currentMeetingId: '2' })
+
+    await waitFor(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      expect(result.current.meeting.meetingId).toBe('2')
+    })
+    if (result.current.status !== 'ready') throw new Error('controller is not ready')
+    expect(result.current.aiChat.model.messages).toEqual([])
+    expect(result.current.aiChat.model.suggestions).toEqual([])
+    expect(result.current.aiChat.model.isLoading).toBe(true)
+
+    await act(async () => {
+      nextWelcome.resolve({
+        messages: [
+          { id: 'assistant-welcome', role: 'assistant', content: '새 회의입니다.', context: null },
+        ],
+        suggestions: [],
+      })
+      await Promise.resolve()
+    })
+  })
+
+  // 서버가 생성 중이라고 답하면 답변이 비어 온다. 사용자가 대기 중임을 알 수 있어야 한다.
+  it('생성 중 응답이면 답변 대기 상태를 유지한다', async () => {
+    vi.spyOn(meetingAiChatApi, 'sendQuestion').mockResolvedValue({
+      messages: [{ id: 'user-9', role: 'user', content: '질문', context: null }],
+      suggestions: null,
+      isAnswerPending: true,
+    })
+    const { result } = await renderReadyController()
+
+    act(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      result.current.aiChat.actions.onDraftChange('질문')
+    })
+    act(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      result.current.aiChat.actions.onSend()
+    })
+
+    await waitFor(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      expect(result.current.aiChat.model.isSending).toBe(false)
+      expect(result.current.aiChat.model.isAwaitingAnswer).toBe(true)
+    })
+  })
+
+  it('AI Chat 조회에 실패하면 사유를 남기고 재시도할 수 있다', async () => {
+    const loadWelcome = vi
+      .spyOn(meetingAiChatApi, 'loadWelcome')
+      .mockRejectedValue(new Error('AI Chat을 불러오지 못했습니다.'))
+    const { result } = await renderReadyController()
+
+    await waitFor(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      expect(result.current.aiChat.model.loadError).toBe('AI Chat을 불러오지 못했습니다.')
+      expect(result.current.aiChat.model.isLoading).toBe(false)
+    })
+
+    loadWelcome.mockResolvedValue({
+      messages: [
+        {
+          id: 'assistant-welcome',
+          role: 'assistant',
+          content: '다시 불러왔습니다.',
+          context: null,
+        },
+      ],
+      suggestions: [],
+    })
+    act(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      result.current.aiChat.actions.onRetryLoad()
+    })
+
+    await waitFor(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      expect(result.current.aiChat.model.loadError).toBeNull()
+      expect(result.current.aiChat.model.messages[0]?.content).toBe('다시 불러왔습니다.')
     })
   })
 

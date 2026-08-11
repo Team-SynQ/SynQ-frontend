@@ -8,6 +8,9 @@ import { AiChatPanel } from './AiChatPanel'
 const model: AiChatViewModel = {
   draft: '작성 중인 질문',
   isSending: false,
+  isLoading: false,
+  isAwaitingAnswer: false,
+  loadError: null,
   sendError: null,
   pinnedContext: null,
   messages: [
@@ -31,6 +34,7 @@ function createActions(): AiChatActions {
     onClearContext: vi.fn(),
     onSelectSuggestion: vi.fn(),
     onSend: vi.fn(),
+    onRetryLoad: vi.fn(),
   }
 }
 

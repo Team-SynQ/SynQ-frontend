@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  meetingAiChatApi,
   meetingConnectionGateway,
   meetingHintApi,
   meetingLifecycleApi,
@@ -91,6 +92,18 @@ describe('MeetingPage controls', () => {
       endedAt: '2026-08-05T01:00:00.000Z',
     }))
     vi.spyOn(meetingHintApi, 'listHintRecords').mockResolvedValue([])
+    vi.spyOn(meetingAiChatApi, 'loadWelcome').mockResolvedValue({
+      messages: [
+        {
+          id: 'assistant-welcome',
+          role: 'assistant',
+          content: '회의가 시작되었습니다.',
+          context: null,
+        },
+      ],
+      suggestions: [],
+    })
+    vi.spyOn(meetingAiChatApi, 'loadHistory').mockResolvedValue([])
     vi.spyOn(transcriptService, 'listSegments').mockImplementation(async (meetingId) =>
       transcriptListResult(meetingId),
     )
