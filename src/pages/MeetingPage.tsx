@@ -47,6 +47,10 @@ export function MeetingPage({ user }: MeetingPageProps = {}) {
   const [lastAction, setLastAction] = useState('회의 진행 화면 준비 완료')
   const [activeControl, setActiveControl] = useState<ActiveMeetingControl>('idle')
   const [completedMeeting, setCompletedMeeting] = useState<CompletedMeeting | null>(null)
+  const [titleSave, setTitleSave] = useState<{ pending: boolean; errorMessage: string | null }>({
+    pending: false,
+    errorMessage: null,
+  })
   const participantsTriggerRef = useRef<HTMLButtonElement>(null)
   const moreMenuTriggerRef = useRef<HTMLButtonElement>(null)
 
@@ -113,6 +117,28 @@ export function MeetingPage({ user }: MeetingPageProps = {}) {
     })
   }
 
+  const closeTitleEdit = () => {
+    setTitleSave({ pending: false, errorMessage: null })
+    setActiveControl('idle')
+  }
+
+  const renameMeeting = async (nextTitle: string) => {
+    setTitleSave({ pending: true, errorMessage: null })
+    try {
+      await controller.renameMeeting(nextTitle)
+      closeTitleEdit()
+      setLastAction('회의 제목을 변경했습니다.')
+    } catch (error) {
+      setTitleSave({
+        pending: false,
+        errorMessage:
+          error instanceof Error && error.message
+            ? error.message
+            : '회의 제목을 변경하지 못했습니다.',
+      })
+    }
+  }
+
   const saveMeeting = async () => {
     setActiveControl('saving')
     try {
@@ -156,7 +182,10 @@ export function MeetingPage({ user }: MeetingPageProps = {}) {
           moreMenuPopover: (
             <MeetingMoreMenu
               onClose={() => setActiveControl('idle')}
-              onEditTitle={() => setActiveControl('edit-title')}
+              onEditTitle={() => {
+                setTitleSave({ pending: false, errorMessage: null })
+                setActiveControl('edit-title')
+              }}
               open={activeControl === 'more'}
               triggerRef={moreMenuTriggerRef}
             />
@@ -180,13 +209,11 @@ export function MeetingPage({ user }: MeetingPageProps = {}) {
       ) : null}
       <MeetingTitleEditDialog
         currentTitle={controller.meetingTitle}
-        onCancel={() => setActiveControl('idle')}
-        onSubmit={(nextTitle) => {
-          controller.setMeetingTitle(nextTitle)
-          setActiveControl('idle')
-          setLastAction('회의 제목을 변경했습니다.')
-        }}
+        errorMessage={titleSave.errorMessage}
+        onCancel={closeTitleEdit}
+        onSubmit={(nextTitle) => void renameMeeting(nextTitle)}
         open={activeControl === 'edit-title'}
+        pending={titleSave.pending}
       />
       <MeetingExitDialog
         mode={currentUserIsHost ? 'end' : 'leave'}

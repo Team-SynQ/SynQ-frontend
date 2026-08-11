@@ -14,6 +14,7 @@ import {
 import type { TranscriptHintResponse } from '../../../shared/api/contracts/meeting.contracts'
 import type { UpdateTranscriptSegmentResult } from '../../../shared/api/contracts/transcript.contracts'
 import { resetLiveMeetingMockDb } from '../../../shared/api/mock/db/liveMeeting.mockDb'
+import { meetingService } from '../../../shared/api/services/meeting.service'
 import { transcriptService } from '../../../shared/api/services/transcript.service'
 import { useLiveMeetingController } from './useLiveMeetingController'
 
@@ -122,9 +123,15 @@ describe('useLiveMeetingController async boundaries', () => {
     const finalizeMeeting = vi.spyOn(meetingRecordGateway, 'finalizeEndedMeeting')
     const { result } = await renderReadyController()
 
-    act(() => {
+    vi.spyOn(meetingService, 'updateMeetingTitle').mockResolvedValue({
+      meetingId: 1,
+      title: '온보딩 개선 회의',
+      userModified: true,
+    })
+
+    await act(async () => {
       if (result.current.status !== 'ready') throw new Error('controller is not ready')
-      result.current.setMeetingTitle('온보딩 개선 회의')
+      await result.current.renameMeeting('온보딩 개선 회의')
     })
 
     let completedMeeting
