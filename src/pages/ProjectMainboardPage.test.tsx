@@ -4,7 +4,7 @@ import type { ComponentProps } from 'react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import type { CompletedMeeting } from '../entities/meeting'
+import type { CompletedMeeting, OngoingMeeting } from '../entities/meeting'
 import type { ProjectSummary } from '../entities/project'
 import {
   MEETING_HISTORY_PROCESSING_MS,
@@ -36,6 +36,7 @@ function renderProjectMainboardPage(
     deleteProjectReference: vi.fn(),
     updateProject: vi.fn(),
     deleteProject: vi.fn(),
+    loadOngoingMeeting: () => Promise.resolve(null),
     ...props,
   }
 
@@ -46,6 +47,7 @@ function renderProjectMainboardPage(
         <Route element={<NavigationDestination />} path="/settings/help" />
         <Route element={<NavigationDestination />} path="/settings/policy" />
         <Route element={<NavigationDestination />} path="/meetings/:meetingId/tutorial" />
+        <Route element={<NavigationDestination />} path="/meetings/:meetingId/start" />
         <Route element={<NavigationDestination />} path="/meetings/:meetingRecordId/detail" />
       </Routes>
     </MemoryRouter>,
@@ -87,6 +89,12 @@ const previousMeeting: CompletedMeeting = {
   completedAt: new Date(2026, 6, 26, 12, 0).toISOString(),
 }
 
+const ongoingMeeting: OngoingMeeting = {
+  meetingId: '12',
+  meetingTitle: '진행 중 회의',
+  startedAt: new Date().toISOString(),
+}
+
 const sidebarUser = {
   email: 'honggildong@gmail.com',
   name: '홍길동',
@@ -109,6 +117,109 @@ describe('ProjectMainboardPage', () => {
     await browserUser.click(screen.getByRole('menuitem', { name: label }))
 
     expect(screen.getByText(new RegExp(`이동 완료 ${path}`))).toBeInTheDocument()
+  })
+
+  it('진행 중인 회의가 있으면 새 회의 시작 대신 참가 버튼을 보여 준다', async () => {
+    renderProjectMainboardPage({
+      loadProjects: () => Promise.resolve([projectOne]),
+      loadCompletedMeetings: () => Promise.resolve([completedMeeting]),
+      loadOngoingMeeting: () => Promise.resolve(ongoingMeeting),
+    })
+
+    expect(
+      await screen.findByRole('button', { name: '진행 중인 회의 참가하기' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '새 회의 시작' })).not.toBeInTheDocument()
+    // 진행 중 회의가 회의 기록 목록에 섞이면 안 된다.
+    expect(screen.queryByText('진행 중 회의')).not.toBeInTheDocument()
+  })
+
+  it('참가 버튼을 누르면 진행 중인 회의로 이동한다', async () => {
+    const user = userEvent.setup()
+    renderProjectMainboardPage({
+      loadProjects: () => Promise.resolve([projectOne]),
+      loadCompletedMeetings: () => Promise.resolve([]),
+      loadOngoingMeeting: () => Promise.resolve(ongoingMeeting),
+    })
+
+    await user.click(await screen.findByRole('button', { name: '진행 중인 회의 참가하기' }))
+
+    expect(await screen.findByText(/이동 완료 \/meetings\/12\/start/)).toBeInTheDocument()
+    expect(screen.getByText(/"projectTitle":"서비스 디자인"/)).toBeInTheDocument()
+  })
+
+  it('진행 중이던 회의가 끝나면 회의 기록도 다시 조회한다', async () => {
+    vi.useFakeTimers()
+    const loadCompletedMeetings = vi
+      .fn<() => Promise<CompletedMeeting[]>>()
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([completedMeeting])
+    const loadOngoingMeeting = vi
+      .fn<() => Promise<OngoingMeeting | null>>()
+      .mockResolvedValueOnce(ongoingMeeting)
+      .mockResolvedValue(null)
+
+    renderProjectMainboardPage({
+      loadProjects: () => Promise.resolve([projectOne]),
+      loadCompletedMeetings,
+      loadOngoingMeeting,
+    })
+
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    expect(screen.getByRole('button', { name: '진행 중인 회의 참가하기' })).toBeInTheDocument()
+    expect(loadCompletedMeetings).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15_000)
+    })
+
+    expect(screen.getByRole('button', { name: '새 회의 시작' })).toBeInTheDocument()
+    // 끝난 회의가 기록 목록에 나타나야 한다.
+    expect(loadCompletedMeetings).toHaveBeenCalledTimes(2)
+  })
+
+  it('늦게 도착한 이전 폴링 응답이 끝난 회의를 되살리지 않는다', async () => {
+    vi.useFakeTimers()
+    let resolveSlowRequest: ((meeting: OngoingMeeting | null) => void) | undefined
+    const loadOngoingMeeting = vi
+      .fn<() => Promise<OngoingMeeting | null>>()
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveSlowRequest = resolve
+          }),
+      )
+      .mockResolvedValue(null)
+
+    renderProjectMainboardPage({
+      loadProjects: () => Promise.resolve([projectOne]),
+      loadCompletedMeetings: () => Promise.resolve([]),
+      loadOngoingMeeting,
+    })
+
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    // 두 번째 요청이 먼저 끝난 뒤, 첫 요청이 진행 중 회의를 뒤늦게 들고 온다.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15_000)
+    })
+    await act(async () => {
+      resolveSlowRequest?.(ongoingMeeting)
+      await Promise.resolve()
+    })
+
+    expect(screen.getByRole('button', { name: '새 회의 시작' })).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: '진행 중인 회의 참가하기' }),
+    ).not.toBeInTheDocument()
   })
 
   it('loads the active project meeting history and opens the latest summary', async () => {

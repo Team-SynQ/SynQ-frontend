@@ -47,4 +47,5 @@ export type {
   MeetingHeaderActions,
   MeetingHeaderViewModel,
   LiveMeetingProjectContext,
+  OngoingMeeting,
 } from './model/meeting.types'
