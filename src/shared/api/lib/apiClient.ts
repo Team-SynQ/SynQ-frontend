@@ -1,7 +1,5 @@
 import type { ApiResponse } from '../contracts/meeting.contracts'
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.synqai.co.kr'
-
 /**
  * 회의·전사를 mock 대신 실제 백엔드에 붙일지 결정한다.
  * 프로젝트 API가 아직 mock이라 기본값은 mock이고, 실제 연동 확인이 필요할 때만 켠다.

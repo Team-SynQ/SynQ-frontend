@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { parseTranscriptionMessage, resolveTranscriptionUrl } from './meeting-transcription.gateway'
+import {
+  buildFallbackTranscriptionUrl,
+  parseTranscriptionMessage,
+  resolveTranscriptionUrl,
+} from './meeting-transcription.gateway'
 
 describe('parseTranscriptionMessage', () => {
   it('중간 인식은 interim으로 해석한다', () => {
@@ -88,5 +92,28 @@ describe('resolveTranscriptionUrl', () => {
     const url = resolveTranscriptionUrl(5, 'wss://api.example.com/ws/meetings/5/stt', null)
 
     expect(url).toBe('wss://api.example.com/ws/meetings/5/stt')
+  })
+})
+
+describe('buildFallbackTranscriptionUrl', () => {
+  it('절대 base URL은 프로토콜만 ws로 바꾼다', () => {
+    const url = buildFallbackTranscriptionUrl(9, 'https://api.example.com')
+
+    expect(url.toString()).toBe('wss://api.example.com/ws/meetings/9/stt')
+  })
+
+  it('개발 서버 프록시 경로여도 현재 출처를 기준으로 절대화한다', () => {
+    const url = buildFallbackTranscriptionUrl(9, '/api')
+
+    expect(url.host).toBe(window.location.host)
+    expect(url.pathname).toBe('/api/ws/meetings/9/stt')
+    expect(url.protocol).toBe(window.location.protocol === 'https:' ? 'wss:' : 'ws:')
+  })
+
+  it('base URL 끝 슬래시가 경로에 겹쳐 들어가지 않는다', () => {
+    expect(buildFallbackTranscriptionUrl(9, 'https://api.example.com/').toString()).toBe(
+      'wss://api.example.com/ws/meetings/9/stt',
+    )
+    expect(buildFallbackTranscriptionUrl(9, '/api/').pathname).toBe('/api/ws/meetings/9/stt')
   })
 })
