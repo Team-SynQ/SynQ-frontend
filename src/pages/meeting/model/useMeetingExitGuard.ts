@@ -31,8 +31,9 @@ export function useMeetingExitGuard({ enabled }: UseMeetingExitGuardOptions) {
     const warnBeforeUnload = (event: BeforeUnloadEvent) => {
       if (exitAllowedRef.current) return
       event.preventDefault()
-      // 일부 브라우저는 아직 returnValue로만 경고를 띄운다.
-      event.returnValue = ''
+      // Chrome·Edge 119 미만은 preventDefault를 무시하고 returnValue만 본다.
+      // 빈 문자열은 "경고 없음"이라 값이 있어야 한다.
+      event.returnValue = true
     }
 
     window.addEventListener('beforeunload', warnBeforeUnload)
