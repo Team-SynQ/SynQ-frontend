@@ -3,8 +3,6 @@ import type {
   FinalizeMeetingRecordRequest,
   MeetingListItemResponse,
 } from '../../../shared/api/contracts/meeting.contracts'
-import { USE_REAL_MEETING_API } from '../../../shared/api/lib/apiClient'
-import { meetingRecordMockGateway } from '../../../shared/api/mock/services/liveMeeting.mock'
 import { meetingService } from '../../../shared/api/services/meeting.service'
 
 export type MeetingRecordGateway = {
@@ -41,7 +39,7 @@ function toCompletedMeetingSummary(
 /** 제목 수정 응답에는 목록 필드가 없어서, 마지막 목록 조회 결과에 제목만 덮어써 돌려준다. */
 const summariesByRecordId = new Map<string, CompletedMeetingSummary>()
 
-export const meetingRecordRealGateway: MeetingRecordGateway = {
+export const meetingRecordGateway: MeetingRecordGateway = {
   // 종료 요청에 이미 기록에 필요한 정보가 다 있어서 서버 재조회 없이 기록 모델을 만든다.
   async finalizeEndedMeeting(request) {
     return {
@@ -97,11 +95,3 @@ export const meetingRecordRealGateway: MeetingRecordGateway = {
     summariesByRecordId.delete(recordId)
   },
 }
-
-/**
- * `VITE_USE_REAL_MEETING_API=true`이면 실제 백엔드에 붙는다.
- * 테스트에서는 항상 mock을 쓴다. (meeting-lifecycle.api와 같은 게이팅)
- */
-export const meetingRecordGateway: MeetingRecordGateway = USE_REAL_MEETING_API
-  ? meetingRecordRealGateway
-  : meetingRecordMockGateway

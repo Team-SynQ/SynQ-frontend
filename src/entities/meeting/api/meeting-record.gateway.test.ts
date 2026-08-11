@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { meetingService } from '../../../shared/api/services/meeting.service'
-import { meetingRecordRealGateway } from './meeting-record.gateway'
+import { meetingRecordGateway } from './meeting-record.gateway'
 
 const meetingListFixture = [
   {
@@ -28,11 +28,11 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-describe('meetingRecordRealGateway', () => {
+describe('meetingRecordGateway', () => {
   it('maps the meeting list to completed records and skips in-progress meetings', async () => {
     vi.spyOn(meetingService, 'listMeetings').mockResolvedValue(meetingListFixture)
 
-    const records = await meetingRecordRealGateway.listCompletedMeetings('7')
+    const records = await meetingRecordGateway.listCompletedMeetings('7')
 
     expect(meetingService.listMeetings).toHaveBeenCalledWith(7)
     expect(records).toHaveLength(1)
@@ -55,8 +55,8 @@ describe('meetingRecordRealGateway', () => {
       userModified: true,
     })
 
-    await meetingRecordRealGateway.listCompletedMeetings('7')
-    const updated = await meetingRecordRealGateway.updateCompletedMeetingTitle('11', '변경된 제목')
+    await meetingRecordGateway.listCompletedMeetings('7')
+    const updated = await meetingRecordGateway.updateCompletedMeetingTitle('11', '변경된 제목')
 
     expect(meetingService.updateMeetingTitle).toHaveBeenCalledWith(11, '변경된 제목')
     expect(updated.meetingTitle).toBe('변경된 제목')
@@ -67,13 +67,13 @@ describe('meetingRecordRealGateway', () => {
   it('deletes a meeting record through the API', async () => {
     const deleteMeeting = vi.spyOn(meetingService, 'deleteMeeting').mockResolvedValue(undefined)
 
-    await meetingRecordRealGateway.deleteCompletedMeeting('11')
+    await meetingRecordGateway.deleteCompletedMeeting('11')
 
     expect(deleteMeeting).toHaveBeenCalledWith(11)
   })
 
   it('builds the finalized record from the end request without a server round trip', async () => {
-    const record = await meetingRecordRealGateway.finalizeEndedMeeting({
+    const record = await meetingRecordGateway.finalizeEndedMeeting({
       meetingId: '21',
       projectId: '7',
       projectTitle: '회의 보조 AI, 씽큐',

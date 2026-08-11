@@ -3,11 +3,13 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import App from '../../App'
+import { meetingLifecycleApi, meetingTranscriptionGateway } from '../../entities/meeting'
 import { projectApi } from '../../entities/project'
 import { userApi } from '../../entities/user'
 import * as meetingMockService from '../../shared/api/mock/services/meeting.mock'
 import { projectMockActorFixture } from '../../shared/api/mock/fixtures/projects.fixture'
 import { authService } from '../../shared/api/services/auth.service'
+import { transcriptService } from '../../shared/api/services/transcript.service'
 import { userService } from '../../shared/api/services/user.service'
 
 async function renderAppAt(path: string) {
@@ -29,6 +31,25 @@ beforeEach(() => {
   })
   vi.spyOn(userApi, 'getMyRoleProfiles').mockResolvedValue([])
   vi.spyOn(projectApi, 'listProjects').mockResolvedValue([])
+
+  // 회의 진행 화면은 실제 API를 쓴다. 라우팅만 확인하므로 전송 계층은 막아 둔다.
+  vi.spyOn(meetingTranscriptionGateway, 'connect').mockImplementation((options) => {
+    void Promise.resolve().then(() => options.onStatus('connected'))
+    return { close: () => {}, sendAudio: () => {} }
+  })
+  vi.spyOn(meetingLifecycleApi, 'joinMeeting').mockImplementation(async (meetingId) => ({
+    meetingId,
+    title: '2차 대면회의',
+    status: 'IN_PROGRESS',
+    role: 'HOST',
+    joinedAt: '2026-08-05T00:00:00.000Z',
+    startedAt: '2026-08-05T00:00:00.000Z',
+    wsUrl: 'wss://api.example.com/ws/meetings/1/stt',
+  }))
+  vi.spyOn(transcriptService, 'listSegments').mockImplementation(async (meetingId) => ({
+    meetingId,
+    segments: [],
+  }))
 })
 
 afterEach(() => {

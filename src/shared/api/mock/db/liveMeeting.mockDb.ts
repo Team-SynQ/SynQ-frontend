@@ -3,7 +3,6 @@ import type {
   LiveMeetingResponse,
   MeetingAiChatMessageResponse,
   TranscriptHintResponse,
-  TranscriptSegmentResponse,
 } from '../../contracts/meeting.contracts'
 import {
   createLiveMeetingScenarios,
@@ -21,10 +20,6 @@ let completedMeetingSequence = 0
 
 function cloneMeeting(meeting: LiveMeetingResponse): LiveMeetingResponse {
   return structuredClone(meeting)
-}
-
-function cloneSegment(segment: TranscriptSegmentResponse): TranscriptSegmentResponse {
-  return { ...segment }
 }
 
 function requireRecord(meetingId: string): LiveMeetingRecord | undefined {
@@ -96,35 +91,17 @@ export const liveMeetingMockDb = {
     }
   },
 
-  listTranscripts(meetingId: string): TranscriptSegmentResponse[] | undefined {
-    return requireRecord(meetingId)
-      ?.meeting.transcript.segments.map(cloneSegment)
-      .sort(
-        (left, right) =>
-          left.startedAtSeconds - right.startedAtSeconds ||
-          left.sequenceIndex - right.sequenceIndex,
-      )
-  },
-
-  updateTranscript(
-    meetingId: string,
-    segmentId: string,
-    text: string,
-    editedAt: string,
-  ): TranscriptSegmentResponse | undefined {
-    const segment = requireRecord(meetingId)?.meeting.transcript.segments.find(
-      (candidate) => candidate.id === segmentId,
-    )
-    if (!segment) return undefined
-
-    segment.text = text
-    segment.isEdited = true
-    segment.editedAt = editedAt
-    return cloneSegment(segment)
-  },
-
   getHint(meetingId: string, transcriptId: string): TranscriptHintResponse | undefined {
     const hint = requireRecord(meetingId)?.hints[transcriptId]
+    return hint ? { ...hint } : undefined
+  },
+
+  /**
+   * 실제 회의의 전사 id는 mock 힌트 목록에 없다. 화면을 비우지 않도록 대표 힌트를 돌려준다.
+   * 실제 힌트 API가 붙으면 이 경로는 사라진다.
+   */
+  getFallbackHint(meetingId: string): TranscriptHintResponse | undefined {
+    const hint = Object.values(requireRecord(meetingId)?.hints ?? {})[0]
     return hint ? { ...hint } : undefined
   },
 
