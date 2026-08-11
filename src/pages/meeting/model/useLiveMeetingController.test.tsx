@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   meetingAiMockGateway,
+  meetingHintApi,
   meetingLifecycleApi,
   meetingRecordGateway,
   meetingTranscriptionGateway,
@@ -90,6 +91,7 @@ describe('useLiveMeetingController async boundaries', () => {
       status: 'COMPLETED',
       endedAt: '2026-08-05T01:00:00.000Z',
     }))
+    vi.spyOn(meetingHintApi, 'listHintRecords').mockResolvedValue([])
     vi.spyOn(transcriptService, 'listSegments').mockResolvedValue(listResult)
     vi.spyOn(transcriptService, 'updateSegment').mockImplementation(
       async (meetingId, segmentId, content) => ({
@@ -286,7 +288,7 @@ describe('useLiveMeetingController async boundaries', () => {
 
   it('keeps a hint collapsed when an in-flight response arrives later', async () => {
     const hintRequest = deferred<TranscriptHintResponse>()
-    vi.spyOn(meetingAiMockGateway, 'getTranscriptHint').mockReturnValue(hintRequest.promise)
+    vi.spyOn(meetingHintApi, 'createSegmentHint').mockReturnValue(hintRequest.promise)
     const { result } = await renderReadyController()
 
     act(() => {
@@ -305,7 +307,6 @@ describe('useLiveMeetingController async boundaries', () => {
       result.current.transcript.actions.onCollapseHint?.(FIRST_SEGMENT_ID)
       hintRequest.resolve({
         transcriptId: FIRST_SEGMENT_ID,
-        notice: null,
         meaning: '늦게 도착한 의미',
         personalImpact: '늦게 도착한 영향',
         teamQuestion: '늦게 도착한 질문',
@@ -320,15 +321,62 @@ describe('useLiveMeetingController async boundaries', () => {
     })
   })
 
+  // 새로고침 후 같은 전사를 눌렀을 때 서버에 다시 생성 요청을 보내지 않아야 한다.
+  it('입장 시 받은 힌트 기록으로 캐시를 채운다', async () => {
+    const stored: TranscriptHintResponse = {
+      transcriptId: FIRST_SEGMENT_ID,
+      meaning: '기록된 의미',
+      personalImpact: '기록된 영향',
+      teamQuestion: '기록된 질문',
+    }
+    vi.spyOn(meetingHintApi, 'listHintRecords').mockResolvedValue([stored])
+    const createSegmentHint = vi.spyOn(meetingHintApi, 'createSegmentHint')
+    const { result } = await renderReadyController()
+
+    act(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      result.current.transcript.actions.onSelectSegment?.(FIRST_SEGMENT_ID)
+    })
+
+    await waitFor(() => {
+      if (result.current.status !== 'ready' || result.current.transcript.state.kind !== 'active') {
+        throw new Error('transcript is not active')
+      }
+      expect(result.current.transcript.state.hintState).toEqual({
+        status: 'ready',
+        transcriptId: FIRST_SEGMENT_ID,
+        hint: stored,
+      })
+    })
+    expect(createSegmentHint).not.toHaveBeenCalled()
+  })
+
+  it('힌트 기록 조회가 실패해도 화면은 뜨고 선택 시 생성 요청을 보낸다', async () => {
+    vi.spyOn(meetingHintApi, 'listHintRecords').mockRejectedValue(new Error('HINT_RECORDS_FAILED'))
+    const createSegmentHint = vi.spyOn(meetingHintApi, 'createSegmentHint').mockResolvedValue({
+      transcriptId: FIRST_SEGMENT_ID,
+      meaning: '의미',
+      personalImpact: '영향',
+      teamQuestion: '질문',
+    })
+    const { result } = await renderReadyController()
+
+    act(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      result.current.transcript.actions.onSelectSegment?.(FIRST_SEGMENT_ID)
+    })
+
+    await waitFor(() => expect(createSegmentHint).toHaveBeenCalledWith(1, FIRST_SEGMENT_ID))
+  })
+
   it('restores a collapsed successful hint from cache without another request', async () => {
     const hint: TranscriptHintResponse = {
       transcriptId: FIRST_SEGMENT_ID,
-      notice: null,
       meaning: '캐시된 의미',
       personalImpact: '캐시된 영향',
       teamQuestion: '캐시된 질문',
     }
-    const hintSpy = vi.spyOn(meetingAiMockGateway, 'getTranscriptHint').mockResolvedValue(hint)
+    const hintSpy = vi.spyOn(meetingHintApi, 'createSegmentHint').mockResolvedValue(hint)
     const { result } = await renderReadyController()
 
     act(() => {
@@ -393,20 +441,18 @@ describe('useLiveMeetingController async boundaries', () => {
   it('reloads the hint after the selected transcript is edited', async () => {
     const previousHint: TranscriptHintResponse = {
       transcriptId: FIRST_SEGMENT_ID,
-      notice: null,
       meaning: '수정 전 의미',
       personalImpact: '수정 전 영향',
       teamQuestion: '수정 전 질문',
     }
     const updatedHint: TranscriptHintResponse = {
       transcriptId: FIRST_SEGMENT_ID,
-      notice: null,
       meaning: '수정 후 의미',
       personalImpact: '수정 후 영향',
       teamQuestion: '수정 후 질문',
     }
     const hintSpy = vi
-      .spyOn(meetingAiMockGateway, 'getTranscriptHint')
+      .spyOn(meetingHintApi, 'createSegmentHint')
       .mockResolvedValueOnce(previousHint)
       .mockResolvedValueOnce(updatedHint)
     const { result } = await renderReadyController()

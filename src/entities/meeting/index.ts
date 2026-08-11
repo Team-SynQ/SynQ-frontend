@@ -11,6 +11,9 @@ export { meetingConnectionGateway } from './api/meeting-connection.gateway'
 export type { MeetingConnectionGateway } from './api/meeting-connection.gateway'
 export { meetingAiMockGateway } from './api/meeting-ai.mock-gateway'
 export type { MeetingAiMockGateway } from './api/meeting-ai.mock-gateway'
+export { meetingHintApi } from './api/meeting-hint.api'
+export type { MeetingHintApi } from './api/meeting-hint.api'
+export { toTranscriptHint, toTranscriptHintRecord } from './api/hint.adapter'
 export { toTranscriptSegment, toTranscriptSegments } from './api/transcript.adapter'
 export {
   meetingTranscriptionGateway,

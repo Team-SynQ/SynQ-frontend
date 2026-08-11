@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   meetingConnectionGateway,
+  meetingHintApi,
   meetingLifecycleApi,
   meetingRecordGateway,
   meetingTranscriptionGateway,
@@ -89,6 +90,7 @@ describe('MeetingPage controls', () => {
       status: 'COMPLETED',
       endedAt: '2026-08-05T01:00:00.000Z',
     }))
+    vi.spyOn(meetingHintApi, 'listHintRecords').mockResolvedValue([])
     vi.spyOn(transcriptService, 'listSegments').mockImplementation(async (meetingId) =>
       transcriptListResult(meetingId),
     )
@@ -360,6 +362,14 @@ describe('MeetingPage controls', () => {
   })
 
   it('retries a failed SynQ hint request', async () => {
+    vi.spyOn(meetingHintApi, 'createSegmentHint')
+      .mockRejectedValueOnce(new Error('SynQ 힌트를 불러오지 못했습니다.'))
+      .mockResolvedValueOnce({
+        transcriptId: '1',
+        meaning: '온보딩 개선이 이번 분기 핵심 우선순위라는 뜻입니다.',
+        personalImpact: '일정과 리소스 배분에 영향이 있을 수 있습니다.',
+        teamQuestion: '온보딩 개선의 완료 기준은 무엇인가요?',
+      })
     const user = userEvent.setup()
     await renderMeetingPage('/meetings/2/live')
 

@@ -1,4 +1,4 @@
-import type { LiveMeetingResponse, TranscriptHintResponse } from '../../contracts/meeting.contracts'
+import type { LiveMeetingResponse } from '../../contracts/meeting.contracts'
 
 export const liveMeetingFixture = {
   meetingId: 'demo',
@@ -81,16 +81,6 @@ export const liveMeetingFixture = {
     ],
   },
 } as const satisfies LiveMeetingResponse
-
-export const liveMeetingHintFixture = {
-  'segment-1': {
-    transcriptId: 'segment-1',
-    notice: null,
-    meaning: '온보딩 개선이 이번 분기 핵심 우선순위라는 뜻입니다.',
-    personalImpact: '일정과 리소스 배분에 영향이 있을 수 있습니다.',
-    teamQuestion: '온보딩 개선의 완료 기준은 무엇인가요?',
-  },
-} as const satisfies Record<string, TranscriptHintResponse>
 
 export const liveMeetingAiAnswerFixture =
   '선택한 전사와 프로젝트 맥락을 기준으로 보면, 온보딩 개선의 우선순위와 완료 기준을 먼저 합의하는 것이 좋습니다.'

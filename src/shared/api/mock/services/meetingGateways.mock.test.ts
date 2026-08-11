@@ -24,24 +24,24 @@ describe('live meeting Mock gateways', () => {
     })
   })
 
-  // 실제 전사 id는 mock 힌트 목록에 없다. 힌트 API가 붙기 전까지 화면이 비지 않아야 한다.
-  it('알 수 없는 전사 id에도 요청한 id로 대표 힌트를 돌려준다', async () => {
-    const hint = await liveMeetingAiMockGateway.getTranscriptHint({
+  it('AI 질문에 답변을 돌려주고 대화에 남긴다', async () => {
+    const answer = await liveMeetingAiMockGateway.sendMeetingAiQuestion({
       meetingId: '1',
-      transcriptId: '4821',
+      question: '이번 결정의 기준은 무엇인가요?',
+      context: null,
     })
 
-    expect(hint.transcriptId).toBe('4821')
-    expect(hint.meaning).toBeTruthy()
+    expect(answer.role).toBe('assistant')
+    expect(answer.content).toBeTruthy()
   })
 
-  it('실패 시나리오에서는 먼저 실패하고 재시도에서 힌트를 준다', async () => {
+  it('빈 질문은 거절한다', async () => {
     await expect(
-      liveMeetingAiMockGateway.getTranscriptHint({ meetingId: '2', transcriptId: '4821' }),
-    ).rejects.toMatchObject({ code: 'TRANSCRIPT_HINT_LOAD_FAILED' })
-
-    await expect(
-      liveMeetingAiMockGateway.getTranscriptHint({ meetingId: '2', transcriptId: '4821' }),
-    ).resolves.toMatchObject({ transcriptId: '4821' })
+      liveMeetingAiMockGateway.sendMeetingAiQuestion({
+        meetingId: '1',
+        question: '   ',
+        context: null,
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_AI_QUESTION' })
   })
 })
