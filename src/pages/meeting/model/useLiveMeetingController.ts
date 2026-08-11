@@ -4,6 +4,7 @@ import {
   liveMeetingSnapshotGateway,
   meetingAiMockGateway,
   meetingConnectionGateway,
+  meetingHintApi,
   meetingLifecycleApi,
   meetingRecordGateway,
   type CompletedMeeting,
@@ -53,11 +54,6 @@ type LiveMeetingController =
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error && error.message ? error.message : fallback
-}
-
-function getErrorCode(error: unknown) {
-  if (typeof error !== 'object' || error === null || !('code' in error)) return null
-  return typeof error.code === 'string' ? error.code : null
 }
 
 export function useLiveMeetingController(meetingId: string): LiveMeetingController {
@@ -121,6 +117,8 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
     meetingSessionRef.current = { meetingId, sequence: requestSessionSequence }
 
     hintRequestSequenceRef.current += 1
+    // 기록 조회와 입장 응답이 경쟁하므로, 캐시 비우기는 두 요청보다 먼저 끝내 둔다.
+    hintCacheRef.current.clear()
 
     if (!hasValidMeetingId) {
       return () => {
@@ -156,7 +154,6 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
         setSendError(null)
         setAiChatDisplayMode('docked')
         endedMeetingRef.current = null
-        hintCacheRef.current.clear()
         setMessages(
           response.aiChat.messages.map(({ id, role, content }) => ({
             id,
@@ -172,6 +169,18 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
           message: getErrorMessage(error, '회의 정보를 불러오지 못했습니다.'),
         })
       })
+
+    // 이미 생성된 힌트를 캐시에 채운다. 새로고침 후 같은 전사를 눌러도 다시 생성하지 않는다.
+    // 실패해도 화면을 막지 않는다. 선택 시점에 생성 요청이 다시 나간다.
+    void meetingHintApi
+      .listHintRecords(apiMeetingId)
+      .then((records) => {
+        if (!active || !isCurrentMeetingSession(meetingId, requestSessionSequence)) return
+        for (const record of records) {
+          hintCacheRef.current.set(record.transcriptId, record)
+        }
+      })
+      .catch(() => {})
 
     return () => {
       active = false
@@ -192,7 +201,7 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
       setHintState({ status: 'loading', transcriptId })
 
       try {
-        const hint = await meetingAiMockGateway.getTranscriptHint({ meetingId, transcriptId })
+        const hint = await meetingHintApi.createSegmentHint(apiMeetingId, transcriptId)
         if (
           requestSequence !== hintRequestSequenceRef.current ||
           !isCurrentMeetingSession(requestMeetingId, requestSessionSequence)
@@ -210,10 +219,6 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
           return
         }
 
-        if (getErrorCode(error) === 'TRANSCRIPT_HINT_NOT_FOUND') {
-          setHintState({ status: 'idle' })
-          return
-        }
         setHintState({
           status: 'error',
           transcriptId,
@@ -221,7 +226,7 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
         })
       }
     },
-    [isCurrentMeetingSession, meetingId],
+    [apiMeetingId, isCurrentMeetingSession, meetingId],
   )
 
   if (!hasValidMeetingId) {
@@ -266,6 +271,15 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
     if (editState.status === 'editing') return
 
     setSelectedSegmentId(segmentId)
+
+    // 중간 인식 문장은 서버에 저장되기 전이라 힌트를 만들 수 없다. 선택만 허용한다.
+    // 진행 중이던 다른 전사의 힌트 응답이 뒤늦게 도착해 열리지 않도록 순번도 올린다.
+    if (segmentId === INTERIM_SEGMENT_ID) {
+      hintRequestSequenceRef.current += 1
+      setHintState({ status: 'idle' })
+      return
+    }
+
     void loadHint(segmentId, true)
   }
 

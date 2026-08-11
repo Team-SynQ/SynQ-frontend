@@ -72,7 +72,6 @@ export type TranscriptSegmentResponse = {
 
 export type TranscriptHintResponse = {
   transcriptId: string
-  notice: string | null
   meaning: string
   personalImpact: string
   teamQuestion: string
