@@ -1,5 +1,6 @@
 import type { TranscriptSegmentResponse } from '../../../shared/api/contracts/meeting.contracts'
-import { API_BASE_URL, getAccessToken } from '../../../shared/api/lib/apiClient'
+import { API_BASE_URL } from '../../../shared/api/apiBaseUrl'
+import { getAccessToken } from '../../../shared/api/lib/apiClient'
 
 export type TranscriptionChannelStatus = 'connecting' | 'connected' | 'closed' | 'error'
 
@@ -24,10 +25,31 @@ export type ConnectTranscriptionOptions = {
 }
 
 /**
+ * 스킴을 WebSocket 계열로 맞춘다.
+ * HTTPS 페이지에서 ws:// 는 브라우저가 차단하므로 이때는 항상 wss:// 로 올린다.
+ */
+function normalizeWebSocketProtocol(url: URL): void {
+  const isSecure = url.protocol === 'https:' || url.protocol === 'wss:'
+  url.protocol = isSecure || window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+}
+
+/**
+ * 서버가 wsUrl을 주지 않았을 때 API base URL에서 연결 주소를 유추한다.
+ *
+ * base URL은 개발 서버 프록시 경로(`/api`)일 수 있어 절대 주소라고 가정하면 안 된다.
+ * 현재 출처를 기준으로 붙여 절대화한 뒤 스킴을 맞춘다.
+ */
+export function buildFallbackTranscriptionUrl(meetingId: number, baseUrl = API_BASE_URL): URL {
+  const url = new URL(`${baseUrl}/ws/meetings/${meetingId}/stt`, window.location.origin)
+  normalizeWebSocketProtocol(url)
+  return url
+}
+
+/**
  * 연결 주소를 확정한다.
  *
  * 서버가 준 wsUrl을 우선 쓰되 두 가지를 보정한다.
- * - HTTPS 페이지에서 ws:// 는 브라우저가 차단하므로 wss:// 로 올린다.
+ * - 스킴을 ws/wss로 맞춘다. 서버가 상대 경로나 http(s)를 줘도 연결되게 한다.
  * - 인증은 헤더를 넣을 수 없어 쿼리 파라미터 token으로 싣는다.
  */
 export function resolveTranscriptionUrl(
@@ -35,12 +57,11 @@ export function resolveTranscriptionUrl(
   wsUrl?: string | null,
   token?: string | null,
 ): string {
-  const fallback = `${API_BASE_URL.replace(/^http/, 'ws')}/ws/meetings/${meetingId}/stt`
-  const url = new URL(wsUrl?.trim() ? wsUrl : fallback)
+  const url = wsUrl?.trim()
+    ? new URL(wsUrl, window.location.origin)
+    : buildFallbackTranscriptionUrl(meetingId)
 
-  if (url.protocol === 'ws:' && window.location.protocol === 'https:') {
-    url.protocol = 'wss:'
-  }
+  normalizeWebSocketProtocol(url)
   if (token) {
     url.searchParams.set('token', token)
   }

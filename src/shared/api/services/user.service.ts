@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://synq-api.duckdns.org'
+import { API_BASE_URL } from '../apiBaseUrl'
 
 export interface UserMeResult {
   userId: number

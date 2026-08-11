@@ -6,7 +6,8 @@ import type {
   MeetingListItemResponse,
   MeetingTitleUpdateResponse,
 } from '../contracts/meeting.contracts'
-import { API_BASE_URL, createAuthHeaders, readApiResult } from '../lib/apiClient'
+import { API_BASE_URL } from '../apiBaseUrl'
+import { createAuthHeaders, readApiResult } from '../lib/apiClient'
 
 export const meetingService = {
   createMeeting: async (

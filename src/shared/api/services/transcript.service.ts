@@ -2,7 +2,8 @@ import type {
   ListTranscriptSegmentsResult,
   UpdateTranscriptSegmentResult,
 } from '../contracts/transcript.contracts'
-import { API_BASE_URL, createAuthHeaders, readApiResult } from '../lib/apiClient'
+import { API_BASE_URL } from '../apiBaseUrl'
+import { createAuthHeaders, readApiResult } from '../lib/apiClient'
 
 export const transcriptService = {
   /**
