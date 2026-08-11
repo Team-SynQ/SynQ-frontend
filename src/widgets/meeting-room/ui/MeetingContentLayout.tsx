@@ -47,11 +47,19 @@ export function MeetingContentLayout({
   const [aiChatWidth, setAiChatWidth] = useState(readAiChatPanelWidth)
   const [maxAiChatWidth, setMaxAiChatWidth] = useState(0)
 
+  /**
+   * 저장 시점에 쓸 최신 폭. 상태는 다음 렌더에 반영되므로, 같은 이벤트 안에서
+   * 조절하고 곧바로 저장하는 키보드 경로가 한 단계 이전 값을 쓰게 된다.
+   */
+  const latestAiChatWidthRef = useRef(aiChatWidth)
+
   // 컨테이너 폭은 렌더 중에 읽지 않는다. 조절 시점과 창 크기 변경 시점에만 잰다.
   const resizeAiChat = (nextWidth: number) => {
     const containerWidth = contentRef.current?.clientWidth ?? 0
+    const clamped = clampAiChatWidth(nextWidth, containerWidth)
+    latestAiChatWidthRef.current = clamped
     setMaxAiChatWidth(Math.max(containerWidth - TRANSCRIPT_MIN_WIDTH, 0))
-    setAiChatWidth(clampAiChatWidth(nextWidth, containerWidth))
+    setAiChatWidth(clamped)
   }
 
   useEffect(() => {
@@ -59,7 +67,11 @@ export function MeetingContentLayout({
     const syncWidth = () => {
       const containerWidth = contentRef.current?.clientWidth ?? 0
       setMaxAiChatWidth(Math.max(containerWidth - TRANSCRIPT_MIN_WIDTH, 0))
-      setAiChatWidth((current) => clampAiChatWidth(current, containerWidth))
+      setAiChatWidth((current) => {
+        const clamped = clampAiChatWidth(current, containerWidth)
+        latestAiChatWidthRef.current = clamped
+        return clamped
+      })
     }
 
     // effect 본문에서 setState를 직접 부르지 않는다. 저장소의 회피 패턴을 따른다.
@@ -106,7 +118,7 @@ export function MeetingContentLayout({
         <AiChatResizeHandle
           maxWidth={maxAiChatWidth}
           onResize={resizeAiChat}
-          onResizeEnd={() => writeAiChatPanelWidth(aiChatWidth)}
+          onResizeEnd={() => writeAiChatPanelWidth(latestAiChatWidthRef.current)}
           width={aiChatWidth}
         />
       ) : null}

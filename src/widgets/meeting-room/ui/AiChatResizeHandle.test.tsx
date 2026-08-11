@@ -32,6 +32,14 @@ describe('AiChatResizeHandle', () => {
     expect(handle).toHaveAttribute('aria-valuemax', '900')
   })
 
+  // 컨테이너를 재기 전에는 상한이 0이다. 하한보다 작은 범위를 노출하면 안 된다.
+  it('상한이 하한보다 작아도 범위를 뒤집지 않는다', () => {
+    const { handle } = renderHandle({ maxWidth: 0 })
+
+    expect(handle).toHaveAttribute('aria-valuemax', '360')
+    expect(handle).toHaveAttribute('aria-valuemin', '360')
+  })
+
   // 오른쪽이 AI Chat이므로 왼쪽으로 끌면 넓어진다.
   it('왼쪽으로 끌면 AI Chat이 넓어진다', () => {
     const { handle, onResize } = renderHandle()

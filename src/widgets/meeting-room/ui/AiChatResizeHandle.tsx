@@ -47,7 +47,8 @@ export function AiChatResizeHandle({
     <div
       aria-label="AI Chat 영역 크기 조절"
       aria-orientation="vertical"
-      aria-valuemax={maxWidth}
+      // 컨테이너를 아직 못 쟀거나 창이 좁으면 상한이 하한보다 작아진다. 뒤집힌 범위를 노출하지 않는다.
+      aria-valuemax={Math.max(maxWidth, AI_CHAT_MIN_WIDTH)}
       aria-valuemin={AI_CHAT_MIN_WIDTH}
       aria-valuenow={width}
       className="group relative z-10 -mr-[3px] w-[6px] cursor-col-resize touch-none focus-visible:outline-none"
