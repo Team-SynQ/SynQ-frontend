@@ -1,12 +1,5 @@
 export type MeetingAvatarKey = 'you' | 'design' | 'pm' | 'server'
 
-export type ApiResponse<T> = {
-  isSuccess: boolean
-  code: string
-  message: string
-  result: T
-}
-
 export type MeetingCreateRequest = {
   consentAgreed: boolean
 }

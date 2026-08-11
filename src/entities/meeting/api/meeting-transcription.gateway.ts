@@ -1,6 +1,6 @@
 import type { TranscriptSegmentResponse } from '../../../shared/api/contracts/meeting.contracts'
 import { API_BASE_URL } from '../../../shared/api/apiBaseUrl'
-import { getAccessToken } from '../../../shared/api/lib/apiClient'
+import { readAccessToken } from '../../../shared/lib/authStorage'
 
 export type TranscriptionChannelStatus = 'connecting' | 'connected' | 'closed' | 'error'
 
@@ -122,7 +122,7 @@ export type MeetingTranscriptionGateway = {
 export const meetingTranscriptionGateway: MeetingTranscriptionGateway = {
   connect({ meetingId, wsUrl, token, onMessage, onStatus }) {
     const socket = new WebSocket(
-      resolveTranscriptionUrl(meetingId, wsUrl, token ?? getAccessToken()),
+      resolveTranscriptionUrl(meetingId, wsUrl, token ?? readAccessToken()),
     )
     socket.binaryType = 'arraybuffer'
     onStatus('connecting')

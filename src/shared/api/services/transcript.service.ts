@@ -1,9 +1,10 @@
+import { axiosInstance } from '../axiosInstance'
+import type { ApiResponse } from '../contracts/api.contracts'
 import type {
   ListTranscriptSegmentsResult,
   UpdateTranscriptSegmentResult,
 } from '../contracts/transcript.contracts'
-import { API_BASE_URL } from '../apiBaseUrl'
-import { createAuthHeaders, readApiResult } from '../lib/apiClient'
+import { unwrapApiResult } from '../unwrapApiResult'
 
 export const transcriptService = {
   /**
@@ -14,21 +15,17 @@ export const transcriptService = {
     meetingId: number,
     afterSequenceIndex?: number | null,
   ): Promise<ListTranscriptSegmentsResult> => {
-    const query =
-      afterSequenceIndex === undefined || afterSequenceIndex === null
-        ? ''
-        : `?afterSequenceIndex=${afterSequenceIndex}`
-    const response = await fetch(
-      `${API_BASE_URL}/meetings/${meetingId}/transcript-segments${query}`,
+    const response = await axiosInstance.get<ApiResponse<ListTranscriptSegmentsResult>>(
+      `/meetings/${meetingId}/transcript-segments`,
       {
-        method: 'GET',
-        headers: createAuthHeaders(),
+        // 0도 유효한 값이라 null·undefined일 때만 파라미터를 뺀다.
+        params:
+          afterSequenceIndex === undefined || afterSequenceIndex === null
+            ? undefined
+            : { afterSequenceIndex },
       },
     )
-    return readApiResult<ListTranscriptSegmentsResult>(
-      response,
-      '전사 세그먼트를 불러오지 못했습니다.',
-    )
+    return unwrapApiResult(response, '전사 세그먼트를 불러오지 못했습니다.')
   },
 
   updateSegment: async (
@@ -36,17 +33,10 @@ export const transcriptService = {
     segmentId: number,
     content: string,
   ): Promise<UpdateTranscriptSegmentResult> => {
-    const response = await fetch(
-      `${API_BASE_URL}/meetings/${meetingId}/transcript-segments/${segmentId}`,
-      {
-        method: 'PATCH',
-        headers: createAuthHeaders(),
-        body: JSON.stringify({ content }),
-      },
+    const response = await axiosInstance.patch<ApiResponse<UpdateTranscriptSegmentResult>>(
+      `/meetings/${meetingId}/transcript-segments/${segmentId}`,
+      { content },
     )
-    return readApiResult<UpdateTranscriptSegmentResult>(
-      response,
-      '전사 내용을 수정하지 못했습니다.',
-    )
+    return unwrapApiResult(response, '전사 내용을 수정하지 못했습니다.')
   },
 }
