@@ -38,9 +38,11 @@ function normalizeWebSocketProtocol(url: URL): void {
  *
  * base URL은 개발 서버 프록시 경로(`/api`)일 수 있어 절대 주소라고 가정하면 안 된다.
  * 현재 출처를 기준으로 붙여 절대화한 뒤 스킴을 맞춘다.
+ * 끝 슬래시는 `API_BASE_URL`이 이미 벗기지만, 인자로 직접 받는 경우를 위해 한 번 더 막는다.
  */
 export function buildFallbackTranscriptionUrl(meetingId: number, baseUrl = API_BASE_URL): URL {
-  const url = new URL(`${baseUrl}/ws/meetings/${meetingId}/stt`, window.location.origin)
+  const path = `${baseUrl.replace(/\/+$/, '')}/ws/meetings/${meetingId}/stt`
+  const url = new URL(path, window.location.origin)
   normalizeWebSocketProtocol(url)
   return url
 }

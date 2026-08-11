@@ -109,4 +109,11 @@ describe('buildFallbackTranscriptionUrl', () => {
     expect(url.pathname).toBe('/api/ws/meetings/9/stt')
     expect(url.protocol).toBe(window.location.protocol === 'https:' ? 'wss:' : 'ws:')
   })
+
+  it('base URL 끝 슬래시가 경로에 겹쳐 들어가지 않는다', () => {
+    expect(buildFallbackTranscriptionUrl(9, 'https://api.example.com/').toString()).toBe(
+      'wss://api.example.com/ws/meetings/9/stt',
+    )
+    expect(buildFallbackTranscriptionUrl(9, '/api/').pathname).toBe('/api/ws/meetings/9/stt')
+  })
 })
