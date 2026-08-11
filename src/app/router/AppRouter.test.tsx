@@ -190,6 +190,49 @@ describe('AppRouter', () => {
     await waitFor(() => expect(window.location.pathname).toBe('/projects'))
   })
 
+  it('신규 가입자가 온보딩을 마치면 보관해 둔 초대 화면으로 돌아간다', async () => {
+    vi.spyOn(userService, 'createRoleProfile').mockResolvedValue({
+      isSuccess: true,
+      code: 'COMMON201',
+      message: '성공적으로 응답이 생성되었습니다.',
+      result: {
+        id: 1,
+        isDefault: false,
+        role: '개발/기술',
+        detailRole: '개발/기술',
+        perspectives: ['일정'],
+      },
+    })
+    vi.spyOn(projectApi, 'getProjectInvitationInfo').mockResolvedValue({
+      projectId: 1,
+      title: '서비스 디자인',
+      description: null,
+      currentMemberCount: 2,
+      maxMemberCount: 6,
+      alreadyJoined: false,
+      expiresAt: '2026-08-20T00:00:00.000Z',
+    })
+    // 로그인 콜백이 온보딩이 필요한 사용자의 초대 토큰을 남겨 둔 상태입니다.
+    window.sessionStorage.setItem('pendingInviteToken', 'invite-token-1')
+
+    const user = userEvent.setup()
+    await renderAppAt('/setup/role')
+
+    const roleButton = screen.getByAltText('개발/기술').closest('button')
+    await user.click(roleButton!)
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    await waitFor(() => expect(window.location.pathname).toBe('/setup/perspectives'))
+
+    await user.click(screen.getByRole('button', { name: '일정' }))
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    await waitFor(() => expect(window.location.pathname).toBe('/setup/preview'))
+
+    await user.click(screen.getByRole('button', { name: '설정 완료' }))
+
+    await waitFor(() => expect(window.location.pathname).toBe('/invite/invite-token-1'))
+    expect(window.sessionStorage.getItem('pendingInviteToken')).toBeNull()
+  })
+
   it('opens the empty project mainboard directly', async () => {
     vi.spyOn(projectApi, 'listProjects').mockResolvedValue([])
 
