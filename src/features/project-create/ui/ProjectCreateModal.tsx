@@ -4,6 +4,7 @@ import closeIcon from '../../../shared/assets/icons/close.svg'
 import { useTransientVisibility } from '../../../shared/lib/useTransientVisibility'
 import { Button, InputBox, OverlayDialog, Toast } from '../../../shared/ui'
 
+import { createRoleProfileOption } from '../api/roleProfile.api'
 import {
   projectFocusOptions,
   projectPerspectiveOptions,
@@ -27,7 +28,9 @@ export type ProjectCreateModalProps = {
   open: boolean
   initialValues?: Partial<ProjectCreateDraft>
   perspectiveOptions?: ProjectPerspectiveOption[]
-  onAddPerspective?: (draft: ProjectRolePerspectiveDraft) => void
+  onAddPerspective?: (
+    draft: ProjectRolePerspectiveDraft,
+  ) => Promise<ProjectPerspectiveOption | void> | ProjectPerspectiveOption | void
   onClose: () => void
   onCreate?: (draft: ProjectCreateDraft, materials: ProjectMaterialDraft) => Promise<void> | void
   onNext?: (draft: ProjectCreateDraft) => void
@@ -38,7 +41,7 @@ export function ProjectCreateModal({
   open,
   initialValues,
   perspectiveOptions = projectPerspectiveOptions,
-  onAddPerspective,
+  onAddPerspective = createRoleProfileOption,
   onClose,
   onCreate,
   onNext,
@@ -93,6 +96,8 @@ function ProjectCreateSession({
   const [step, setStep] = useState<'details' | 'materials'>('details')
   const [isAddingPerspective, setIsAddingPerspective] = useState(false)
   const addSuccessToast = useTransientVisibility()
+  const addErrorToast = useTransientVisibility()
+  const [isAddingPerspectivePending, setIsAddingPerspectivePending] = useState(false)
   const [availableOptions, setAvailableOptions] = useState(perspectiveOptions)
   const [draft, setDraft] = useState<ProjectCreateDraft>({
     name: initialValues?.name ?? '',
@@ -100,24 +105,31 @@ function ProjectCreateSession({
     overview: initialValues?.overview ?? '',
   })
 
-  const handleAddPerspective = (roleDraft: ProjectRolePerspectiveDraft) => {
+  const handleAddPerspective = async (roleDraft: ProjectRolePerspectiveDraft) => {
     const role = projectRoleOptions.find((option) => option.id === roleDraft.roleId)
     const focusLabels = roleDraft.focusIds
       .map((focusId) => projectFocusOptions.find((option) => option.id === focusId)?.label)
       .filter((label): label is string => Boolean(label))
     const summary = focusLabels.join(', ') || roleDraft.detailRole || '직접 설정'
-    const newOption: ProjectPerspectiveOption = {
-      id: `custom-${roleDraft.roleId}-${availableOptions.length + 1}`,
-      label: role?.label ?? roleDraft.roleId,
-      description: summary,
-      selectedDescription: summary,
-    }
+    setIsAddingPerspectivePending(true)
+    try {
+      const createdOption = await onAddPerspective?.(roleDraft)
+      const nextOption: ProjectPerspectiveOption = createdOption ?? {
+        id: `custom-${roleDraft.roleId}-${availableOptions.length + 1}`,
+        label: role?.label ?? roleDraft.roleId,
+        description: summary,
+        selectedDescription: summary,
+      }
 
-    setAvailableOptions((current) => [...current, newOption])
-    setDraft((current) => ({ ...current, perspectiveId: newOption.id }))
-    setIsAddingPerspective(false)
-    addSuccessToast.show()
-    onAddPerspective?.(roleDraft)
+      setAvailableOptions((current) => [...current, nextOption])
+      setDraft((current) => ({ ...current, perspectiveId: nextOption.id }))
+      setIsAddingPerspective(false)
+      addSuccessToast.show()
+    } catch {
+      addErrorToast.show()
+    } finally {
+      setIsAddingPerspectivePending(false)
+    }
   }
 
   const handleNext = (nextDraft: ProjectCreateDraft) => {
@@ -132,7 +144,8 @@ function ProjectCreateSession({
         descriptionId={descriptionId}
         onBack={() => setIsAddingPerspective(false)}
         onClose={onClose}
-        onSubmit={handleAddPerspective}
+        onSubmit={(roleDraft) => void handleAddPerspective(roleDraft)}
+        pending={isAddingPerspectivePending}
         titleId={titleId}
       />
     )
@@ -172,6 +185,17 @@ function ProjectCreateSession({
           title="새 역할/관점 추가 완료"
           type="success"
           visible={addSuccessToast.isVisible}
+        />
+      ) : null}
+      {addErrorToast.isMounted ? (
+        <Toast
+          className="z-[70]!"
+          description="역할·관점 설정을 저장하지 못했습니다. 다시 시도해 주세요."
+          position="topCenter"
+          size="compact"
+          title="새 역할/관점 추가 실패"
+          type="error"
+          visible={addErrorToast.isVisible}
         />
       ) : null}
     </>

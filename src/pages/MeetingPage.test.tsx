@@ -7,12 +7,33 @@ import {
   meetingConnectionGateway,
   meetingLifecycleApi,
   meetingRecordGateway,
+  meetingTranscriptionGateway,
 } from '../entities/meeting'
 import type { ProjectNavigationState } from '../features/meeting-processing'
 import { resetLiveMeetingMockDb } from '../shared/api/mock/db/liveMeeting.mockDb'
-import { resetMeetingLifecycleMockDb } from '../shared/api/mock/db/meetingLifecycle.mockDb'
+import { transcriptService } from '../shared/api/services/transcript.service'
 import { writeMeetingRuntime } from './meeting/model/meetingRuntime.storage'
 import { MeetingPage } from './MeetingPage'
+
+const TRANSCRIPT_TEXT =
+  '네, 지난주 유저 인터뷰 결과를 토대로 봤을 때, 제품 측면에서는 온보딩 플로우 개선이 가장 큰 임팩트를 줄 수 있을 것 같습니다.'
+
+function transcriptListResult(meetingId: number) {
+  return {
+    meetingId,
+    segments: [
+      {
+        segmentId: 1,
+        sequenceIndex: 0,
+        startMs: 284000,
+        endMs: 292000,
+        content: TRANSCRIPT_TEXT,
+        speakerLabel: null,
+        isModified: false,
+      },
+    ],
+  }
+}
 
 function ProjectDestination() {
   const location = useLocation()
@@ -48,7 +69,38 @@ describe('MeetingPage controls', () => {
     vi.restoreAllMocks()
     window.sessionStorage.clear()
     resetLiveMeetingMockDb()
-    resetMeetingLifecycleMockDb()
+
+    // WebSocket은 열지 않는다. 전사는 조회 API 스텁이 채운다.
+    vi.spyOn(meetingTranscriptionGateway, 'connect').mockImplementation((options) => {
+      void Promise.resolve().then(() => options.onStatus('connected'))
+      return { close: () => {}, sendAudio: () => {} }
+    })
+    vi.spyOn(meetingLifecycleApi, 'joinMeeting').mockImplementation(async (meetingId) => ({
+      meetingId,
+      title: '2차 대면회의',
+      status: 'IN_PROGRESS',
+      role: 'HOST',
+      joinedAt: '2026-08-05T00:00:00.000Z',
+      startedAt: '2026-08-05T00:00:00.000Z',
+      wsUrl: 'wss://api.example.com/ws/meetings/1/stt',
+    }))
+    vi.spyOn(meetingLifecycleApi, 'endMeeting').mockImplementation(async (meetingId) => ({
+      meetingId,
+      status: 'COMPLETED',
+      endedAt: '2026-08-05T01:00:00.000Z',
+    }))
+    vi.spyOn(transcriptService, 'listSegments').mockImplementation(async (meetingId) =>
+      transcriptListResult(meetingId),
+    )
+    vi.spyOn(transcriptService, 'updateSegment').mockImplementation(
+      async (meetingId, segmentId, content) => ({
+        segmentId,
+        meetingId,
+        content,
+        isModified: true,
+        updatedAt: '2026-08-05T00:30:00.000Z',
+      }),
+    )
   })
 
   it('opens and dismisses the participant list', async () => {
@@ -136,7 +188,7 @@ describe('MeetingPage controls', () => {
     await user.click(within(dialog).getByRole('button', { name: '닫기' }))
 
     expect(await screen.findByText('프로젝트 메인 project-1')).toBeInTheDocument()
-    expect(screen.getByText('처리 회의 meeting-record-1')).toBeInTheDocument()
+    expect(screen.getByText('처리 회의 1')).toBeInTheDocument()
   })
 
   it('returns a non-host participant to the project without completing the meeting', async () => {
@@ -147,6 +199,7 @@ describe('MeetingPage controls', () => {
       status: 'IN_PROGRESS',
       role: 'MEMBER',
       joinedAt: '2026-08-05T00:00:00.000Z',
+      startedAt: '2026-08-05T00:00:00.000Z',
       wsUrl: 'wss://mock.synq/meetings/1',
     })
     const user = userEvent.setup()
@@ -166,6 +219,9 @@ describe('MeetingPage controls', () => {
   })
 
   it('shows a retry control when completed meeting storage fails', async () => {
+    vi.spyOn(meetingRecordGateway, 'finalizeEndedMeeting').mockRejectedValue(
+      new Error('회의 기록을 저장하지 못했습니다.'),
+    )
     const user = userEvent.setup()
     await renderMeetingPage('/meetings/4/live')
 
@@ -286,6 +342,9 @@ describe('MeetingPage controls', () => {
   })
 
   it('keeps a failed transcript draft visible without committing it', async () => {
+    vi.spyOn(transcriptService, 'updateSegment').mockRejectedValue(
+      new Error('전사 내용을 수정하지 못했습니다.'),
+    )
     const user = userEvent.setup()
     await renderMeetingPage('/meetings/3/live')
 

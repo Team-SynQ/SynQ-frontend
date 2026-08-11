@@ -2,18 +2,19 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
-  liveMeetingSnapshotGateway,
   meetingAiMockGateway,
   meetingLifecycleApi,
   meetingRecordGateway,
+  meetingTranscriptionGateway,
+  type ConnectTranscriptionOptions,
 } from '../../../entities/meeting'
 import type {
   MeetingAiChatMessageResponse,
   TranscriptHintResponse,
-  TranscriptSegmentResponse,
 } from '../../../shared/api/contracts/meeting.contracts'
+import type { UpdateTranscriptSegmentResult } from '../../../shared/api/contracts/transcript.contracts'
 import { resetLiveMeetingMockDb } from '../../../shared/api/mock/db/liveMeeting.mockDb'
-import { resetMeetingLifecycleMockDb } from '../../../shared/api/mock/db/meetingLifecycle.mockDb'
+import { transcriptService } from '../../../shared/api/services/transcript.service'
 import { useLiveMeetingController } from './useLiveMeetingController'
 
 function deferred<T>() {
@@ -24,6 +25,36 @@ function deferred<T>() {
     reject = rejectPromise
   })
   return { promise, reject, resolve }
+}
+
+const FIRST_SEGMENT_ID = '1'
+
+function transcriptDto(segmentId: number, content: string, sequenceIndex = segmentId - 1) {
+  return {
+    segmentId,
+    sequenceIndex,
+    startMs: sequenceIndex * 1000,
+    endMs: sequenceIndex * 1000 + 900,
+    content,
+    speakerLabel: null,
+    isModified: false,
+  }
+}
+
+const listResult = {
+  meetingId: 1,
+  segments: [transcriptDto(1, '지난주 유저 인터뷰 결과를 정리했습니다.')],
+}
+
+/** WS 채널을 열지 않고, 테스트가 확정 발화를 직접 밀어 넣을 수 있게 한다. */
+let deliverMessage: ConnectTranscriptionOptions['onMessage'] = () => {}
+
+function stubTranscriptionChannel() {
+  vi.spyOn(meetingTranscriptionGateway, 'connect').mockImplementation((options) => {
+    deliverMessage = options.onMessage
+    void Promise.resolve().then(() => options.onStatus('connected'))
+    return { close: () => {}, sendAudio: () => {} }
+  })
 }
 
 async function renderReadyController(meetingId = '1') {
@@ -42,11 +73,36 @@ describe('useLiveMeetingController async boundaries', () => {
     vi.restoreAllMocks()
     window.sessionStorage.clear()
     resetLiveMeetingMockDb()
-    resetMeetingLifecycleMockDb()
+    deliverMessage = () => {}
+
+    stubTranscriptionChannel()
+    vi.spyOn(meetingLifecycleApi, 'joinMeeting').mockImplementation(async (meetingId) => ({
+      meetingId,
+      title: '2차 대면회의',
+      status: 'IN_PROGRESS',
+      role: 'HOST',
+      joinedAt: '2026-08-05T00:00:00.000Z',
+      startedAt: '2026-08-05T00:00:00.000Z',
+      wsUrl: 'wss://api.example.com/ws/meetings/1/stt',
+    }))
+    vi.spyOn(meetingLifecycleApi, 'endMeeting').mockImplementation(async (meetingId) => ({
+      meetingId,
+      status: 'COMPLETED',
+      endedAt: '2026-08-05T01:00:00.000Z',
+    }))
+    vi.spyOn(transcriptService, 'listSegments').mockResolvedValue(listResult)
+    vi.spyOn(transcriptService, 'updateSegment').mockImplementation(
+      async (meetingId, segmentId, content) => ({
+        segmentId,
+        meetingId,
+        content,
+        isModified: true,
+        updatedAt: '2026-08-05T00:30:00.000Z',
+      }),
+    )
   })
 
   it('completes the meeting with the current title, elapsed time, and host', async () => {
-    const endMeeting = vi.spyOn(meetingLifecycleApi, 'endMeeting')
     const finalizeMeeting = vi.spyOn(meetingRecordGateway, 'finalizeEndedMeeting')
     const { result } = await renderReadyController()
 
@@ -75,7 +131,7 @@ describe('useLiveMeetingController async boundaries', () => {
         avatarKey: 'you',
       },
     })
-    expect(endMeeting).toHaveBeenCalledWith(1)
+    expect(meetingLifecycleApi.endMeeting).toHaveBeenCalledWith(1)
     expect(finalizeMeeting).toHaveBeenCalledWith(
       expect.objectContaining({ activeDurationSeconds: 0, meetingId: '1' }),
     )
@@ -96,6 +152,19 @@ describe('useLiveMeetingController async boundaries', () => {
     expect(result.current.transcript.state.isSpeaking).toBe(false)
   })
 
+  it('shows the transcript loaded from the segment API', async () => {
+    const { result } = await renderReadyController()
+
+    if (result.current.status !== 'ready' || result.current.transcript.state.kind !== 'active') {
+      throw new Error('transcript is not active')
+    }
+    expect(transcriptService.listSegments).toHaveBeenCalledWith(1, null)
+    expect(result.current.transcript.state.segments[0]).toMatchObject({
+      id: FIRST_SEGMENT_ID,
+      text: '지난주 유저 인터뷰 결과를 정리했습니다.',
+    })
+  })
+
   it('normalizes the current participant host flag from the join role', async () => {
     vi.spyOn(meetingLifecycleApi, 'joinMeeting').mockResolvedValue({
       meetingId: 1,
@@ -103,7 +172,8 @@ describe('useLiveMeetingController async boundaries', () => {
       status: 'IN_PROGRESS',
       role: 'MEMBER',
       joinedAt: '2026-08-05T00:00:00.000Z',
-      wsUrl: 'wss://mock.synq/meetings/1',
+      startedAt: '2026-08-05T00:00:00.000Z',
+      wsUrl: 'wss://api.example.com/ws/meetings/1/stt',
     })
 
     const { result } = await renderReadyController()
@@ -123,7 +193,7 @@ describe('useLiveMeetingController async boundaries', () => {
 
     act(() => {
       if (result.current.status !== 'ready') throw new Error('controller is not ready')
-      result.current.transcript.actions.onAskAi?.('segment-1')
+      result.current.transcript.actions.onAskAi?.(FIRST_SEGMENT_ID)
       result.current.aiChat.actions.onDraftChange('이 문장이 일정에 미치는 영향은?')
     })
     act(() => {
@@ -139,14 +209,14 @@ describe('useLiveMeetingController async boundaries', () => {
     })
     if (result.current.status !== 'ready') throw new Error('controller is not ready')
     expect(result.current.aiChat.model.draft).toBe('이 문장이 일정에 미치는 영향은?')
-    expect(result.current.aiChat.model.pinnedContext?.transcriptId).toBe('segment-1')
+    expect(result.current.aiChat.model.pinnedContext?.transcriptId).toBe(FIRST_SEGMENT_ID)
   })
 
   it('ignores edit and AI responses from the previous meeting session', async () => {
-    const updateRequest = deferred<TranscriptSegmentResponse>()
+    const updateRequest = deferred<UpdateTranscriptSegmentResult>()
     const sendRequest = deferred<MeetingAiChatMessageResponse>()
     const updateSpy = vi
-      .spyOn(liveMeetingSnapshotGateway, 'updateTranscript')
+      .spyOn(transcriptService, 'updateSegment')
       .mockReturnValue(updateRequest.promise)
     const sendSpy = vi
       .spyOn(meetingAiMockGateway, 'sendMeetingAiQuestion')
@@ -155,7 +225,7 @@ describe('useLiveMeetingController async boundaries', () => {
 
     act(() => {
       if (result.current.status !== 'ready') throw new Error('controller is not ready')
-      result.current.transcript.actions.onStartEdit?.('segment-1')
+      result.current.transcript.actions.onStartEdit?.(FIRST_SEGMENT_ID)
     })
     act(() => {
       if (result.current.status !== 'ready') throw new Error('controller is not ready')
@@ -176,6 +246,10 @@ describe('useLiveMeetingController async boundaries', () => {
     expect(updateSpy).toHaveBeenCalledOnce()
     expect(sendSpy).toHaveBeenCalledOnce()
 
+    vi.spyOn(transcriptService, 'listSegments').mockResolvedValue({
+      meetingId: 2,
+      segments: [transcriptDto(9, '다음 회의의 문장')],
+    })
     rerender({ currentMeetingId: '2' })
     await waitFor(() => {
       expect(result.current.status).toBe('ready')
@@ -186,12 +260,11 @@ describe('useLiveMeetingController async boundaries', () => {
 
     await act(async () => {
       updateRequest.resolve({
-        id: 'segment-1',
-        sequenceIndex: 0,
-        startedAtSeconds: 284,
-        text: '이전 회의에서 수정한 문장',
-        isEdited: true,
-        editedAt: '2026-07-27T00:00:00.000Z',
+        segmentId: 1,
+        meetingId: 1,
+        content: '이전 회의에서 수정한 문장',
+        isModified: true,
+        updatedAt: '2026-07-27T00:00:00.000Z',
       })
       sendRequest.resolve({
         id: 'stale-assistant',
@@ -203,28 +276,12 @@ describe('useLiveMeetingController async boundaries', () => {
       await Promise.resolve()
     })
 
-    if (result.current.status !== 'ready') throw new Error('controller is not ready')
-    expect(result.current.meeting.transcript.segments[0]?.text).toBe(
-      '네, 지난주 유저 인터뷰 결과를 토대로 봤을 때, 제품 측면에서는 온보딩 플로우 개선이 가장 큰 임팩트를 줄 수 있을 것 같습니다. 사용자들이 앱에 처음 들어왔을 때 핵심 기능을 파악하기 전에 헤매는 구간이 너무 길어요.',
-    )
+    if (result.current.status !== 'ready' || result.current.transcript.state.kind !== 'active') {
+      throw new Error('transcript is not active')
+    }
+    expect(result.current.transcript.state.segments[0]?.text).toBe('다음 회의의 문장')
     expect(result.current.aiChat.model.messages).toHaveLength(1)
     expect(result.current.aiChat.model.messages[0]?.id).toBe('assistant-welcome')
-  })
-
-  it('handles transcript refresh rejection without an unhandled promise', async () => {
-    vi.spyOn(liveMeetingSnapshotGateway, 'listTranscripts').mockRejectedValue(
-      new Error('TRANSCRIPT_REFRESH_FAILED'),
-    )
-    const { result } = await renderReadyController()
-
-    act(() => {
-      if (result.current.status !== 'ready') throw new Error('controller is not ready')
-      result.current.transcript.actions.onRefresh()
-    })
-
-    await waitFor(() =>
-      expect(liveMeetingSnapshotGateway.listTranscripts).toHaveBeenCalledWith('1'),
-    )
   })
 
   it('keeps a hint collapsed when an in-flight response arrives later', async () => {
@@ -234,7 +291,7 @@ describe('useLiveMeetingController async boundaries', () => {
 
     act(() => {
       if (result.current.status !== 'ready') throw new Error('controller is not ready')
-      result.current.transcript.actions.onSelectSegment?.('segment-1')
+      result.current.transcript.actions.onSelectSegment?.(FIRST_SEGMENT_ID)
     })
     await waitFor(() => {
       if (result.current.status !== 'ready' || result.current.transcript.state.kind !== 'active') {
@@ -245,9 +302,9 @@ describe('useLiveMeetingController async boundaries', () => {
 
     act(() => {
       if (result.current.status !== 'ready') throw new Error('controller is not ready')
-      result.current.transcript.actions.onCollapseHint?.('segment-1')
+      result.current.transcript.actions.onCollapseHint?.(FIRST_SEGMENT_ID)
       hintRequest.resolve({
-        transcriptId: 'segment-1',
+        transcriptId: FIRST_SEGMENT_ID,
         notice: null,
         meaning: '늦게 도착한 의미',
         personalImpact: '늦게 도착한 영향',
@@ -265,7 +322,7 @@ describe('useLiveMeetingController async boundaries', () => {
 
   it('restores a collapsed successful hint from cache without another request', async () => {
     const hint: TranscriptHintResponse = {
-      transcriptId: 'segment-1',
+      transcriptId: FIRST_SEGMENT_ID,
       notice: null,
       meaning: '캐시된 의미',
       personalImpact: '캐시된 영향',
@@ -276,7 +333,7 @@ describe('useLiveMeetingController async boundaries', () => {
 
     act(() => {
       if (result.current.status !== 'ready') throw new Error('controller is not ready')
-      result.current.transcript.actions.onSelectSegment?.('segment-1')
+      result.current.transcript.actions.onSelectSegment?.(FIRST_SEGMENT_ID)
     })
     await waitFor(() => {
       if (result.current.status !== 'ready' || result.current.transcript.state.kind !== 'active') {
@@ -287,8 +344,8 @@ describe('useLiveMeetingController async boundaries', () => {
 
     act(() => {
       if (result.current.status !== 'ready') throw new Error('controller is not ready')
-      result.current.transcript.actions.onCollapseHint?.('segment-1')
-      result.current.transcript.actions.onSelectSegment?.('segment-1')
+      result.current.transcript.actions.onCollapseHint?.(FIRST_SEGMENT_ID)
+      result.current.transcript.actions.onSelectSegment?.(FIRST_SEGMENT_ID)
     })
 
     await waitFor(() => {
@@ -297,36 +354,37 @@ describe('useLiveMeetingController async boundaries', () => {
       }
       expect(result.current.transcript.state.hintState).toEqual({
         status: 'ready',
-        transcriptId: 'segment-1',
+        transcriptId: FIRST_SEGMENT_ID,
         hint,
       })
     })
     expect(hintSpy).toHaveBeenCalledOnce()
   })
 
-  it('does not recreate the elapsed timer when transcript data is replaced', async () => {
+  it('does not recreate the elapsed timer when a new segment arrives', async () => {
     const setIntervalSpy = vi.spyOn(window, 'setInterval')
     const { result, unmount } = await renderReadyController()
     setIntervalSpy.mockClear()
-    vi.spyOn(liveMeetingSnapshotGateway, 'listTranscripts').mockResolvedValue([
-      {
-        id: 'segment-1',
-        sequenceIndex: 1,
-        startedAtSeconds: 284,
-        text: '새로고침된 전사 문장',
-        isEdited: false,
-        editedAt: null,
-      },
-    ])
 
     act(() => {
-      if (result.current.status !== 'ready') throw new Error('controller is not ready')
-      result.current.transcript.actions.onRefresh()
+      deliverMessage({
+        kind: 'final',
+        segment: {
+          id: '2',
+          sequenceIndex: 1,
+          startedAtSeconds: 284,
+          text: '새로 도착한 전사 문장',
+          isEdited: false,
+          editedAt: null,
+        },
+      })
     })
 
     await waitFor(() => {
-      if (result.current.status !== 'ready') throw new Error('controller is not ready')
-      expect(result.current.meeting.transcript.segments[0]?.text).toBe('새로고침된 전사 문장')
+      if (result.current.status !== 'ready' || result.current.transcript.state.kind !== 'active') {
+        throw new Error('transcript is not active')
+      }
+      expect(result.current.transcript.state.segments.at(-1)?.text).toBe('새로 도착한 전사 문장')
     })
     expect(setIntervalSpy.mock.calls.filter(([, delay]) => delay === 1000)).toHaveLength(0)
     unmount()
@@ -334,14 +392,14 @@ describe('useLiveMeetingController async boundaries', () => {
 
   it('reloads the hint after the selected transcript is edited', async () => {
     const previousHint: TranscriptHintResponse = {
-      transcriptId: 'segment-1',
+      transcriptId: FIRST_SEGMENT_ID,
       notice: null,
       meaning: '수정 전 의미',
       personalImpact: '수정 전 영향',
       teamQuestion: '수정 전 질문',
     }
     const updatedHint: TranscriptHintResponse = {
-      transcriptId: 'segment-1',
+      transcriptId: FIRST_SEGMENT_ID,
       notice: null,
       meaning: '수정 후 의미',
       personalImpact: '수정 후 영향',
@@ -355,7 +413,7 @@ describe('useLiveMeetingController async boundaries', () => {
 
     act(() => {
       if (result.current.status !== 'ready') throw new Error('controller is not ready')
-      result.current.transcript.actions.onSelectSegment?.('segment-1')
+      result.current.transcript.actions.onSelectSegment?.(FIRST_SEGMENT_ID)
     })
     await waitFor(() => {
       if (result.current.status !== 'ready' || result.current.transcript.state.kind !== 'active') {
@@ -363,14 +421,14 @@ describe('useLiveMeetingController async boundaries', () => {
       }
       expect(result.current.transcript.state.hintState).toEqual({
         status: 'ready',
-        transcriptId: 'segment-1',
+        transcriptId: FIRST_SEGMENT_ID,
         hint: previousHint,
       })
     })
 
     act(() => {
       if (result.current.status !== 'ready') throw new Error('controller is not ready')
-      result.current.transcript.actions.onStartEdit?.('segment-1')
+      result.current.transcript.actions.onStartEdit?.(FIRST_SEGMENT_ID)
     })
     act(() => {
       if (result.current.status !== 'ready') throw new Error('controller is not ready')
@@ -384,13 +442,14 @@ describe('useLiveMeetingController async boundaries', () => {
       if (result.current.status !== 'ready' || result.current.transcript.state.kind !== 'active') {
         throw new Error('transcript is not active')
       }
-      expect(result.current.meeting.transcript.segments[0]?.text).toBe('수정된 전사 문장')
+      expect(result.current.transcript.state.segments[0]?.text).toBe('수정된 전사 문장')
       expect(result.current.transcript.state.hintState?.status).toBe('idle')
     })
+    expect(transcriptService.updateSegment).toHaveBeenCalledWith(1, 1, '수정된 전사 문장')
 
     act(() => {
       if (result.current.status !== 'ready') throw new Error('controller is not ready')
-      result.current.transcript.actions.onSelectSegment?.('segment-1')
+      result.current.transcript.actions.onSelectSegment?.(FIRST_SEGMENT_ID)
     })
     await waitFor(() => {
       if (result.current.status !== 'ready' || result.current.transcript.state.kind !== 'active') {
@@ -398,7 +457,7 @@ describe('useLiveMeetingController async boundaries', () => {
       }
       expect(result.current.transcript.state.hintState).toEqual({
         status: 'ready',
-        transcriptId: 'segment-1',
+        transcriptId: FIRST_SEGMENT_ID,
         hint: updatedHint,
       })
     })

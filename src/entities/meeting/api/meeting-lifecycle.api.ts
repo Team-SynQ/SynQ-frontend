@@ -4,7 +4,7 @@ import type {
   MeetingEndResponse,
   MeetingJoinResponse,
 } from '../../../shared/api/contracts/meeting.contracts'
-import { meetingLifecycleMockService } from '../../../shared/api/mock/services/meetingLifecycle.mock'
+import { meetingService } from '../../../shared/api/services/meeting.service'
 
 export type MeetingLifecycleApi = {
   createMeeting(projectId: number, request: MeetingCreateRequest): Promise<MeetingCreateResponse>
@@ -12,4 +12,4 @@ export type MeetingLifecycleApi = {
   endMeeting(meetingId: number): Promise<MeetingEndResponse>
 }
 
-export const meetingLifecycleApi: MeetingLifecycleApi = meetingLifecycleMockService
+export const meetingLifecycleApi: MeetingLifecycleApi = meetingService

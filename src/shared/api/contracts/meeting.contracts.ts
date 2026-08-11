@@ -1,12 +1,5 @@
 export type MeetingAvatarKey = 'you' | 'design' | 'pm' | 'server'
 
-export type ApiResponse<T> = {
-  isSuccess: boolean
-  code: string
-  message: string
-  result: T
-}
-
 export type MeetingCreateRequest = {
   consentAgreed: boolean
 }
@@ -25,6 +18,8 @@ export type MeetingJoinResponse = {
   status: string
   role: string
   joinedAt: string
+  /** 회의 시작 시각. 전사 세그먼트의 startMs가 이 시각 기준이다. */
+  startedAt: string
   wsUrl: string
 }
 
@@ -32,6 +27,28 @@ export type MeetingEndResponse = {
   meetingId: number
   status: string
   endedAt: string
+}
+
+export type MeetingListItemResponse = {
+  meetingId: number
+  title: string
+  status: string
+  createdAt: string
+  /** 회의가 아직 진행 중이면 null이다. */
+  durationSeconds: number | null
+  host: {
+    userId: number
+    name: string
+    profileImageUrl: string | null
+  }
+  /** 요약이 아직 생성되지 않았으면 null이다. */
+  keyTopics: string[] | null
+}
+
+export type MeetingTitleUpdateResponse = {
+  meetingId: number
+  title: string
+  userModified: boolean
 }
 
 export type MeetingParticipantResponse = {

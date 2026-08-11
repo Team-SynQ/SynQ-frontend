@@ -4,46 +4,14 @@ import { Outlet, useNavigate, useOutletContext } from 'react-router-dom'
 import UserPerspectiveSetupPage from '../../pages/UserPerspectiveSetupPage'
 import UserRoleSetupPage from '../../pages/UserRoleSetupPage'
 import UserSetupPreviewPage from '../../pages/UserSetupPreviewPage'
-
-const ROLE_LABEL_MAP: Record<string, string> = {
-  pm: '기획/운영',
-  design: '디자인/콘텐츠',
-  dev: '개발/기술',
-  marketing: '마케팅/브랜딩',
-  sales: '영업/고객',
-  data: '데이터/리서치',
-  exec: '경영/전략',
-  etc: '기타',
-}
-
-const ROLE_ICON_MAP: Record<string, string> = {
-  pm: '/assets/images/role-pm.png',
-  design: '/assets/images/role-design.png',
-  dev: '/assets/images/role-dev.png',
-  marketing: '/assets/images/role-marketing.png',
-  sales: '/assets/images/role-sales.png',
-  data: '/assets/images/role-data.png',
-  exec: '/assets/images/role-exec.png',
-  etc: '/assets/images/role-etc.png',
-}
-
-const PERSPECTIVE_LABEL_MAP: Record<string, string> = {
-  schedule: '일정',
-  scope: '기능 범위',
-  decision: '의사 결정',
-  ux: '사용자 경험',
-  tech_risk: '기술 리스크',
-  cost_performance: '비용/성과',
-  customer_feedback: '고객 반응',
-  ops_issue: '운영 이슈',
-  action_item: '액션 아이템',
-  team_qna: '팀 질문',
-}
-
-type RoleData = {
-  selectedRole: string
-  detailRole: string
-}
+import { userService } from '../../shared/api/services/user.service'
+import { PERSPECTIVE_ENUM_MAP, ROLE_ENUM_MAP } from '../../shared/lib/onboardingMapper'
+import {
+  PERSPECTIVE_LABEL_MAP,
+  ROLE_ICON_MAP,
+  ROLE_LABEL_MAP,
+  type RoleData,
+} from './userSetupMaps'
 
 type UserSetupContextValue = {
   perspectives: string[]
@@ -107,7 +75,35 @@ export function UserPerspectiveSetupRoute() {
 export function UserSetupPreviewRoute() {
   const navigate = useNavigate()
   const { perspectives, roleData } = useUserSetupContext()
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const selectedRole = roleData?.selectedRole ?? ''
+
+  const handleComplete = async () => {
+    if (isSubmitting || !roleData) return
+    setIsSubmitting(true)
+
+    const roleEnum = ROLE_ENUM_MAP[roleData.selectedRole] ?? roleData.selectedRole
+    const perspectivesEnum = perspectives.map((id) => PERSPECTIVE_ENUM_MAP[id] ?? id)
+
+    const trimmedDetail = roleData.detailRole?.trim() ?? ''
+    const detailRolePayload = roleEnum === 'ETC' ? trimmedDetail : ''
+
+    try {
+      const response = await userService.createRoleProfile({
+        role: roleEnum,
+        detailRole: detailRolePayload,
+        perspectives: perspectivesEnum,
+      })
+
+      if (response.isSuccess) {
+        navigate('/projects')
+      }
+    } catch (error) {
+      console.error('역할/관점 저장 실패:', error)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   return (
     <UserSetupPreviewPage
@@ -116,13 +112,7 @@ export function UserSetupPreviewRoute() {
       detailRole={roleData?.detailRole}
       selectedPerspectiveLabels={perspectives.map((id) => PERSPECTIVE_LABEL_MAP[id] ?? id)}
       onPrev={() => navigate('/setup/perspectives')}
-      onComplete={() => {
-        console.log('최종 온보딩 완료 데이터:', {
-          ...roleData,
-          perspectives,
-        })
-        navigate('/projects')
-      }}
+      onComplete={handleComplete}
     />
   )
 }

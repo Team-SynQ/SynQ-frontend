@@ -5,6 +5,7 @@ interface UserSetupPreviewPageProps {
   selectedRoleIcon?: string
   detailRole?: string
   selectedPerspectiveLabels?: string[]
+  footnote?: string
   onComplete?: () => void
   onPrev?: () => void
 }
@@ -14,6 +15,7 @@ const UserSetupPreviewPage: React.FC<UserSetupPreviewPageProps> = ({
   selectedRoleIcon = '',
   detailRole = '',
   selectedPerspectiveLabels = [],
+  footnote = '모든 설정은 추후 수정 가능합니다.',
   onComplete,
   onPrev,
 }) => {
@@ -69,7 +71,7 @@ const UserSetupPreviewPage: React.FC<UserSetupPreviewPageProps> = ({
       </div>
 
       <div className="w-full max-w-[480px] flex flex-col items-center">
-        <p className="text-xs text-gray-400 mb-4">모든 설정은 추후 수정 가능합니다.</p>
+        <p className="text-xs text-gray-400 mb-4">{footnote}</p>
 
         <div className="flex w-full gap-3">
           <button
