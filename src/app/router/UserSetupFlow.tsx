@@ -4,6 +4,7 @@ import { Outlet, useNavigate, useOutletContext } from 'react-router-dom'
 import UserPerspectiveSetupPage from '../../pages/UserPerspectiveSetupPage'
 import UserRoleSetupPage from '../../pages/UserRoleSetupPage'
 import UserSetupPreviewPage from '../../pages/UserSetupPreviewPage'
+import { consumePendingInviteToken } from '../../features/project-invite'
 import { userService } from '../../shared/api/services/user.service'
 import { toPerspectiveEnums, toRoleEnum } from '../../shared/lib/onboardingMapper'
 import {
@@ -95,7 +96,12 @@ export function UserSetupPreviewRoute() {
       })
 
       if (response.isSuccess) {
-        navigate('/projects')
+        // 초대 링크로 처음 들어온 사용자는 로그인 콜백이 토큰을 남겨 둔다.
+        // 계정 온보딩까지 마친 지금 그 초대 화면으로 돌려보낸다.
+        const pendingInviteToken = consumePendingInviteToken()
+        navigate(
+          pendingInviteToken ? `/invite/${encodeURIComponent(pendingInviteToken)}` : '/projects',
+        )
       }
     } catch (error) {
       console.error('역할/관점 저장 실패:', error)
