@@ -16,6 +16,8 @@ export type {
   MeetingAiChatWelcome,
 } from './api/meeting-ai-chat.api'
 export { toAiChatMessages, toAiChatSuggestions } from './api/aiChat.adapter'
+export { meetingParticipantApi, toMeetingParticipant } from './api/meeting-participant.api'
+export type { MeetingParticipantApi } from './api/meeting-participant.api'
 export { meetingHintApi } from './api/meeting-hint.api'
 export type { MeetingHintApi } from './api/meeting-hint.api'
 export { toTranscriptHint, toTranscriptHintRecord } from './api/hint.adapter'

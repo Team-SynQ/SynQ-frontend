@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 
 import type { CompletedMeeting, LiveMeetingProjectContext } from '../entities/meeting'
+import type { CurrentUser } from '../entities/user'
 import type { AiChatDisplayMode } from '../features/meeting-ai-chat'
 import { MeetingConnectionToast } from '../features/meeting-connection'
 import type { ProjectNavigationState } from '../features/meeting-processing'
@@ -11,7 +12,6 @@ import {
   MeetingParticipantsPopover,
   MeetingSaveDialog,
   MeetingTitleEditDialog,
-  meetingParticipantAvatars,
   type MeetingParticipant,
 } from '../features/meeting-controls'
 import { MeetingRoom } from '../widgets/meeting-room'
@@ -33,11 +33,15 @@ const aiChatModeAnnouncements: Record<AiChatDisplayMode, string> = {
   launcher: 'AI Chat을 완전히 축소했습니다.',
 }
 
-export function MeetingPage() {
+export type MeetingPageProps = {
+  user?: CurrentUser
+}
+
+export function MeetingPage({ user }: MeetingPageProps = {}) {
   const location = useLocation()
   const navigate = useNavigate()
   const { meetingId = 'demo' } = useParams()
-  const controller = useLiveMeetingController(meetingId)
+  const controller = useLiveMeetingController(meetingId, user?.userId ?? null)
   const [lastAction, setLastAction] = useState('회의 진행 화면 준비 완료')
   const [activeControl, setActiveControl] = useState<ActiveMeetingControl>('idle')
   const [completedMeeting, setCompletedMeeting] = useState<CompletedMeeting | null>(null)
@@ -66,14 +70,12 @@ export function MeetingPage() {
     )
   }
 
-  const participants: MeetingParticipant[] = controller.meeting.participants.map((participant) => ({
+  const participants: MeetingParticipant[] = controller.participants.map((participant) => ({
     id: participant.id,
     name: participant.name,
-    role: participant.role,
-    avatarSrc: meetingParticipantAvatars[participant.avatarKey],
+    avatarSrc: participant.profileImageUrl ?? undefined,
     isCurrentUser: participant.isCurrentUser,
     isHost: participant.isHost,
-    isMicrophoneOn: participant.isMicrophoneOn,
   }))
   const currentUserIsHost = controller.role === 'host'
 
@@ -142,7 +144,7 @@ export function MeetingPage() {
             meetingId,
             meetingTitle: controller.meetingTitle,
             participantCount: participants.length,
-            projectTitle: controller.meeting.projectTitle,
+            projectTitle: projectContext.projectTitle,
             recordingState: controller.recordingState,
             recordingControlDisabled: controller.connectionState !== 'connected',
           },

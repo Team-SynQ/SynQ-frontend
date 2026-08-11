@@ -8,6 +8,7 @@ import {
   meetingConnectionGateway,
   meetingHintApi,
   meetingLifecycleApi,
+  meetingParticipantApi,
   meetingRecordGateway,
   meetingTranscriptionGateway,
 } from '../entities/meeting'
@@ -56,7 +57,14 @@ async function renderMeetingPage(
   const result = render(
     <MemoryRouter initialEntries={[{ pathname: path, state }]}>
       <Routes>
-        <Route element={<MeetingPage />} path="/meetings/:meetingId/live" />
+        <Route
+          element={
+            <MeetingPage
+              user={{ userId: 7, name: '윤금서', email: 'a@b.c', profileImageUrl: null }}
+            />
+          }
+          path="/meetings/:meetingId/live"
+        />
         <Route element={<ProjectDestination />} path="/projects" />
       </Routes>
     </MemoryRouter>,
@@ -92,6 +100,12 @@ describe('MeetingPage controls', () => {
       endedAt: '2026-08-05T01:00:00.000Z',
     }))
     vi.spyOn(meetingHintApi, 'listHintRecords').mockResolvedValue([])
+    vi.spyOn(meetingParticipantApi, 'listParticipants').mockResolvedValue([
+      { id: '7', name: '윤금서', profileImageUrl: null, isCurrentUser: true, isHost: true },
+      { id: '8', name: '이동희', profileImageUrl: null, isCurrentUser: false, isHost: false },
+      { id: '9', name: '이소미', profileImageUrl: null, isCurrentUser: false, isHost: false },
+      { id: '10', name: '김도진', profileImageUrl: null, isCurrentUser: false, isHost: false },
+    ])
     vi.spyOn(meetingAiChatApi, 'loadWelcome').mockResolvedValue({
       messages: [
         {
@@ -118,6 +132,16 @@ describe('MeetingPage controls', () => {
     )
   })
 
+  // 헤더가 mock 스냅샷을 그대로 쓰면 다른 프로젝트에서 들어와도 같은 이름이 뜬다.
+  it('헤더에 들어온 경로의 프로젝트 이름을 표시한다', async () => {
+    await renderMeetingPage('/meetings/1/live', {
+      projectId: 'project-9',
+      projectTitle: '테스트용',
+    })
+
+    expect(screen.getByTitle('테스트용')).toBeInTheDocument()
+  })
+
   it('opens and dismisses the participant list', async () => {
     const user = userEvent.setup()
     await renderMeetingPage()
@@ -129,7 +153,7 @@ describe('MeetingPage controls', () => {
     const participantList = screen.getByRole('list', { name: '회의 참여자' })
     expect(trigger).toHaveAttribute('aria-controls', participantList.id)
     expect(trigger).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getByText('윤금서/Design (you)')).toBeInTheDocument()
+    expect(screen.getByText('윤금서 (you)')).toBeInTheDocument()
 
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('list', { name: '회의 참여자' })).not.toBeInTheDocument()
