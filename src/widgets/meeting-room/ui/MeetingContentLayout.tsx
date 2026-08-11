@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 
 import {
   AiChatLauncher,
@@ -9,6 +9,13 @@ import {
 import { TranscriptPanel } from '../../../features/live-transcription'
 import type { TranscriptPanelProps } from '../../../features/live-transcription'
 import { cn } from '../../../shared/lib/cn'
+import {
+  clampAiChatWidth,
+  readAiChatPanelWidth,
+  TRANSCRIPT_MIN_WIDTH,
+  writeAiChatPanelWidth,
+} from '../model/aiChatPanelWidth.storage'
+import { AiChatResizeHandle } from './AiChatResizeHandle'
 
 export type MeetingAiChatDisplayProps = {
   mode: AiChatDisplayMode
@@ -36,6 +43,42 @@ export function MeetingContentLayout({
   const launcherReturnModeRef = useRef<RestorableAiChatMode>(
     mode === 'launcher' ? 'floating' : mode,
   )
+  const contentRef = useRef<HTMLDivElement>(null)
+  const [aiChatWidth, setAiChatWidth] = useState(readAiChatPanelWidth)
+  const [maxAiChatWidth, setMaxAiChatWidth] = useState(0)
+
+  /**
+   * 저장 시점에 쓸 최신 폭. 상태는 다음 렌더에 반영되므로, 같은 이벤트 안에서
+   * 조절하고 곧바로 저장하는 키보드 경로가 한 단계 이전 값을 쓰게 된다.
+   */
+  const latestAiChatWidthRef = useRef(aiChatWidth)
+
+  // 컨테이너 폭은 렌더 중에 읽지 않는다. 조절 시점과 창 크기 변경 시점에만 잰다.
+  const resizeAiChat = (nextWidth: number) => {
+    const containerWidth = contentRef.current?.clientWidth ?? 0
+    const clamped = clampAiChatWidth(nextWidth, containerWidth)
+    latestAiChatWidthRef.current = clamped
+    setMaxAiChatWidth(Math.max(containerWidth - TRANSCRIPT_MIN_WIDTH, 0))
+    setAiChatWidth(clamped)
+  }
+
+  useEffect(() => {
+    // 창이 좁아지면 지금 폭이 상한을 넘을 수 있어 함께 다시 맞춘다.
+    const syncWidth = () => {
+      const containerWidth = contentRef.current?.clientWidth ?? 0
+      setMaxAiChatWidth(Math.max(containerWidth - TRANSCRIPT_MIN_WIDTH, 0))
+      setAiChatWidth((current) => {
+        const clamped = clampAiChatWidth(current, containerWidth)
+        latestAiChatWidthRef.current = clamped
+        return clamped
+      })
+    }
+
+    // effect 본문에서 setState를 직접 부르지 않는다. 저장소의 회피 패턴을 따른다.
+    void Promise.resolve().then(syncWidth)
+    window.addEventListener('resize', syncWidth)
+    return () => window.removeEventListener('resize', syncWidth)
+  }, [])
 
   useEffect(() => {
     const previousMode = previousModeRef.current
@@ -59,11 +102,26 @@ export function MeetingContentLayout({
     <div
       className={cn(
         'relative grid min-h-0 overflow-hidden',
-        mode === 'docked' ? 'grid-cols-[minmax(524px,1fr)_500px]' : 'grid-cols-[minmax(0,1fr)]',
+        mode === 'docked'
+          ? 'grid-cols-[minmax(524px,1fr)_auto_var(--ai-chat-width)]'
+          : 'grid-cols-[minmax(0,1fr)]',
       )}
       data-ai-chat-mode={mode}
+      ref={contentRef}
+      style={
+        mode === 'docked' ? ({ '--ai-chat-width': `${aiChatWidth}px` } as CSSProperties) : undefined
+      }
     >
       <TranscriptPanel {...transcript} />
+
+      {mode === 'docked' ? (
+        <AiChatResizeHandle
+          maxWidth={maxAiChatWidth}
+          onResize={resizeAiChat}
+          onResizeEnd={() => writeAiChatPanelWidth(latestAiChatWidthRef.current)}
+          width={aiChatWidth}
+        />
+      ) : null}
 
       {mode !== 'launcher' ? (
         <div

@@ -1,10 +1,15 @@
 import { useState } from 'react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { AiChatContentProps, AiChatDisplayMode } from '../../../features/meeting-ai-chat'
 import type { TranscriptPanelProps } from '../../../features/live-transcription'
+import {
+  AI_CHAT_DEFAULT_WIDTH,
+  readAiChatPanelWidth,
+  writeAiChatPanelWidth,
+} from '../model/aiChatPanelWidth.storage'
 import { MeetingContentLayout } from './MeetingContentLayout'
 
 const aiChat: AiChatContentProps = {
@@ -66,7 +71,7 @@ describe('MeetingContentLayout', () => {
 
     const root = container.querySelector('[data-ai-chat-mode]')
     expect(root).toHaveAttribute('data-ai-chat-mode', 'docked')
-    expect(root).toHaveClass('grid-cols-[minmax(524px,1fr)_500px]')
+    expect(root).toHaveClass('grid-cols-[minmax(524px,1fr)_auto_var(--ai-chat-width)]')
 
     const minimize = screen.getByRole('button', { name: 'AI Chat 창 축소' })
     minimize.focus()
@@ -171,5 +176,52 @@ describe('MeetingContentLayout', () => {
     )
 
     expect(screen.getByRole('button', { name: 'AI Chat 열기' })).toHaveFocus()
+  })
+
+  describe('AI Chat 폭 조절', () => {
+    beforeEach(() => {
+      window.sessionStorage.clear()
+    })
+
+    // 조절과 저장이 같은 이벤트에서 일어난다. 상태를 그대로 읽으면 한 단계 이전 값이 저장된다.
+    it('키보드로 조절한 폭을 그 값 그대로 저장한다', async () => {
+      const user = userEvent.setup()
+      const { container } = render(<LayoutHarness initialMode="docked" />)
+
+      const handle = screen.getByRole('separator', { name: 'AI Chat 영역 크기 조절' })
+      handle.focus()
+      await user.keyboard('{ArrowLeft}')
+
+      expect(readAiChatPanelWidth()).toBe(AI_CHAT_DEFAULT_WIDTH + 24)
+      expect(container.querySelector('[data-ai-chat-mode]')).toHaveStyle({
+        '--ai-chat-width': `${AI_CHAT_DEFAULT_WIDTH + 24}px`,
+      })
+    })
+
+    it('연속으로 눌러도 마지막 폭이 저장된다', async () => {
+      const user = userEvent.setup()
+      render(<LayoutHarness initialMode="docked" />)
+
+      const handle = screen.getByRole('separator', { name: 'AI Chat 영역 크기 조절' })
+      handle.focus()
+      await user.keyboard('{ArrowLeft}{ArrowLeft}{ArrowLeft}')
+
+      expect(readAiChatPanelWidth()).toBe(AI_CHAT_DEFAULT_WIDTH + 72)
+    })
+
+    it('저장된 폭이 있으면 그 폭으로 시작한다', () => {
+      writeAiChatPanelWidth(640)
+      const { container } = render(<LayoutHarness initialMode="docked" />)
+
+      expect(container.querySelector('[data-ai-chat-mode]')).toHaveStyle({
+        '--ai-chat-width': '640px',
+      })
+    })
+
+    it('floating 모드에서는 구분선을 노출하지 않는다', () => {
+      render(<LayoutHarness initialMode="floating" />)
+
+      expect(screen.queryByRole('separator')).not.toBeInTheDocument()
+    })
   })
 })

@@ -35,9 +35,10 @@ export function AiChatMessageList({
       {messages.map((message) => (
         <article
           className={cn(
-            // 폭은 패널 기준 상대값으로 잡는다. 고정 px이면 패널이 좁아질 때 말풍선이 밖으로 넘친다.
+            // 폭은 패널을 따라간다. 사용자가 패널을 넓히면 말풍선도 넓어져야 빈 공간이 생기지 않는다.
+            // 다만 한 줄이 지나치게 길면 읽기 어려워 상한을 둔다.
             'rounded-m p-s break-words typo-transcription-body-01',
-            variant === 'floating' ? 'max-w-[min(300px,85%)]' : 'max-w-[min(400px,85%)]',
+            variant === 'floating' ? 'max-w-[min(300px,85%)]' : 'max-w-[min(720px,85%)]',
             // 질문은 입력한 줄바꿈을 살린다. 답변은 마크다운이 구조를 담당하므로 걸지 않는다.
             message.role === 'user' && 'whitespace-pre-wrap',
             message.role === 'assistant'
