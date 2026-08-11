@@ -14,6 +14,7 @@ import {
 } from '../entities/meeting'
 import type { ProjectNavigationState } from '../features/meeting-processing'
 import { resetLiveMeetingMockDb } from '../shared/api/mock/db/liveMeeting.mockDb'
+import { meetingService } from '../shared/api/services/meeting.service'
 import { transcriptService } from '../shared/api/services/transcript.service'
 import { writeMeetingRuntime } from './meeting/model/meetingRuntime.storage'
 import { MeetingPage } from './MeetingPage'
@@ -100,6 +101,11 @@ describe('MeetingPage controls', () => {
       meetingId,
       status: 'COMPLETED',
       endedAt: '2026-08-05T01:00:00.000Z',
+    }))
+    vi.spyOn(meetingService, 'updateMeetingTitle').mockImplementation(async (meetingId, title) => ({
+      meetingId,
+      title,
+      userModified: true,
     }))
     vi.spyOn(meetingHintApi, 'listHintRecords').mockResolvedValue([])
     vi.spyOn(meetingParticipantApi, 'listParticipants').mockResolvedValue([
@@ -194,8 +200,34 @@ describe('MeetingPage controls', () => {
     await user.type(titleInput, '3차 회의')
     await user.click(within(dialog).getByRole('button', { name: '제목 변경하기' }))
 
+    // 저장이 끝난 뒤에야 제목이 바뀐다. 동기로 단언하면 저장 전 화면을 볼 수 있다.
+    expect(await screen.findByTitle('3차 회의')).toBeInTheDocument()
     expect(screen.queryByRole('dialog', { name: '회의 제목 수정' })).not.toBeInTheDocument()
-    expect(screen.getByTitle('3차 회의')).toBeInTheDocument()
+    // 화면만 바꾸고 저장하지 않으면 회의 기록에는 옛 제목이 남는다.
+    expect(meetingService.updateMeetingTitle).toHaveBeenCalledWith(1, '3차 회의')
+  })
+
+  it('제목 저장에 실패하면 모달을 열어 둔 채 오류를 알리고 헤더 제목을 지킨다', async () => {
+    vi.spyOn(meetingService, 'updateMeetingTitle').mockRejectedValue(
+      new Error('회의 제목을 수정하지 못했습니다.'),
+    )
+    const user = userEvent.setup()
+    await renderMeetingPage()
+
+    await user.click(screen.getByRole('button', { name: '회의 메뉴 더보기' }))
+    await user.click(screen.getByRole('menuitem', { name: '제목 수정하기' }))
+
+    const dialog = screen.getByRole('dialog', { name: '회의 제목 수정' })
+    const titleInput = within(dialog).getByLabelText('회의 제목')
+    await user.clear(titleInput)
+    await user.type(titleInput, '저장에 실패할 제목')
+    await user.click(within(dialog).getByRole('button', { name: '제목 변경하기' }))
+
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      '회의 제목을 수정하지 못했습니다.',
+    )
+    expect(within(dialog).getByLabelText('회의 제목')).toHaveValue('저장에 실패할 제목')
+    expect(screen.getByTitle('2차 대면회의')).toBeInTheDocument()
   })
 
   it('moves from end confirmation to the saving dialog', async () => {

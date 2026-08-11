@@ -110,6 +110,27 @@ describe('MeetingTitleEditDialog', () => {
     expect(screen.getByLabelText('회의 제목')).toHaveValue('3차 회의')
   })
 
+  it('저장 실패 문구를 입력한 제목과 함께 보여 준다', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <MeetingTitleEditDialog
+        currentTitle="2차 대면회의"
+        errorMessage="회의 제목을 수정하지 못했습니다."
+        onCancel={vi.fn()}
+        onSubmit={vi.fn()}
+        open
+      />,
+    )
+
+    const input = screen.getByLabelText('회의 제목')
+    await user.clear(input)
+    await user.type(input, '3차 회의')
+
+    expect(screen.getByRole('alert')).toHaveTextContent('회의 제목을 수정하지 못했습니다.')
+    expect(input).toHaveValue('3차 회의')
+  })
+
   it('locks editing and dismissal while a title update is pending', async () => {
     const user = userEvent.setup()
     const onCancel = vi.fn()

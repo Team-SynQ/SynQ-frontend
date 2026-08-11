@@ -8,6 +8,8 @@ type MeetingTitleEditDialogProps = {
   currentTitle: string
   maxLength?: number
   pending?: boolean
+  /** 저장에 실패했을 때 입력한 제목을 잃지 않도록 모달을 열어 둔 채 보여 준다. */
+  errorMessage?: string | null
   onCancel: () => void
   onSubmit: (title: string) => void
 }
@@ -17,6 +19,7 @@ export function MeetingTitleEditDialog({
   currentTitle,
   maxLength = 50,
   pending = false,
+  errorMessage = null,
   onCancel,
   onSubmit,
 }: MeetingTitleEditDialogProps) {
@@ -33,6 +36,7 @@ export function MeetingTitleEditDialog({
       {open ? (
         <MeetingTitleEditForm
           currentTitle={currentTitle}
+          errorMessage={errorMessage}
           key={currentTitle}
           maxLength={maxLength}
           pending={pending}
@@ -51,6 +55,7 @@ type MeetingTitleEditFormProps = Omit<MeetingTitleEditDialogProps, 'open'> & {
 
 function MeetingTitleEditForm({
   currentTitle,
+  errorMessage = null,
   maxLength = 50,
   pending = false,
   onCancel,
@@ -90,6 +95,11 @@ function MeetingTitleEditForm({
           onChange={(event) => setDraft(event.target.value)}
           value={draft}
         />
+        {errorMessage ? (
+          <p className="m-0 px-xs typo-caption-01 text-status-negative" role="alert">
+            {errorMessage}
+          </p>
+        ) : null}
       </div>
 
       <div className="mt-xs flex gap-s">

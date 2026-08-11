@@ -28,6 +28,7 @@ import type {
   TranscriptPanelProps,
   TranscriptSegment,
 } from '../../../features/live-transcription'
+import { meetingService } from '../../../shared/api/services/meeting.service'
 import { transcriptService } from '../../../shared/api/services/transcript.service'
 import { useLiveTranscription } from './useLiveTranscription'
 import { useMeetingRuntime } from './useMeetingRuntime'
@@ -47,7 +48,7 @@ type ReadyController = {
   transcript: TranscriptPanelProps
   aiChat: AiChatContentProps
   aiChatDisplayMode: AiChatDisplayMode
-  setMeetingTitle: (title: string) => void
+  renameMeeting: (title: string) => Promise<void>
   toggleRecording: () => void
   completeMeeting: (context: LiveMeetingProjectContext) => Promise<CompletedMeeting>
   changeAiChatDisplayMode: (mode: AiChatDisplayMode) => void
@@ -452,6 +453,20 @@ export function useLiveMeetingController(
     }
   }
 
+  /**
+   * 제목은 서버에 저장된 뒤에만 화면에 반영한다.
+   * 먼저 바꿔 두면 저장에 실패해도 바뀐 것처럼 보이고, 회의 기록에는 옛 제목이 남는다.
+   */
+  const renameMeeting = async (title: string) => {
+    const requestMeetingId = meetingId
+    const requestSessionSequence = meetingSessionRef.current.sequence
+
+    const updated = await meetingService.updateMeetingTitle(apiMeetingId, title)
+    if (!isCurrentMeetingSession(requestMeetingId, requestSessionSequence)) return
+
+    setMeetingTitle(updated.title)
+  }
+
   const changeAiChatDisplayMode = (mode: AiChatDisplayMode) => {
     setAiChatDisplayMode(mode)
     if (mode !== 'launcher') {
@@ -580,7 +595,7 @@ export function useLiveMeetingController(
     transcript,
     aiChat,
     aiChatDisplayMode,
-    setMeetingTitle,
+    renameMeeting,
     toggleRecording: runtime.toggleRecording,
     completeMeeting,
     changeAiChatDisplayMode,
