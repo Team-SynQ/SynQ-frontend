@@ -18,6 +18,7 @@ export {
   resolveTranscriptionUrl,
 } from './api/meeting-transcription.gateway'
 export type {
+  ConnectTranscriptionOptions,
   MeetingTranscriptionGateway,
   TranscriptionChannel,
   TranscriptionChannelStatus,
