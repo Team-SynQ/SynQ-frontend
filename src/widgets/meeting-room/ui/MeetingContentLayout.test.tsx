@@ -66,7 +66,7 @@ describe('MeetingContentLayout', () => {
 
     const root = container.querySelector('[data-ai-chat-mode]')
     expect(root).toHaveAttribute('data-ai-chat-mode', 'docked')
-    expect(root).toHaveClass('grid-cols-[minmax(524px,1fr)_500px]')
+    expect(root).toHaveClass('grid-cols-[minmax(524px,1fr)_auto_var(--ai-chat-width)]')
 
     const minimize = screen.getByRole('button', { name: 'AI Chat 창 축소' })
     minimize.focus()
