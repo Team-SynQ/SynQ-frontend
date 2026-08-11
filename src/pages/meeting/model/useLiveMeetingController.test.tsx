@@ -321,6 +321,33 @@ describe('useLiveMeetingController async boundaries', () => {
     })
   })
 
+  // 말하는 중인 문장은 서버에 저장 전이라 힌트를 만들 수 없다. 요청도 오류 카드도 없어야 한다.
+  it('중간 인식 문장을 선택하면 힌트를 요청하지 않는다', async () => {
+    const createSegmentHint = vi.spyOn(meetingHintApi, 'createSegmentHint')
+    const { result } = await renderReadyController()
+
+    act(() => {
+      deliverMessage({ kind: 'interim', text: '지금 말하는 중인 문장' })
+    })
+    await waitFor(() => {
+      if (result.current.status !== 'ready' || result.current.transcript.state.kind !== 'active') {
+        throw new Error('transcript is not active')
+      }
+      expect(result.current.transcript.state.segments.at(-1)?.isInterim).toBe(true)
+    })
+
+    act(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      result.current.transcript.actions.onSelectSegment?.('interim')
+    })
+
+    if (result.current.status !== 'ready' || result.current.transcript.state.kind !== 'active') {
+      throw new Error('transcript is not active')
+    }
+    expect(createSegmentHint).not.toHaveBeenCalled()
+    expect(result.current.transcript.state.hintState?.status).toBe('idle')
+  })
+
   // 새로고침 후 같은 전사를 눌렀을 때 서버에 다시 생성 요청을 보내지 않아야 한다.
   it('입장 시 받은 힌트 기록으로 캐시를 채운다', async () => {
     const stored: TranscriptHintResponse = {

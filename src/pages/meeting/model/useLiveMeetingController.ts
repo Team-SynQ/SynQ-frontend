@@ -271,6 +271,15 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
     if (editState.status === 'editing') return
 
     setSelectedSegmentId(segmentId)
+
+    // 중간 인식 문장은 서버에 저장되기 전이라 힌트를 만들 수 없다. 선택만 허용한다.
+    // 진행 중이던 다른 전사의 힌트 응답이 뒤늦게 도착해 열리지 않도록 순번도 올린다.
+    if (segmentId === INTERIM_SEGMENT_ID) {
+      hintRequestSequenceRef.current += 1
+      setHintState({ status: 'idle' })
+      return
+    }
+
     void loadHint(segmentId, true)
   }
 
