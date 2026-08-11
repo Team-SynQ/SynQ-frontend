@@ -328,6 +328,44 @@ describe('useLiveMeetingController async boundaries', () => {
     })
   })
 
+  // 입장 응답이 먼저 끝나면 화면은 이미 새 회의다. 그 사이 이전 대화가 보이면 안 된다.
+  it('회의를 옮기면 이전 회의의 대화와 추천 질문을 즉시 비운다', async () => {
+    const { result, rerender } = await renderReadyController()
+
+    await waitFor(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      expect(result.current.aiChat.model.messages).toHaveLength(1)
+    })
+
+    const nextWelcome = deferred<Awaited<ReturnType<typeof meetingAiChatApi.loadWelcome>>>()
+    vi.spyOn(meetingAiChatApi, 'loadWelcome').mockReturnValue(nextWelcome.promise)
+    vi.spyOn(transcriptService, 'listSegments').mockResolvedValue({
+      meetingId: 2,
+      segments: [transcriptDto(9, '다음 회의의 문장')],
+    })
+
+    rerender({ currentMeetingId: '2' })
+
+    await waitFor(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      expect(result.current.meeting.meetingId).toBe('2')
+    })
+    if (result.current.status !== 'ready') throw new Error('controller is not ready')
+    expect(result.current.aiChat.model.messages).toEqual([])
+    expect(result.current.aiChat.model.suggestions).toEqual([])
+    expect(result.current.aiChat.model.isLoading).toBe(true)
+
+    await act(async () => {
+      nextWelcome.resolve({
+        messages: [
+          { id: 'assistant-welcome', role: 'assistant', content: '새 회의입니다.', context: null },
+        ],
+        suggestions: [],
+      })
+      await Promise.resolve()
+    })
+  })
+
   // 서버가 생성 중이라고 답하면 답변이 비어 온다. 사용자가 대기 중임을 알 수 있어야 한다.
   it('생성 중 응답이면 답변 대기 상태를 유지한다', async () => {
     vi.spyOn(meetingAiChatApi, 'sendQuestion').mockResolvedValue({

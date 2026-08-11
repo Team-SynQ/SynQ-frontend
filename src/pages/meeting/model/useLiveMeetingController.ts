@@ -124,6 +124,11 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
   const loadAiChat = useCallback(
     async (requestSessionSequence: number, isActive: () => boolean) => {
       const requestMeetingId = meetingId
+      // 이전 회의의 대화가 새 회의 화면에 남지 않도록, 조회를 시작하기 전에 비운다.
+      // 입장 응답이 먼저 끝나면 화면은 이미 새 회의다.
+      setMessages([])
+      setSuggestions([])
+      setIsAnswerPending(false)
       setIsChatLoading(true)
       setChatLoadError(null)
 
