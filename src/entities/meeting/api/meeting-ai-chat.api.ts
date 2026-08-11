@@ -26,6 +26,9 @@ export type MeetingAiChatApi = {
   loadHistory(meetingId: number): Promise<MeetingAiChatMessageResponse[]>
 }
 
+/** 응답이 hasNext를 계속 참으로 주더라도 멈추기 위한 상한. */
+const HISTORY_PAGE_LIMIT = 20
+
 /** 서버에 저장된 전사만 질문에 묶을 수 있다. 중간 인식 문장은 숫자 id가 아니다. */
 function toLinkedSegmentId(transcriptId: string | null): number | undefined {
   if (!transcriptId) return undefined
@@ -43,9 +46,9 @@ export const meetingAiChatApi: MeetingAiChatApi = {
 
     return {
       messages: toAiChatMessages(dto),
-      suggestions: dto.suggestedQuestions?.length
-        ? toAiChatSuggestions(dto.suggestedQuestions)
-        : null,
+      // 빈 배열은 "추천을 비워라"는 뜻이다. 필드가 아예 없을 때만 기존 추천을 유지한다.
+      suggestions:
+        dto.suggestedQuestions === undefined ? null : toAiChatSuggestions(dto.suggestedQuestions),
     }
   },
 
@@ -67,8 +70,20 @@ export const meetingAiChatApi: MeetingAiChatApi = {
     }
   },
 
+  /**
+   * 대화 내역은 페이지네이션이다. 첫 페이지만 읽으면 새로고침 후 앞부분이 사라지므로
+   * hasNext가 끝날 때까지 이어 읽는다. 응답이 이상해 hasNext가 계속 참이어도
+   * 무한히 돌지 않도록 상한을 둔다.
+   */
   async loadHistory(meetingId) {
-    const history = await aiChatService.listMessages(meetingId)
-    return (history.messages ?? []).flatMap(toAiChatMessages)
+    const messages: MeetingAiChatMessageResponse[] = []
+
+    for (let page = 0; page < HISTORY_PAGE_LIMIT; page += 1) {
+      const history = await aiChatService.listMessages(meetingId, page)
+      messages.push(...(history.messages ?? []).flatMap(toAiChatMessages))
+      if (!history.hasNext) break
+    }
+
+    return messages
   },
 }

@@ -59,11 +59,22 @@ describe('meetingAiChatApi', () => {
     })
   })
 
-  it('추천 질문이 없으면 null을 돌려 기존 추천을 유지하게 한다', async () => {
+  it('추천 질문 필드가 없으면 null을 돌려 기존 추천을 유지하게 한다', async () => {
     vi.spyOn(aiChatService, 'sendQuestion').mockResolvedValue(sendResponse())
 
     await expect(meetingAiChatApi.sendQuestion(7, '질문', null)).resolves.toMatchObject({
       suggestions: null,
+    })
+  })
+
+  // 빈 배열은 "추천을 비워라"는 뜻이다. 유지로 바꾸면 지난 추천이 계속 남는다.
+  it('추천 질문이 빈 배열이면 빈 목록으로 갱신한다', async () => {
+    vi.spyOn(aiChatService, 'sendQuestion').mockResolvedValue(
+      sendResponse({ suggestedQuestions: [] }),
+    )
+
+    await expect(meetingAiChatApi.sendQuestion(7, '질문', null)).resolves.toMatchObject({
+      suggestions: [],
     })
   })
 
@@ -95,5 +106,32 @@ describe('meetingAiChatApi', () => {
     })
 
     await expect(meetingAiChatApi.loadHistory(7)).resolves.toHaveLength(4)
+  })
+
+  // 첫 페이지만 읽으면 새로고침 후 앞선 대화가 사라진다.
+  it('hasNext가 끝날 때까지 다음 페이지를 이어 읽는다', async () => {
+    const listMessages = vi
+      .spyOn(aiChatService, 'listMessages')
+      .mockResolvedValueOnce({ messages: [sendResponse()], page: 0, size: 20, hasNext: true })
+      .mockResolvedValueOnce({
+        messages: [sendResponse({ id: 6 })],
+        page: 1,
+        size: 20,
+        hasNext: false,
+      })
+
+    await expect(meetingAiChatApi.loadHistory(7)).resolves.toHaveLength(4)
+    expect(listMessages).toHaveBeenNthCalledWith(1, 7, 0)
+    expect(listMessages).toHaveBeenNthCalledWith(2, 7, 1)
+  })
+
+  it('hasNext가 계속 참이어도 무한히 돌지 않는다', async () => {
+    const listMessages = vi
+      .spyOn(aiChatService, 'listMessages')
+      .mockResolvedValue({ messages: [sendResponse()], page: 0, size: 20, hasNext: true })
+
+    await meetingAiChatApi.loadHistory(7)
+
+    expect(listMessages).toHaveBeenCalledTimes(20)
   })
 })
