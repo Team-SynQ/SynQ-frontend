@@ -1,3 +1,4 @@
+import { Button } from '../../../shared/ui'
 import { cn } from '../../../shared/lib/cn'
 import type { AiChatMessage } from '../model/aiChat.types'
 import { AiChatMarkdown } from './AiChatMarkdown'
@@ -5,9 +6,20 @@ import { AiChatMarkdown } from './AiChatMarkdown'
 export type AiChatMessageListProps = {
   messages: AiChatMessage[]
   variant: 'docked' | 'floating'
+  isLoading?: boolean
+  isAwaitingAnswer?: boolean
+  loadError?: string | null
+  onRetryLoad?: () => void
 }
 
-export function AiChatMessageList({ messages, variant }: AiChatMessageListProps) {
+export function AiChatMessageList({
+  messages,
+  variant,
+  isLoading = false,
+  isAwaitingAnswer = false,
+  loadError = null,
+  onRetryLoad,
+}: AiChatMessageListProps) {
   return (
     <div
       aria-label="AI Chat 메시지"
@@ -45,6 +57,39 @@ export function AiChatMessageList({ messages, variant }: AiChatMessageListProps)
           )}
         </article>
       ))}
+
+      {/* 답변 자리를 비워 두지 않는다. 전송 직후와 서버가 생성 중일 때 모두 여기에 걸린다. */}
+      {isAwaitingAnswer ? (
+        <p
+          className={cn(
+            'm-0 self-start rounded-m rounded-bl-none border p-s typo-transcription-body-01 text-fg-secondary',
+            variant === 'floating'
+              ? 'border-line-default bg-surface-elevated'
+              : 'border-surface-muted bg-surface-elevated',
+          )}
+          role="status"
+        >
+          답변을 생성하고 있습니다…
+        </p>
+      ) : null}
+
+      {/* 초기 로딩과 실패는 대화가 비어 있을 때만 안내한다. 기존 대화를 가리지 않는다. */}
+      {isLoading && messages.length === 0 ? (
+        <p className="m-0 typo-transcription-body-01 text-fg-secondary" role="status">
+          AI Chat을 준비하고 있습니다…
+        </p>
+      ) : null}
+
+      {!isLoading && loadError && messages.length === 0 ? (
+        <div className="flex flex-col items-start gap-xs" role="alert">
+          <p className="m-0 typo-transcription-body-01 text-fg-secondary">{loadError}</p>
+          {onRetryLoad ? (
+            <Button onClick={onRetryLoad} size="small" variant="primaryLine">
+              다시 시도
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   )
 }

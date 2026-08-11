@@ -13,10 +13,14 @@ const aiChat: AiChatContentProps = {
     onClearContext: vi.fn(),
     onSelectSuggestion: vi.fn(),
     onSend: vi.fn(),
+    onRetryLoad: vi.fn(),
   },
   model: {
     draft: '',
     isSending: false,
+    isLoading: false,
+    isAwaitingAnswer: false,
+    loadError: null,
     sendError: null,
     messages: [
       {

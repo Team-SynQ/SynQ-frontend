@@ -74,6 +74,10 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
   const [pinnedContext, setPinnedContext] = useState<LiveMeetingAiPinnedContext | null>(null)
   const [aiChatDisplayMode, setAiChatDisplayMode] = useState<AiChatDisplayMode>('docked')
   const [suggestions, setSuggestions] = useState<LiveMeetingAiChatSuggestion[]>([])
+  const [isChatLoading, setIsChatLoading] = useState(true)
+  const [chatLoadError, setChatLoadError] = useState<string | null>(null)
+  /** 서버가 생성 중이라고 답한 뒤 최종 답변을 아직 못 받은 상태. */
+  const [isAnswerPending, setIsAnswerPending] = useState(false)
   const hintCacheRef = useRef(new Map<string, LiveMeetingTranscriptHint>())
   const hintRequestSequenceRef = useRef(0)
   const composerInputRef = useRef<HTMLInputElement>(null)
@@ -111,6 +115,39 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
       meetingSessionRef.current.meetingId === requestMeetingId &&
       meetingSessionRef.current.sequence === requestSequence,
     [],
+  )
+
+  /**
+   * 환영 문구·추천 질문과 기존 대화를 채운다. 응답이 몇 초 걸려 로딩 상태를 노출한다.
+   * 실패해도 질문 전송은 막지 않고, 재시도 경로만 열어 둔다.
+   */
+  const loadAiChat = useCallback(
+    async (requestSessionSequence: number, isActive: () => boolean) => {
+      const requestMeetingId = meetingId
+      setIsChatLoading(true)
+      setChatLoadError(null)
+
+      try {
+        const [welcome, history] = await Promise.all([
+          meetingAiChatApi.loadWelcome(apiMeetingId),
+          meetingAiChatApi.loadHistory(apiMeetingId),
+        ])
+        if (!isActive() || !isCurrentMeetingSession(requestMeetingId, requestSessionSequence))
+          return
+
+        setMessages([...welcome.messages, ...history])
+        setSuggestions(welcome.suggestions)
+      } catch (error) {
+        if (!isActive() || !isCurrentMeetingSession(requestMeetingId, requestSessionSequence))
+          return
+        setChatLoadError(getErrorMessage(error, 'AI Chat을 불러오지 못했습니다.'))
+      } finally {
+        if (isActive() && isCurrentMeetingSession(requestMeetingId, requestSessionSequence)) {
+          setIsChatLoading(false)
+        }
+      }
+    },
+    [apiMeetingId, isCurrentMeetingSession, meetingId],
   )
 
   useEffect(() => {
@@ -177,22 +214,12 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
       })
       .catch(() => {})
 
-    // 환영 문구·추천 질문과 기존 대화를 함께 채운다. 둘 다 실패해도 질문 전송은 막지 않는다.
-    void Promise.all([
-      meetingAiChatApi.loadWelcome(apiMeetingId),
-      meetingAiChatApi.loadHistory(apiMeetingId).catch(() => []),
-    ])
-      .then(([welcome, history]) => {
-        if (!active || !isCurrentMeetingSession(meetingId, requestSessionSequence)) return
-        setMessages([...welcome.messages, ...history])
-        setSuggestions(welcome.suggestions)
-      })
-      .catch(() => {})
+    void loadAiChat(requestSessionSequence, () => active)
 
     return () => {
       active = false
     }
-  }, [apiMeetingId, hasValidMeetingId, isCurrentMeetingSession, meetingId])
+  }, [apiMeetingId, hasValidMeetingId, isCurrentMeetingSession, loadAiChat, meetingId])
 
   const loadHint = useCallback(
     async (transcriptId: string, useCache: boolean) => {
@@ -373,9 +400,12 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
       setMessages((current) => [...current, ...response.messages])
       // 서버가 답변마다 후속 질문을 준다. 주지 않으면 기존 추천을 유지한다.
       if (response.suggestions) setSuggestions(response.suggestions)
+      // 생성 중이면 답변이 아직 없다. 수신 경로는 AI 이벤트 연동에서 붙인다.
+      setIsAnswerPending(response.isAnswerPending)
       setDraft('')
     } catch {
       if (!isCurrentMeetingSession(requestMeetingId, requestSessionSequence)) return
+      setIsAnswerPending(false)
       setSendError('AI 답변을 불러오지 못했습니다. 다시 시도해 주세요.')
     } finally {
       if (isCurrentMeetingSession(requestMeetingId, requestSessionSequence)) {
@@ -472,11 +502,15 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
         }
       },
       onSend: () => void sendMessage(),
+      onRetryLoad: () => void loadAiChat(meetingSessionRef.current.sequence, () => true),
     },
     composerInputRef,
     model: {
       draft,
       isSending,
+      isLoading: isChatLoading,
+      isAwaitingAnswer: isSending || isAnswerPending,
+      loadError: chatLoadError,
       sendError,
       messages,
       pinnedContext,
