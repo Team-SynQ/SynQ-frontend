@@ -148,6 +148,80 @@ describe('ProjectMainboardPage', () => {
     expect(screen.getByText(/"projectTitle":"서비스 디자인"/)).toBeInTheDocument()
   })
 
+  it('진행 중이던 회의가 끝나면 회의 기록도 다시 조회한다', async () => {
+    vi.useFakeTimers()
+    const loadCompletedMeetings = vi
+      .fn<() => Promise<CompletedMeeting[]>>()
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([completedMeeting])
+    const loadOngoingMeeting = vi
+      .fn<() => Promise<OngoingMeeting | null>>()
+      .mockResolvedValueOnce(ongoingMeeting)
+      .mockResolvedValue(null)
+
+    renderProjectMainboardPage({
+      loadProjects: () => Promise.resolve([projectOne]),
+      loadCompletedMeetings,
+      loadOngoingMeeting,
+    })
+
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    expect(screen.getByRole('button', { name: '진행 중인 회의 참가하기' })).toBeInTheDocument()
+    expect(loadCompletedMeetings).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15_000)
+    })
+
+    expect(screen.getByRole('button', { name: '새 회의 시작' })).toBeInTheDocument()
+    // 끝난 회의가 기록 목록에 나타나야 한다.
+    expect(loadCompletedMeetings).toHaveBeenCalledTimes(2)
+  })
+
+  it('늦게 도착한 이전 폴링 응답이 끝난 회의를 되살리지 않는다', async () => {
+    vi.useFakeTimers()
+    let resolveSlowRequest: ((meeting: OngoingMeeting | null) => void) | undefined
+    const loadOngoingMeeting = vi
+      .fn<() => Promise<OngoingMeeting | null>>()
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveSlowRequest = resolve
+          }),
+      )
+      .mockResolvedValue(null)
+
+    renderProjectMainboardPage({
+      loadProjects: () => Promise.resolve([projectOne]),
+      loadCompletedMeetings: () => Promise.resolve([]),
+      loadOngoingMeeting,
+    })
+
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    // 두 번째 요청이 먼저 끝난 뒤, 첫 요청이 진행 중 회의를 뒤늦게 들고 온다.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15_000)
+    })
+    await act(async () => {
+      resolveSlowRequest?.(ongoingMeeting)
+      await Promise.resolve()
+    })
+
+    expect(screen.getByRole('button', { name: '새 회의 시작' })).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: '진행 중인 회의 참가하기' }),
+    ).not.toBeInTheDocument()
+  })
+
   it('loads the active project meeting history and opens the latest summary', async () => {
     const user = userEvent.setup()
     const loadCompletedMeetings = vi.fn(() => Promise.resolve([completedMeeting]))

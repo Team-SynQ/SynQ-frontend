@@ -240,6 +240,8 @@ export function ProjectMainboardPage({
   const [ongoingMeetingByProject, setOngoingMeetingByProject] = useState<
     Record<string, OngoingMeeting | null>
   >({})
+  /** 폴링 결과가 달라졌는지 판단하는 기준값. state를 읽으면 갱신 함수 밖에서 비교할 수 없다. */
+  const ongoingMeetingIdRef = useRef<Record<string, string | null>>({})
   const [latestCreatedProjectName, setLatestCreatedProjectName] = useState<string>()
   const [meetingEntryVariant, setMeetingEntryVariant] = useState<MeetingEntryModalVariant | null>(
     null,
@@ -430,16 +432,33 @@ export function ProjectMainboardPage({
     if (!activeProjectId) return
 
     let isSubscribed = true
+    // 응답이 주기보다 오래 걸리면 요청이 겹친다. 늦게 온 옛 응답이 끝난 회의를 되살리지 않게 순번을 센다.
+    let latestRequestSequence = 0
+
     const refreshOngoingMeeting = () => {
+      const requestSequence = ++latestRequestSequence
+
       void loadOngoingMeeting(activeProjectId)
         .then((meeting) => {
-          if (!isSubscribed) return
-          setOngoingMeetingByProject((current) => {
-            // 대부분의 주기는 결과가 같다. 그대로 담으면 15초마다 화면 전체가 다시 그려진다.
-            const previous = current[activeProjectId] ?? null
-            if (previous?.meetingId === meeting?.meetingId) return current
+          if (!isSubscribed || requestSequence !== latestRequestSequence) return
 
-            return { ...current, [activeProjectId]: meeting }
+          const previousMeetingId = ongoingMeetingIdRef.current[activeProjectId] ?? null
+          const nextMeetingId = meeting?.meetingId ?? null
+          // 대부분의 주기는 결과가 같다. 그대로 담으면 15초마다 화면 전체가 다시 그려진다.
+          if (previousMeetingId === nextMeetingId) return
+
+          ongoingMeetingIdRef.current[activeProjectId] = nextMeetingId
+          setOngoingMeetingByProject((current) => ({ ...current, [activeProjectId]: meeting }))
+
+          // 진행 중이던 회의가 끝났다. 회의 기록은 최초 조회 결과를 캐시하므로,
+          // 비워 주지 않으면 방금 끝난 회의가 목록에 나타나지 않는다.
+          if (!previousMeetingId) return
+          setCompletedMeetingsByProject((current) => {
+            if (!(activeProjectId in current)) return current
+
+            const next = { ...current }
+            delete next[activeProjectId]
+            return next
           })
         })
         .catch(() => {
