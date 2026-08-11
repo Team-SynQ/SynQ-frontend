@@ -52,7 +52,7 @@ describe('AiChatPanel', () => {
 
     expect(screen.getByRole('complementary', { name: 'AI Chat' })).toBeInTheDocument()
     expect(screen.getByText('회의가 시작되었습니다.').closest('article')).toHaveClass(
-      'max-w-[400px]',
+      'max-w-[min(400px,85%)]',
       'border-surface-muted',
     )
     expect(screen.getByRole('button', { name: '지난 회의 범위는?' })).toBeInTheDocument()
@@ -86,7 +86,7 @@ describe('AiChatPanel', () => {
     const panel = screen.getByRole('complementary', { name: 'AI Chat' })
     expect(panel).toHaveClass('overflow-hidden', 'rounded-m')
     expect(screen.getByText('회의가 시작되었습니다.').closest('article')).toHaveClass(
-      'max-w-[300px]',
+      'max-w-[min(300px,85%)]',
       'border-line-default',
     )
 

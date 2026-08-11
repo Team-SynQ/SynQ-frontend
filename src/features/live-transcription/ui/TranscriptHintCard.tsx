@@ -15,9 +15,6 @@ export function TranscriptHintCard({ state, onCollapse, onRetry }: TranscriptHin
       <header className="mb-s flex items-center justify-between gap-s">
         <div className="min-w-0">
           <h3 className="m-0 typo-body-01 text-gray-800">SynQ 힌트</h3>
-          {state.status === 'ready' && state.hint.notice ? (
-            <p className="m-0 mt-xs typo-caption text-gray-500">{state.hint.notice}</p>
-          ) : null}
         </div>
         <Button
           aria-label="SynQ 힌트 접기"

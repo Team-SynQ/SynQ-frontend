@@ -1,17 +1,13 @@
 import type {
   CompletedMeetingSummary,
   LiveMeetingResponse,
-  MeetingAiChatMessageResponse,
-  TranscriptHintResponse,
 } from '../../contracts/meeting.contracts'
 import {
   createLiveMeetingScenarios,
   type LiveMeetingScenario,
 } from '../scenarios/liveMeeting.scenario'
 
-type LiveMeetingRecord = LiveMeetingScenario & {
-  hintAttempts: Record<string, number>
-}
+type LiveMeetingRecord = LiveMeetingScenario
 
 const records = new Map<string, LiveMeetingRecord>()
 const completedMeetingRecords = new Map<string, CompletedMeetingSummary[]>()
@@ -43,10 +39,7 @@ export function resetLiveMeetingMockDb() {
   completedMeetingSequence = 0
 
   Object.entries(createLiveMeetingScenarios()).forEach(([meetingId, scenario]) => {
-    records.set(meetingId, {
-      ...structuredClone(scenario),
-      hintAttempts: {},
-    })
+    records.set(meetingId, structuredClone(scenario))
   })
 }
 
@@ -71,7 +64,6 @@ export const liveMeetingMockDb = {
         meetingId,
         projectId,
       },
-      hintAttempts: {},
     }
     records.set(meetingId, record)
     return cloneMeeting(record.meeting)
@@ -83,43 +75,9 @@ export const liveMeetingMockDb = {
 
     return {
       meeting: cloneMeeting(record.meeting),
-      hints: structuredClone(record.hints),
-      aiAnswer: record.aiAnswer,
-      hintFailureCount: record.hintFailureCount,
       transcriptEditFails: record.transcriptEditFails,
       completionFails: record.completionFails,
     }
-  },
-
-  getHint(meetingId: string, transcriptId: string): TranscriptHintResponse | undefined {
-    const hint = requireRecord(meetingId)?.hints[transcriptId]
-    return hint ? { ...hint } : undefined
-  },
-
-  /**
-   * 실제 회의의 전사 id는 mock 힌트 목록에 없다. 화면을 비우지 않도록 대표 힌트를 돌려준다.
-   * 실제 힌트 API가 붙으면 이 경로는 사라진다.
-   */
-  getFallbackHint(meetingId: string): TranscriptHintResponse | undefined {
-    const hint = Object.values(requireRecord(meetingId)?.hints ?? {})[0]
-    return hint ? { ...hint } : undefined
-  },
-
-  incrementHintAttempt(meetingId: string, transcriptId: string): number {
-    const record = requireRecord(meetingId)
-    if (!record) return 0
-
-    const nextAttempt = (record.hintAttempts[transcriptId] ?? 0) + 1
-    record.hintAttempts[transcriptId] = nextAttempt
-    return nextAttempt
-  },
-
-  appendMessages(meetingId: string, messages: MeetingAiChatMessageResponse[]): boolean {
-    const record = requireRecord(meetingId)
-    if (!record) return false
-
-    record.meeting.aiChat.messages.push(...structuredClone(messages))
-    return true
   },
 
   addCompletedMeeting(record: Omit<CompletedMeetingSummary, 'recordId'>): CompletedMeetingSummary {

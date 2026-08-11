@@ -68,7 +68,8 @@ export function MeetingContentLayout({
       {mode !== 'launcher' ? (
         <div
           className={cn(
-            'min-h-0',
+            // min-w-0이 없으면 긴 문구가 그리드 트랙을 밀고 나간다.
+            'min-h-0 min-w-0',
             mode === 'floating' &&
               'absolute bottom-m right-m z-20 h-[min(618px,calc(100%_-_48px))] w-[400px] rounded-m shadow-ai-chat-floating',
           )}

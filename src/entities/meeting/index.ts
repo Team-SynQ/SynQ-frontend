@@ -9,8 +9,16 @@ export { meetingRecordGateway } from './api/meeting-record.gateway'
 export type { MeetingRecordGateway } from './api/meeting-record.gateway'
 export { meetingConnectionGateway } from './api/meeting-connection.gateway'
 export type { MeetingConnectionGateway } from './api/meeting-connection.gateway'
-export { meetingAiMockGateway } from './api/meeting-ai.mock-gateway'
-export type { MeetingAiMockGateway } from './api/meeting-ai.mock-gateway'
+export { meetingAiChatApi } from './api/meeting-ai-chat.api'
+export type {
+  MeetingAiChatApi,
+  MeetingAiChatSendResult,
+  MeetingAiChatWelcome,
+} from './api/meeting-ai-chat.api'
+export { toAiChatMessages, toAiChatSuggestions } from './api/aiChat.adapter'
+export { meetingHintApi } from './api/meeting-hint.api'
+export type { MeetingHintApi } from './api/meeting-hint.api'
+export { toTranscriptHint, toTranscriptHintRecord } from './api/hint.adapter'
 export { toTranscriptSegment, toTranscriptSegments } from './api/transcript.adapter'
 export {
   meetingTranscriptionGateway,
