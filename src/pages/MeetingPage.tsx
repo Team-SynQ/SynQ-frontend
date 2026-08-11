@@ -16,6 +16,7 @@ import {
 } from '../features/meeting-controls'
 import { MeetingRoom } from '../widgets/meeting-room'
 import { useLiveMeetingController } from './meeting/model/useLiveMeetingController'
+import { useMeetingExitGuard } from './meeting/model/useMeetingExitGuard'
 
 type ActiveMeetingControl =
   | 'idle'
@@ -42,6 +43,7 @@ export function MeetingPage({ user }: MeetingPageProps = {}) {
   const navigate = useNavigate()
   const { meetingId = 'demo' } = useParams()
   const controller = useLiveMeetingController(meetingId, user?.userId ?? null)
+  const exitGuard = useMeetingExitGuard({ enabled: controller.status === 'ready' })
   const [lastAction, setLastAction] = useState('회의 진행 화면 준비 완료')
   const [activeControl, setActiveControl] = useState<ActiveMeetingControl>('idle')
   const [completedMeeting, setCompletedMeeting] = useState<CompletedMeeting | null>(null)
@@ -91,6 +93,7 @@ export function MeetingPage({ user }: MeetingPageProps = {}) {
   }
 
   const returnToProject = () => {
+    exitGuard.allowExit()
     navigate('/projects', {
       replace: true,
       state: { activeProjectId: projectContext.projectId },
@@ -100,6 +103,7 @@ export function MeetingPage({ user }: MeetingPageProps = {}) {
   const returnToProjectWithCompletedMeeting = () => {
     if (!completedMeeting) return
 
+    exitGuard.allowExit()
     navigate('/projects', {
       replace: true,
       state: {
@@ -186,15 +190,20 @@ export function MeetingPage({ user }: MeetingPageProps = {}) {
       />
       <MeetingExitDialog
         mode={currentUserIsHost ? 'end' : 'leave'}
-        onCancel={() => setActiveControl('idle')}
+        onCancel={() => {
+          exitGuard.dismiss()
+          setActiveControl('idle')
+        }}
         onConfirm={() => {
+          // 가로챈 이동은 여기서 놓아준다. 종료·나가기 처리가 끝나면 스스로 프로젝트 화면으로 보낸다.
+          exitGuard.dismiss()
           if (currentUserIsHost) {
             void saveMeeting()
             return
           }
           returnToProject()
         }}
-        open={activeControl === 'end-confirm'}
+        open={activeControl === 'end-confirm' || exitGuard.isBlocked}
       />
       {activeControl === 'saving' ? <MeetingSaveDialog open state="saving" /> : null}
       {activeControl === 'save-success' && completedMeeting ? (
