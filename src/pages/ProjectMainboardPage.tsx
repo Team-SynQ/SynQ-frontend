@@ -6,6 +6,7 @@ import {
   meetingRecordGateway,
   type CompletedMeeting,
   type MeetingLifecycleApi,
+  type OngoingMeeting,
 } from '../entities/meeting'
 import {
   MeetingEntryModal,
@@ -70,6 +71,7 @@ type ProjectMainboardPageProps = {
     nextName: string,
   ) => Promise<void> | void
   loadCompletedMeetings?: (projectId: string) => Promise<CompletedMeeting[]>
+  loadOngoingMeeting?: (projectId: string) => Promise<OngoingMeeting | null>
   updateCompletedMeetingTitle?: (recordId: string, title: string) => Promise<CompletedMeeting>
   deleteCompletedMeeting?: (recordId: string) => Promise<void>
   loadProjectInformation?: (
@@ -161,6 +163,11 @@ const deleteProjectById = async (projectId: string) => {
 
 const loadCompletedMeetingHistory = (projectId: string) =>
   meetingRecordGateway.listCompletedMeetings(projectId)
+const loadOngoingProjectMeeting = (projectId: string) =>
+  meetingRecordGateway.findOngoingMeeting(projectId)
+
+/** 남이 연 회의가 언제 끝날지 알 수 없어 주기적으로 확인한다. 회의 목록 조회 하나라 부담이 작다. */
+const ONGOING_MEETING_POLL_INTERVAL_MS = 15_000
 const updateCompletedMeetingHistoryTitle = (recordId: string, title: string) =>
   meetingRecordGateway.updateCompletedMeetingTitle(recordId, title)
 const deleteCompletedMeetingHistory = (recordId: string) =>
@@ -205,6 +212,7 @@ export function ProjectMainboardPage({
   deleteProjectReference = deleteProjectReferenceMaterial,
   renameProjectReference,
   loadCompletedMeetings = loadCompletedMeetingHistory,
+  loadOngoingMeeting = loadOngoingProjectMeeting,
   updateCompletedMeetingTitle = updateCompletedMeetingHistoryTitle,
   deleteCompletedMeeting = deleteCompletedMeetingHistory,
   loadProjectInformation,
@@ -229,6 +237,9 @@ export function ProjectMainboardPage({
   >({})
   const [meetingHistoryErrorProjectId, setMeetingHistoryErrorProjectId] = useState<string>()
   const [meetingHistoryReloadKey, setMeetingHistoryReloadKey] = useState(0)
+  const [ongoingMeetingByProject, setOngoingMeetingByProject] = useState<
+    Record<string, OngoingMeeting | null>
+  >({})
   const [latestCreatedProjectName, setLatestCreatedProjectName] = useState<string>()
   const [meetingEntryVariant, setMeetingEntryVariant] = useState<MeetingEntryModalVariant | null>(
     null,
@@ -411,6 +422,34 @@ export function ProjectMainboardPage({
     settleMeetingProcessing,
   ])
 
+  /**
+   * 진행 중 회의는 다른 사람이 열고 닫는다. 회의가 끝난 뒤에도 「회의 중」이 남지 않도록 주기적으로 다시 본다.
+   * 프로젝트별로 담아 두면 프로젝트를 바꿨을 때 이전 프로젝트의 회의가 잠깐 보이는 일이 없다.
+   */
+  useEffect(() => {
+    if (!activeProjectId) return
+
+    let isSubscribed = true
+    const refreshOngoingMeeting = () => {
+      void loadOngoingMeeting(activeProjectId)
+        .then((meeting) => {
+          if (!isSubscribed) return
+          setOngoingMeetingByProject((current) => ({ ...current, [activeProjectId]: meeting }))
+        })
+        .catch(() => {
+          // 보조 정보다. 실패해도 화면을 막지 않고 다음 주기에 다시 시도한다.
+        })
+    }
+
+    refreshOngoingMeeting()
+    const timerId = window.setInterval(refreshOngoingMeeting, ONGOING_MEETING_POLL_INTERVAL_MS)
+
+    return () => {
+      isSubscribed = false
+      window.clearInterval(timerId)
+    }
+  }, [activeProjectId, loadOngoingMeeting])
+
   const handleCreateProject = () => {
     setIsCreateModalOpen(true)
     onCreateProject?.()
@@ -419,6 +458,18 @@ export function ProjectMainboardPage({
   const handleAddProject = () => {
     setIsCreateModalOpen(true)
     onAddProject?.()
+  }
+
+  const joinOngoingMeeting = () => {
+    if (!activeProject || !ongoingMeeting) return
+
+    // `/start`가 튜토리얼 표시 여부를 판단한다. 참가 처리는 회의 화면 진입 시의 join이 담당한다.
+    navigate(`/meetings/${encodeURIComponent(ongoingMeeting.meetingId)}/start`, {
+      state: {
+        projectId: activeProject.id,
+        projectTitle: activeProject.name,
+      },
+    })
   }
 
   const createMeetingAndNavigate = async () => {
@@ -703,6 +754,7 @@ export function ProjectMainboardPage({
   const activeProjectMeetings = activeProjectId
     ? (completedMeetingsByProject[activeProjectId] ?? [])
     : []
+  const ongoingMeeting = activeProjectId ? (ongoingMeetingByProject[activeProjectId] ?? null) : null
   const isMeetingHistoryLoading = Boolean(
     activeProjectId &&
     !(activeProjectId in completedMeetingsByProject) &&
@@ -781,6 +833,8 @@ export function ProjectMainboardPage({
           meetingStartPendingRef.current = false
           setMeetingEntryVariant('startConfirmation')
         }}
+        ongoingMeeting={ongoingMeeting}
+        onJoinOngoingMeeting={joinOngoingMeeting}
         onUpdateProject={handleUpdateProject}
         project={activeProject}
       />

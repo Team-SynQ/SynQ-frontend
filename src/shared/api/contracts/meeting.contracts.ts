@@ -45,6 +45,13 @@ export type MeetingListItemResponse = {
   keyTopics: string[] | null
 }
 
+export type OngoingMeetingSummary = {
+  meetingId: string
+  meetingTitle: string
+  /** 진행 중 회의는 durationSeconds가 없다. 목록의 생성 시각을 시작 시각으로 쓴다. */
+  startedAt: string
+}
+
 export type MeetingTitleUpdateResponse = {
   meetingId: number
   title: string

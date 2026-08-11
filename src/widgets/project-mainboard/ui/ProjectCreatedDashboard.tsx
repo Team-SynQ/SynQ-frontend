@@ -1,7 +1,7 @@
 import { useId, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-import type { CompletedMeeting } from '../../../entities/meeting'
+import type { CompletedMeeting, OngoingMeeting } from '../../../entities/meeting'
 import {
   PROJECT_REFERENCE_MAX_MATERIALS,
   type ProjectReferenceMaterial,
@@ -33,6 +33,7 @@ import microphoneIcon from '../assets/microphone.svg'
 import plusIcon from '../../../shared/assets/icons/plus.svg'
 import { useTransientVisibility } from '../../../shared/lib/useTransientVisibility'
 import { Badge, Button, OverlayDialog, Toast } from '../../../shared/ui'
+import { OngoingMeetingButton } from './OngoingMeetingButton'
 import { ProjectLatestMeetingSummary } from './ProjectLatestMeetingSummary'
 import { ProjectMeetingHistory } from './ProjectMeetingHistory'
 
@@ -52,6 +53,9 @@ type ProjectCreatedDashboardProps = {
   onRetryMeetingSummary?: (recordId: string) => void
   onOpenMeetingDetail?: (recordId: string) => void
   onStartMeeting?: () => void
+  /** 이 프로젝트에서 진행 중인 회의. 있으면 새 회의를 시작할 수 없다. */
+  ongoingMeeting?: OngoingMeeting | null
+  onJoinOngoingMeeting?: () => void
   onLoadProject?: () => Promise<ProjectSummary | void> | ProjectSummary | void
   onUpdateProject?: (draft: ProjectInformationDraft) => Promise<void> | void
   perspectiveOptions?: ProjectInformationPerspective[]
@@ -80,6 +84,8 @@ export function ProjectCreatedDashboard({
   onRetryMeetingSummary,
   onOpenMeetingDetail,
   onStartMeeting,
+  ongoingMeeting,
+  onJoinOngoingMeeting,
   onLoadProject,
   onUpdateProject,
   perspectiveOptions,
@@ -119,25 +125,32 @@ export function ProjectCreatedDashboard({
       <section className="flex flex-col gap-s">
         <div className="flex items-center justify-between gap-s">
           <h2 className="m-0 typo-title-02 text-fg-primary">프로젝트 허브</h2>
-          <Button
-            className="w-[178px]"
-            leftIcon={
-              <span className="flex size-[28px] items-center justify-center">
-                <img
-                  alt=""
-                  aria-hidden="true"
-                  className="size-[28px]"
-                  height="28"
-                  src={microphoneIcon}
-                  width="28"
-                />
-              </span>
-            }
-            onClick={onStartMeeting ?? (() => navigate('/meetings/demo/tutorial'))}
-            size="large"
-          >
-            새 회의 시작
-          </Button>
+          {ongoingMeeting ? (
+            <OngoingMeetingButton
+              onJoin={onJoinOngoingMeeting ?? (() => {})}
+              startedAt={ongoingMeeting.startedAt}
+            />
+          ) : (
+            <Button
+              className="w-[178px]"
+              leftIcon={
+                <span className="flex size-[28px] items-center justify-center">
+                  <img
+                    alt=""
+                    aria-hidden="true"
+                    className="size-[28px]"
+                    height="28"
+                    src={microphoneIcon}
+                    width="28"
+                  />
+                </span>
+              }
+              onClick={onStartMeeting ?? (() => navigate('/meetings/demo/tutorial'))}
+              size="large"
+            >
+              새 회의 시작
+            </Button>
+          )}
         </div>
 
         <div className="grid min-h-[300px] grid-cols-[minmax(0,1fr)_472px] gap-s max-[1200px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
