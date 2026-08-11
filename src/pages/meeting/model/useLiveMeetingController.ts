@@ -6,11 +6,13 @@ import {
   meetingConnectionGateway,
   meetingHintApi,
   meetingLifecycleApi,
+  meetingParticipantApi,
   meetingRecordGateway,
   type CompletedMeeting,
   type LiveMeeting,
   type LiveMeetingAiChatSuggestion,
   type LiveMeetingAiPinnedContext,
+  type LiveMeetingParticipant,
   type LiveMeetingProjectContext,
   type LiveMeetingTranscriptHint,
   type TranscriptionChannelStatus,
@@ -41,6 +43,7 @@ type ReadyController = {
   connectionState: 'connecting' | 'connected' | 'reconnecting'
   connectionNotice: 'unstable' | 'restored' | null
   role: 'host' | 'participant'
+  participants: LiveMeetingParticipant[]
   transcript: TranscriptPanelProps
   aiChat: AiChatContentProps
   aiChatDisplayMode: AiChatDisplayMode
@@ -57,7 +60,10 @@ function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error && error.message ? error.message : fallback
 }
 
-export function useLiveMeetingController(meetingId: string): LiveMeetingController {
+export function useLiveMeetingController(
+  meetingId: string,
+  currentUserId: number | null,
+): LiveMeetingController {
   const [meeting, setMeeting] = useState<LiveMeeting | null>(null)
   const [loadError, setLoadError] = useState<{ meetingId: string; message: string } | null>(null)
   const [meetingTitle, setMeetingTitle] = useState('')
@@ -74,6 +80,7 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
   const [pinnedContext, setPinnedContext] = useState<LiveMeetingAiPinnedContext | null>(null)
   const [aiChatDisplayMode, setAiChatDisplayMode] = useState<AiChatDisplayMode>('docked')
   const [suggestions, setSuggestions] = useState<LiveMeetingAiChatSuggestion[]>([])
+  const [participants, setParticipants] = useState<LiveMeetingParticipant[]>([])
   const [isChatLoading, setIsChatLoading] = useState(true)
   const [chatLoadError, setChatLoadError] = useState<string | null>(null)
   /** 서버가 생성 중이라고 답한 뒤 최종 답변을 아직 못 받은 상태. */
@@ -155,6 +162,27 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
     [apiMeetingId, isCurrentMeetingSession, meetingId],
   )
 
+  /**
+   * 참여자 목록은 입장·스냅샷과 독립이다. 실패해도 회의 화면은 그대로 뜬다.
+   * 이전 회의의 참여자가 남지 않도록 조회 전에 비운다.
+   */
+  const loadParticipants = useCallback(
+    async (requestSessionSequence: number, isActive: () => boolean) => {
+      const requestMeetingId = meetingId
+      setParticipants([])
+
+      try {
+        const list = await meetingParticipantApi.listParticipants(apiMeetingId, currentUserId)
+        if (!isActive() || !isCurrentMeetingSession(requestMeetingId, requestSessionSequence))
+          return
+        setParticipants(list)
+      } catch {
+        // 참여자 목록이 없어도 회의 진행에는 지장이 없다.
+      }
+    },
+    [apiMeetingId, currentUserId, isCurrentMeetingSession, meetingId],
+  )
+
   useEffect(() => {
     let active = true
     const requestSessionSequence = meetingSessionRef.current.sequence + 1
@@ -178,12 +206,7 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
         if (!active || !isCurrentMeetingSession(meetingId, requestSessionSequence)) return
 
         const joinedAsHost = joinResponse.role === 'HOST'
-        setMeeting({
-          ...response,
-          participants: response.participants.map((participant) =>
-            participant.isCurrentUser ? { ...participant, isHost: joinedAsHost } : participant,
-          ),
-        })
+        setMeeting(response)
         setLoadError(null)
         setMeetingTitle(joinResponse.title)
         setRole(joinedAsHost ? 'host' : 'participant')
@@ -219,12 +242,20 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
       })
       .catch(() => {})
 
+    void loadParticipants(requestSessionSequence, () => active)
     void loadAiChat(requestSessionSequence, () => active)
 
     return () => {
       active = false
     }
-  }, [apiMeetingId, hasValidMeetingId, isCurrentMeetingSession, loadAiChat, meetingId])
+  }, [
+    apiMeetingId,
+    hasValidMeetingId,
+    isCurrentMeetingSession,
+    loadAiChat,
+    loadParticipants,
+    meetingId,
+  ])
 
   const loadHint = useCallback(
     async (transcriptId: string, useCache: boolean) => {
@@ -427,7 +458,7 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
   }
 
   const completeMeeting = async (context: LiveMeetingProjectContext): Promise<CompletedMeeting> => {
-    const host = meeting.participants.find((participant) => participant.isHost)
+    const host = participants.find((participant) => participant.isHost)
     if (!host) {
       throw new Error('회의 진행자 정보를 찾을 수 없습니다.')
     }
@@ -450,7 +481,8 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
       host: {
         id: host.id,
         name: host.name,
-        avatarKey: host.avatarKey,
+        // 회의 기록의 아바타는 아직 고정 키를 쓴다. 기록 화면이 프로필 이미지를 받으면 함께 정리한다.
+        avatarKey: 'pm',
       },
     })
     runtime.clear()
@@ -532,6 +564,7 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
     connectionState: runtime.connectionState,
     connectionNotice: runtime.connectionNotice,
     role,
+    participants,
     transcript,
     aiChat,
     aiChatDisplayMode,

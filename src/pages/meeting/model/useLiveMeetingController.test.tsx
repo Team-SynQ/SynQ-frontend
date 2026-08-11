@@ -5,6 +5,7 @@ import {
   meetingAiChatApi,
   meetingHintApi,
   meetingLifecycleApi,
+  meetingParticipantApi,
   meetingRecordGateway,
   meetingTranscriptionGateway,
   type ConnectTranscriptionOptions,
@@ -56,10 +57,10 @@ function stubTranscriptionChannel() {
   })
 }
 
-async function renderReadyController(meetingId = '1') {
+async function renderReadyController(meetingId = '1', currentUserId: number | null = 7) {
   const hook = renderHook(
     ({ currentMeetingId }: { currentMeetingId: string }) =>
-      useLiveMeetingController(currentMeetingId),
+      useLiveMeetingController(currentMeetingId, currentUserId),
     { initialProps: { currentMeetingId: meetingId } },
   )
 
@@ -90,6 +91,9 @@ describe('useLiveMeetingController async boundaries', () => {
       endedAt: '2026-08-05T01:00:00.000Z',
     }))
     vi.spyOn(meetingHintApi, 'listHintRecords').mockResolvedValue([])
+    vi.spyOn(meetingParticipantApi, 'listParticipants').mockResolvedValue([
+      { id: '7', name: '윤금서', profileImageUrl: null, isCurrentUser: true, isHost: true },
+    ])
     vi.spyOn(meetingAiChatApi, 'loadWelcome').mockResolvedValue({
       messages: [
         {
@@ -138,9 +142,8 @@ describe('useLiveMeetingController async boundaries', () => {
       meetingTitle: '온보딩 개선 회의',
       durationSeconds: 0,
       host: {
-        id: 'you',
+        id: '7',
         name: '윤금서',
-        avatarKey: 'you',
       },
     })
     expect(meetingLifecycleApi.endMeeting).toHaveBeenCalledWith(1)
@@ -192,9 +195,32 @@ describe('useLiveMeetingController async boundaries', () => {
 
     if (result.current.status !== 'ready') throw new Error('controller is not ready')
     expect(result.current.role).toBe('participant')
-    expect(
-      result.current.meeting.participants.find((participant) => participant.isCurrentUser)?.isHost,
-    ).toBe(false)
+  })
+
+  it('참여자 목록을 서버 역할과 내 userId로 채운다', async () => {
+    vi.spyOn(meetingParticipantApi, 'listParticipants').mockResolvedValue([
+      { id: '7', name: '윤금서', profileImageUrl: null, isCurrentUser: true, isHost: false },
+      { id: '9', name: '이동희', profileImageUrl: null, isCurrentUser: false, isHost: true },
+    ])
+    const { result } = await renderReadyController()
+
+    await waitFor(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      expect(result.current.participants).toHaveLength(2)
+    })
+    if (result.current.status !== 'ready') throw new Error('controller is not ready')
+    expect(meetingParticipantApi.listParticipants).toHaveBeenCalledWith(1, 7)
+    expect(result.current.participants.find((item) => item.isHost)?.name).toBe('이동희')
+    expect(result.current.participants.find((item) => item.isCurrentUser)?.name).toBe('윤금서')
+  })
+
+  it('참여자 조회에 실패해도 회의 화면은 뜬다', async () => {
+    vi.spyOn(meetingParticipantApi, 'listParticipants').mockRejectedValue(new Error('실패'))
+    const { result } = await renderReadyController()
+
+    expect(result.current.status).toBe('ready')
+    if (result.current.status !== 'ready') throw new Error('controller is not ready')
+    expect(result.current.participants).toEqual([])
   })
 
   it('keeps the AI draft and pinned context while exposing a controlled send error', async () => {

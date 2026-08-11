@@ -54,11 +54,10 @@ export type MeetingTitleUpdateResponse = {
 export type MeetingParticipantResponse = {
   id: string
   name: string
-  role: string
-  avatarKey: MeetingAvatarKey
+  /** 서버가 주는 프로필 이미지. 없으면 화면이 이름 첫 글자로 대체한다. */
+  profileImageUrl: string | null
   isCurrentUser: boolean
   isHost: boolean
-  isMicrophoneOn: boolean
 }
 
 export type TranscriptSegmentResponse = {
@@ -101,7 +100,6 @@ export type LiveMeetingResponse = {
   meetingTitle: string
   elapsedSeconds: number
   recordingState: 'recording' | 'paused'
-  participants: MeetingParticipantResponse[]
   transcript: {
     status: 'waiting' | 'active'
     isSpeaking: boolean

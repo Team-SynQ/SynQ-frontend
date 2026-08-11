@@ -9,10 +9,10 @@ describe('live meeting 스냅샷 Mock', () => {
   })
 
   // 전사·힌트·AI Chat은 실제 API로 옮겼다. 이 mock에는 참여자 목록만 의미가 있다.
-  it('참여자 목록을 주고 진행 상태는 담지 않는다', async () => {
+  it('회의 메타데이터만 주고 진행 상태는 담지 않는다', async () => {
     const snapshot = await liveMeetingSnapshotMockGateway.getSnapshot('1')
 
-    expect(snapshot.participants.length).toBeGreaterThan(0)
+    expect(snapshot.projectTitle).toBeTruthy()
     expect(snapshot).not.toHaveProperty('aiChat')
     expect(snapshot).not.toHaveProperty('elapsedSeconds')
     expect(snapshot).not.toHaveProperty('recordingState')

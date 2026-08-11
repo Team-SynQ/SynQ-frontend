@@ -107,6 +107,10 @@ function MeetingDetailRoute() {
   return <MeetingDetailPage user={useAuthenticatedUser()} />
 }
 
+function MeetingRoute() {
+  return <MeetingPage user={useAuthenticatedUser()} />
+}
+
 export function AppRoutes() {
   return (
     <Routes>
@@ -137,7 +141,7 @@ export function AppRoutes() {
         </Route>
         <Route element={<MeetingStartPage />} path="/meetings/:meetingId/start" />
         <Route element={<MeetingTutorialPage />} path="/meetings/:meetingId/tutorial" />
-        <Route element={<MeetingPage />} path="/meetings/:meetingId/live" />
+        <Route element={<MeetingRoute />} path="/meetings/:meetingId/live" />
         <Route element={<MeetingDetailRoute />} path="/meetings/:meetingRecordId/detail" />
       </Route>
       <Route element={<Navigate replace to="/" />} path="*" />

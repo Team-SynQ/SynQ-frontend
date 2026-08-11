@@ -1,6 +1,5 @@
 import type { RefObject } from 'react'
 
-import microphoneIcon from '../assets/microphone.svg'
 import type { MeetingParticipant } from '../model/meetingControls.types'
 import { cn } from '../../../shared/lib/cn'
 import { useDismissableLayer } from '../../../shared/lib/useDismissableLayer'
@@ -72,7 +71,7 @@ export function MeetingParticipantsPopover({
             )}
 
             <span className="min-w-0 truncate typo-body-01 text-fg-secondary">
-              {participant.name}/{participant.role}
+              {participant.name}
               {participant.isCurrentUser ? ' (you)' : ''}
             </span>
 
@@ -82,16 +81,6 @@ export function MeetingParticipantsPopover({
               </span>
             ) : null}
           </div>
-
-          {participant.isMicrophoneOn ? (
-            <span
-              className="flex size-[24px] shrink-0 items-center justify-center"
-              data-testid={`participant-microphone-${participant.id}`}
-            >
-              <img alt="" className="h-[16px] w-[11px]" src={microphoneIcon} />
-              <span className="sr-only">마이크 사용 중</span>
-            </span>
-          ) : null}
         </div>
       ))}
     </div>
