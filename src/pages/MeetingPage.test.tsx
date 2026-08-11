@@ -1,6 +1,6 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
+import { createMemoryRouter, RouterProvider, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
@@ -54,24 +54,26 @@ async function renderMeetingPage(
   path = '/meetings/1/live',
   state?: { projectId: string; projectTitle: string },
 ) {
-  const result = render(
-    <MemoryRouter initialEntries={[{ pathname: path, state }]}>
-      <Routes>
-        <Route
-          element={
-            <MeetingPage
-              user={{ userId: 7, name: '윤금서', email: 'a@b.c', profileImageUrl: null }}
-            />
-          }
-          path="/meetings/:meetingId/live"
-        />
-        <Route element={<ProjectDestination />} path="/projects" />
-      </Routes>
-    </MemoryRouter>,
+  // 이탈 방지가 useBlocker를 쓰므로 데이터 라우터가 필요하다.
+  // 뒤로가기를 재현할 수 있도록 회의 화면 앞에 항목을 하나 둔다.
+  const router = createMemoryRouter(
+    [
+      {
+        path: '/meetings/:meetingId/live',
+        element: (
+          <MeetingPage
+            user={{ userId: 7, name: '윤금서', email: 'a@b.c', profileImageUrl: null }}
+          />
+        ),
+      },
+      { path: '/projects', element: <ProjectDestination /> },
+    ],
+    { initialEntries: ['/projects', { pathname: path, state }], initialIndex: 1 },
   )
+  const result = render(<RouterProvider router={router} />)
 
   await screen.findByRole('button', { name: '참여자 4명 확인' })
-  return result
+  return { ...result, router }
 }
 
 describe('MeetingPage controls', () => {
@@ -255,6 +257,49 @@ describe('MeetingPage controls', () => {
     expect(finalizeEndedMeeting).not.toHaveBeenCalled()
     expect(await screen.findByText('프로젝트 메인 project-1')).toBeInTheDocument()
     expect(screen.getByText('처리 회의 없음')).toBeInTheDocument()
+  })
+
+  it('가로챈 뒤로가기를 취소하면 회의 화면에 남는다', async () => {
+    const user = userEvent.setup()
+    const { router } = await renderMeetingPage()
+
+    await act(async () => {
+      await router.navigate(-1)
+    })
+
+    expect(screen.getByRole('dialog', { name: '회의를 종료할까요?' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '취소' }))
+
+    expect(screen.queryByRole('dialog', { name: '회의를 종료할까요?' })).not.toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/meetings/1/live')
+  })
+
+  it('가로챈 뒤로가기에서 종료를 확인하면 회의를 저장하고 프로젝트로 이동한다', async () => {
+    const user = userEvent.setup()
+    const { router } = await renderMeetingPage('/meetings/1/live', {
+      projectId: 'project-1',
+      projectTitle: '서비스 디자인',
+    })
+
+    await act(async () => {
+      await router.navigate(-1)
+    })
+    await user.click(screen.getByRole('button', { name: '종료하기' }))
+
+    const dialog = await screen.findByRole('dialog', { name: '회의가 종료되었습니다.' })
+    await user.click(within(dialog).getByRole('button', { name: '닫기' }))
+
+    expect(await screen.findByText('프로젝트 메인 project-1')).toBeInTheDocument()
+  })
+
+  it('탭 닫기·새로고침에 브라우저 기본 경고를 켠다', async () => {
+    await renderMeetingPage()
+
+    const unloadEvent = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(unloadEvent)
+
+    expect(unloadEvent.defaultPrevented).toBe(true)
   })
 
   it('shows a retry control when completed meeting storage fails', async () => {
