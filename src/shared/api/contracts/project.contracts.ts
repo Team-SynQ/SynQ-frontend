@@ -1,3 +1,5 @@
+import type { RoleProfilePerspective, RoleProfileRole } from './user.contracts'
+
 export type CreateProjectRequest = {
   title: string
   description?: string | null
@@ -84,6 +86,45 @@ export type ProjectLinkReferenceResponse = {
   uploaderId: number
   uploaderName: string
   createdAt: string
+}
+
+export type ProjectRolePerspectiveResponse = {
+  useDefault: boolean
+  /** useDefault가 true면 프로젝트 전용 값이 없어 null일 수 있습니다. */
+  roleCategory: RoleProfileRole | null
+  detailRole: string | null
+  perspectives: RoleProfilePerspective[]
+}
+
+export type ProjectRolePerspectiveUpdateRequest =
+  /** 계정 기본 프로필을 그대로 따릅니다. */
+  | { useDefault: true }
+  /** 프로젝트 전용 값을 지정합니다. roleCategory가 'ETC'면 detailRole이 필요합니다(서버 검증). */
+  | {
+      useDefault: false
+      roleCategory: RoleProfileRole
+      detailRole?: string
+      perspectives: RoleProfilePerspective[]
+    }
+
+export type ProjectRolePerspectiveUpdateResponse = {
+  projectId: number
+  useDefault: boolean
+  roleCategory: RoleProfileRole | null
+  detailRole: string | null
+  perspectives: RoleProfilePerspective[]
+  updatedAt: string
+}
+
+export type ReferenceNameUpdateRequest = {
+  name: string
+}
+
+export type ReferenceNameUpdateResponse = {
+  referenceId: number
+  name: string
+  type: ProjectReferenceType
+  updatedAt: string
 }
 
 export type ProjectMemberResponse = {

@@ -23,7 +23,13 @@ import { PrivacyPage } from '../../pages/PrivacyPage'
 import { ProjectInvitePage } from '../../pages/ProjectInvitePage'
 import { ProjectMainboardPage } from '../../pages/ProjectMainboardPage'
 import { TermsPage } from '../../pages/TermsPage'
-import { changeMyName, loadCurrentUser, type CurrentUser } from '../../entities/user'
+import {
+  changeMyName,
+  changeMyProfileImage,
+  loadCurrentUser,
+  resetMyProfileImage,
+  type CurrentUser,
+} from '../../entities/user'
 import { readAccessToken } from '../../shared/lib/authStorage'
 import { LandingRoute, OnboardingRoute } from './EntryFlowRoutes'
 import {
@@ -95,9 +101,16 @@ function AccountSettingsRoute() {
 
   return (
     <AccountSettingsPage
+      initialProfileImageUrl={user.profileImageUrl ?? undefined}
       onSaveName={async (name) => {
         onUserChange(await changeMyName(name))
       }}
+      // 업로드 API가 저장까지 처리하므로, 저장 단계에서는 삭제(기본 이미지)와 상태 반영만 담당합니다.
+      onSaveProfileImage={async (imageUrl) => {
+        if (imageUrl === undefined) await resetMyProfileImage()
+        onUserChange({ ...user, profileImageUrl: imageUrl ?? null })
+      }}
+      onUploadProfileImage={changeMyProfileImage}
       user={user}
     />
   )

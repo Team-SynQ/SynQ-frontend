@@ -3,27 +3,11 @@ import { useId, useState } from 'react'
 import { useTransientVisibility } from '../../../shared/lib/useTransientVisibility'
 import { OverlayDialog, Toast } from '../../../shared/ui'
 import type { AccountPerspective, AccountPerspectiveDraft } from '../model/accountSettings.types'
+import {
+  perspectiveSaveFeedbackMessages,
+  type PerspectiveSaveFeedback,
+} from './accountPerspectiveFeedback'
 import { AccountPerspectiveForm } from './AccountPerspectiveForm'
-
-type EditFeedback = 'success' | 'error'
-
-const feedbackMessages: Record<
-  EditFeedback,
-  { description: string; size: 'default' | 'wide'; title: string; type: 'success' | 'error' }
-> = {
-  success: {
-    description: '역할·관점 설정이 저장되었습니다.',
-    size: 'default',
-    title: '설정 저장 성공',
-    type: 'success',
-  },
-  error: {
-    description: '역할·관점 설정을 저장하지 못했습니다. 다시 시도해 주세요.',
-    size: 'wide',
-    title: '설정 저장 실패',
-    type: 'error',
-  },
-}
 
 export type AccountPerspectiveEditDialogProps = {
   onCancel: () => void
@@ -39,10 +23,10 @@ export function AccountPerspectiveEditDialog({
   perspective,
 }: AccountPerspectiveEditDialogProps) {
   const titleId = useId()
-  const [feedback, setFeedback] = useState<EditFeedback>()
+  const [feedback, setFeedback] = useState<PerspectiveSaveFeedback>()
   const feedbackToast = useTransientVisibility()
 
-  const showFeedback = (nextFeedback: EditFeedback) => {
+  const showFeedback = (nextFeedback: PerspectiveSaveFeedback) => {
     setFeedback(nextFeedback)
     feedbackToast.show()
   }
@@ -63,7 +47,7 @@ export function AccountPerspectiveEditDialog({
     onCancel()
   }
 
-  const feedbackMessage = feedback ? feedbackMessages[feedback] : undefined
+  const feedbackMessage = feedback ? perspectiveSaveFeedbackMessages[feedback] : undefined
 
   return (
     <>

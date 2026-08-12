@@ -8,3 +8,4 @@ export {
   type AccountPerspective,
   type AccountPerspectiveDraft,
 } from './model/accountSettings.types'
+export { toAccountPerspective, toRoleProfileRequest } from './model/accountPerspectiveMapping'
