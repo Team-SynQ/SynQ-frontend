@@ -27,7 +27,6 @@ export const liveMeetingSnapshotMockGateway = {
       projectId: meeting.projectId,
       projectTitle: meeting.projectTitle,
       meetingTitle: meeting.meetingTitle,
-      participants: meeting.participants,
       transcript: meeting.transcript,
     }
   },

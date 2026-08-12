@@ -1,18 +1,25 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
+import { createMemoryRouter, RouterProvider, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  meetingAiChatApi,
   meetingConnectionGateway,
   meetingHintApi,
   meetingLifecycleApi,
+  meetingParticipantApi,
   meetingRecordGateway,
   meetingTranscriptionGateway,
 } from '../entities/meeting'
 import type { ProjectNavigationState } from '../features/meeting-processing'
 import { resetLiveMeetingMockDb } from '../shared/api/mock/db/liveMeeting.mockDb'
+import { meetingService } from '../shared/api/services/meeting.service'
 import { transcriptService } from '../shared/api/services/transcript.service'
+import {
+  readMeetingProjectContext,
+  writeMeetingProjectContext,
+} from './meeting/model/meetingProjectContext.storage'
 import { writeMeetingRuntime } from './meeting/model/meetingRuntime.storage'
 import { MeetingPage } from './MeetingPage'
 
@@ -52,17 +59,26 @@ async function renderMeetingPage(
   path = '/meetings/1/live',
   state?: { projectId: string; projectTitle: string },
 ) {
-  const result = render(
-    <MemoryRouter initialEntries={[{ pathname: path, state }]}>
-      <Routes>
-        <Route element={<MeetingPage />} path="/meetings/:meetingId/live" />
-        <Route element={<ProjectDestination />} path="/projects" />
-      </Routes>
-    </MemoryRouter>,
+  // 이탈 방지가 useBlocker를 쓰므로 데이터 라우터가 필요하다.
+  // 뒤로가기를 재현할 수 있도록 회의 화면 앞에 항목을 하나 둔다.
+  const router = createMemoryRouter(
+    [
+      {
+        path: '/meetings/:meetingId/live',
+        element: (
+          <MeetingPage
+            user={{ userId: 7, name: '윤금서', email: 'a@b.c', profileImageUrl: null }}
+          />
+        ),
+      },
+      { path: '/projects', element: <ProjectDestination /> },
+    ],
+    { initialEntries: ['/projects', { pathname: path, state }], initialIndex: 1 },
   )
+  const result = render(<RouterProvider router={router} />)
 
   await screen.findByRole('button', { name: '참여자 4명 확인' })
-  return result
+  return { ...result, router }
 }
 
 describe('MeetingPage controls', () => {
@@ -90,7 +106,30 @@ describe('MeetingPage controls', () => {
       status: 'COMPLETED',
       endedAt: '2026-08-05T01:00:00.000Z',
     }))
+    vi.spyOn(meetingService, 'updateMeetingTitle').mockImplementation(async (meetingId, title) => ({
+      meetingId,
+      title,
+      userModified: true,
+    }))
     vi.spyOn(meetingHintApi, 'listHintRecords').mockResolvedValue([])
+    vi.spyOn(meetingParticipantApi, 'listParticipants').mockResolvedValue([
+      { id: '7', name: '윤금서', profileImageUrl: null, isCurrentUser: true, isHost: true },
+      { id: '8', name: '이동희', profileImageUrl: null, isCurrentUser: false, isHost: false },
+      { id: '9', name: '이소미', profileImageUrl: null, isCurrentUser: false, isHost: false },
+      { id: '10', name: '김도진', profileImageUrl: null, isCurrentUser: false, isHost: false },
+    ])
+    vi.spyOn(meetingAiChatApi, 'loadWelcome').mockResolvedValue({
+      messages: [
+        {
+          id: 'assistant-welcome',
+          role: 'assistant',
+          content: '회의가 시작되었습니다.',
+          context: null,
+        },
+      ],
+      suggestions: [],
+    })
+    vi.spyOn(meetingAiChatApi, 'loadHistory').mockResolvedValue([])
     vi.spyOn(transcriptService, 'listSegments').mockImplementation(async (meetingId) =>
       transcriptListResult(meetingId),
     )
@@ -105,6 +144,45 @@ describe('MeetingPage controls', () => {
     )
   })
 
+  // 헤더가 mock 스냅샷을 그대로 쓰면 다른 프로젝트에서 들어와도 같은 이름이 뜬다.
+  it('헤더에 들어온 경로의 프로젝트 이름을 표시한다', async () => {
+    await renderMeetingPage('/meetings/1/live', {
+      projectId: 'project-9',
+      projectTitle: '테스트용',
+    })
+
+    expect(screen.getByTitle('테스트용')).toBeInTheDocument()
+    expect(readMeetingProjectContext('1')).toEqual({
+      projectId: 'project-9',
+      projectTitle: '테스트용',
+    })
+  })
+
+  // 새로고침하면 라우터 state가 사라진다. 저장해 둔 값이 없으면 mock 이름이 뜬다.
+  it('새로고침으로 라우터 state를 잃어도 저장된 프로젝트 이름을 복원한다', async () => {
+    writeMeetingProjectContext('1', { projectId: 'project-9', projectTitle: '테스트용' })
+
+    await renderMeetingPage()
+
+    expect(screen.getByTitle('테스트용')).toBeInTheDocument()
+  })
+
+  it('복원한 프로젝트로 회의를 종료하고 돌아간다', async () => {
+    writeMeetingProjectContext('1', { projectId: 'project-9', projectTitle: '테스트용' })
+    const user = userEvent.setup()
+    await renderMeetingPage()
+
+    await user.click(screen.getByRole('button', { name: '회의 종료' }))
+    await user.click(screen.getByRole('button', { name: '종료하기' }))
+
+    const dialog = await screen.findByRole('dialog', { name: '회의가 종료되었습니다.' })
+    await user.click(within(dialog).getByRole('button', { name: '닫기' }))
+
+    expect(await screen.findByText('프로젝트 메인 project-9')).toBeInTheDocument()
+    // 끝난 회의의 값을 탭에 남겨 두지 않는다.
+    expect(readMeetingProjectContext('1')).toBeNull()
+  })
+
   it('opens and dismisses the participant list', async () => {
     const user = userEvent.setup()
     await renderMeetingPage()
@@ -116,7 +194,7 @@ describe('MeetingPage controls', () => {
     const participantList = screen.getByRole('list', { name: '회의 참여자' })
     expect(trigger).toHaveAttribute('aria-controls', participantList.id)
     expect(trigger).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getByText('윤금서/Design (you)')).toBeInTheDocument()
+    expect(screen.getByText('윤금서 (you)')).toBeInTheDocument()
 
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('list', { name: '회의 참여자' })).not.toBeInTheDocument()
@@ -155,8 +233,34 @@ describe('MeetingPage controls', () => {
     await user.type(titleInput, '3차 회의')
     await user.click(within(dialog).getByRole('button', { name: '제목 변경하기' }))
 
+    // 저장이 끝난 뒤에야 제목이 바뀐다. 동기로 단언하면 저장 전 화면을 볼 수 있다.
+    expect(await screen.findByTitle('3차 회의')).toBeInTheDocument()
     expect(screen.queryByRole('dialog', { name: '회의 제목 수정' })).not.toBeInTheDocument()
-    expect(screen.getByTitle('3차 회의')).toBeInTheDocument()
+    // 화면만 바꾸고 저장하지 않으면 회의 기록에는 옛 제목이 남는다.
+    expect(meetingService.updateMeetingTitle).toHaveBeenCalledWith(1, '3차 회의')
+  })
+
+  it('제목 저장에 실패하면 모달을 열어 둔 채 오류를 알리고 헤더 제목을 지킨다', async () => {
+    vi.spyOn(meetingService, 'updateMeetingTitle').mockRejectedValue(
+      new Error('회의 제목을 수정하지 못했습니다.'),
+    )
+    const user = userEvent.setup()
+    await renderMeetingPage()
+
+    await user.click(screen.getByRole('button', { name: '회의 메뉴 더보기' }))
+    await user.click(screen.getByRole('menuitem', { name: '제목 수정하기' }))
+
+    const dialog = screen.getByRole('dialog', { name: '회의 제목 수정' })
+    const titleInput = within(dialog).getByLabelText('회의 제목')
+    await user.clear(titleInput)
+    await user.type(titleInput, '저장에 실패할 제목')
+    await user.click(within(dialog).getByRole('button', { name: '제목 변경하기' }))
+
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      '회의 제목을 수정하지 못했습니다.',
+    )
+    expect(within(dialog).getByLabelText('회의 제목')).toHaveValue('저장에 실패할 제목')
+    expect(screen.getByTitle('2차 대면회의')).toBeInTheDocument()
   })
 
   it('moves from end confirmation to the saving dialog', async () => {
@@ -218,6 +322,49 @@ describe('MeetingPage controls', () => {
     expect(finalizeEndedMeeting).not.toHaveBeenCalled()
     expect(await screen.findByText('프로젝트 메인 project-1')).toBeInTheDocument()
     expect(screen.getByText('처리 회의 없음')).toBeInTheDocument()
+  })
+
+  it('가로챈 뒤로가기를 취소하면 회의 화면에 남는다', async () => {
+    const user = userEvent.setup()
+    const { router } = await renderMeetingPage()
+
+    await act(async () => {
+      await router.navigate(-1)
+    })
+
+    expect(screen.getByRole('dialog', { name: '회의를 종료할까요?' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '취소' }))
+
+    expect(screen.queryByRole('dialog', { name: '회의를 종료할까요?' })).not.toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/meetings/1/live')
+  })
+
+  it('가로챈 뒤로가기에서 종료를 확인하면 회의를 저장하고 프로젝트로 이동한다', async () => {
+    const user = userEvent.setup()
+    const { router } = await renderMeetingPage('/meetings/1/live', {
+      projectId: 'project-1',
+      projectTitle: '서비스 디자인',
+    })
+
+    await act(async () => {
+      await router.navigate(-1)
+    })
+    await user.click(screen.getByRole('button', { name: '종료하기' }))
+
+    const dialog = await screen.findByRole('dialog', { name: '회의가 종료되었습니다.' })
+    await user.click(within(dialog).getByRole('button', { name: '닫기' }))
+
+    expect(await screen.findByText('프로젝트 메인 project-1')).toBeInTheDocument()
+  })
+
+  it('탭 닫기·새로고침에 브라우저 기본 경고를 켠다', async () => {
+    await renderMeetingPage()
+
+    const unloadEvent = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(unloadEvent)
+
+    expect(unloadEvent.defaultPrevented).toBe(true)
   })
 
   it('shows a retry control when completed meeting storage fails', async () => {

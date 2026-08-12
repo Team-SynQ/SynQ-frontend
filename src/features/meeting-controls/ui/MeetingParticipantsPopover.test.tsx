@@ -9,14 +9,12 @@ const participants: MeetingParticipant[] = [
   {
     id: 'you',
     name: '윤금서',
-    role: 'Design',
     isCurrentUser: true,
     isHost: true,
-    isMicrophoneOn: true,
   },
-  { id: 'design', name: '이동희', role: 'Design' },
-  { id: 'pm', name: '이소미', role: 'PM' },
-  { id: 'server', name: '김도진', role: 'Server' },
+  { id: 'design', name: '이동희' },
+  { id: 'pm', name: '이소미' },
+  { id: 'server', name: '김도진' },
 ]
 
 describe('MeetingParticipantsPopover', () => {
@@ -29,13 +27,11 @@ describe('MeetingParticipantsPopover', () => {
     expect(items[0]).toHaveClass('gap-l')
     expect(screen.getByTestId('participant-info-you')).toHaveClass('w-[226px]')
     expect(screen.getByTestId('participant-avatar-you')).toHaveClass('size-[24px]')
-    expect(screen.getByTestId('participant-microphone-you')).toHaveClass('size-[24px]')
-    expect(items[0]).toHaveTextContent('윤금서/Design (you)')
+    expect(items[0]).toHaveTextContent('윤금서 (you)')
     expect(items[0]).toHaveTextContent('진행자')
-    expect(items[0]).toHaveTextContent('마이크 사용 중')
-    expect(items[1]).toHaveTextContent('이동희/Design')
-    expect(items[2]).toHaveTextContent('이소미/PM')
-    expect(items[3]).toHaveTextContent('김도진/Server')
+    expect(items[1]).toHaveTextContent('이동희')
+    expect(items[2]).toHaveTextContent('이소미')
+    expect(items[3]).toHaveTextContent('김도진')
   })
 
   it('dismisses on Escape', () => {

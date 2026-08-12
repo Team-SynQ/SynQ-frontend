@@ -47,6 +47,24 @@ describe('meetingRecordGateway', () => {
     })
   })
 
+  it('finds the in-progress meeting with its start time', async () => {
+    vi.spyOn(meetingService, 'listMeetings').mockResolvedValue(meetingListFixture)
+
+    const ongoing = await meetingRecordGateway.findOngoingMeeting('7')
+
+    expect(ongoing).toEqual({
+      meetingId: '12',
+      meetingTitle: '진행 중 회의',
+      startedAt: '2026-08-02T10:00:00Z',
+    })
+  })
+
+  it('returns no ongoing meeting when every meeting has ended', async () => {
+    vi.spyOn(meetingService, 'listMeetings').mockResolvedValue([meetingListFixture[0]])
+
+    expect(await meetingRecordGateway.findOngoingMeeting('7')).toBeNull()
+  })
+
   it('updates the title through the API and keeps the rest of the cached record', async () => {
     vi.spyOn(meetingService, 'listMeetings').mockResolvedValue(meetingListFixture)
     vi.spyOn(meetingService, 'updateMeetingTitle').mockResolvedValue({

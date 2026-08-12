@@ -2,11 +2,13 @@ import type {
   CompletedMeetingSummary,
   FinalizeMeetingRecordRequest,
   MeetingListItemResponse,
+  OngoingMeetingSummary,
 } from '../../../shared/api/contracts/meeting.contracts'
 import { meetingService } from '../../../shared/api/services/meeting.service'
 
 export type MeetingRecordGateway = {
   finalizeEndedMeeting(request: FinalizeMeetingRecordRequest): Promise<CompletedMeetingSummary>
+  findOngoingMeeting(projectId: string): Promise<OngoingMeetingSummary | null>
   listCompletedMeetings(projectId: string): Promise<CompletedMeetingSummary[]>
   updateCompletedMeetingTitle(recordId: string, title: string): Promise<CompletedMeetingSummary>
   deleteCompletedMeeting(recordId: string): Promise<void>
@@ -54,6 +56,22 @@ export const meetingRecordGateway: MeetingRecordGateway = {
       overview: '',
       keywords: [],
       decisions: [],
+    }
+  },
+
+  /**
+   * 프로젝트당 진행 중 회의는 하나다(`MEETING409_3`). 둘 이상 오면 첫 번째만 쓴다.
+   * 회의 기록 목록과 같은 응답을 쓰지만, 기록에 진행 중 회의가 섞이면 안 되므로 조회를 분리했다.
+   */
+  async findOngoingMeeting(projectId) {
+    const meetings = await meetingService.listMeetings(Number(projectId))
+    const ongoing = meetings.find((meeting) => meeting.status === 'IN_PROGRESS')
+    if (!ongoing) return null
+
+    return {
+      meetingId: String(ongoing.meetingId),
+      meetingTitle: ongoing.title,
+      startedAt: ongoing.createdAt,
     }
   },
 

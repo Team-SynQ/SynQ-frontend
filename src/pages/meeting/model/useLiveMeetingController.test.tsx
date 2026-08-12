@@ -5,6 +5,7 @@ import {
   meetingAiChatApi,
   meetingHintApi,
   meetingLifecycleApi,
+  meetingParticipantApi,
   meetingRecordGateway,
   meetingTranscriptionGateway,
   type ConnectTranscriptionOptions,
@@ -13,6 +14,7 @@ import {
 import type { TranscriptHintResponse } from '../../../shared/api/contracts/meeting.contracts'
 import type { UpdateTranscriptSegmentResult } from '../../../shared/api/contracts/transcript.contracts'
 import { resetLiveMeetingMockDb } from '../../../shared/api/mock/db/liveMeeting.mockDb'
+import { meetingService } from '../../../shared/api/services/meeting.service'
 import { transcriptService } from '../../../shared/api/services/transcript.service'
 import { useLiveMeetingController } from './useLiveMeetingController'
 
@@ -56,10 +58,10 @@ function stubTranscriptionChannel() {
   })
 }
 
-async function renderReadyController(meetingId = '1') {
+async function renderReadyController(meetingId = '1', currentUserId: number | null = 7) {
   const hook = renderHook(
     ({ currentMeetingId }: { currentMeetingId: string }) =>
-      useLiveMeetingController(currentMeetingId),
+      useLiveMeetingController(currentMeetingId, currentUserId),
     { initialProps: { currentMeetingId: meetingId } },
   )
 
@@ -90,6 +92,9 @@ describe('useLiveMeetingController async boundaries', () => {
       endedAt: '2026-08-05T01:00:00.000Z',
     }))
     vi.spyOn(meetingHintApi, 'listHintRecords').mockResolvedValue([])
+    vi.spyOn(meetingParticipantApi, 'listParticipants').mockResolvedValue([
+      { id: '7', name: '윤금서', profileImageUrl: null, isCurrentUser: true, isHost: true },
+    ])
     vi.spyOn(meetingAiChatApi, 'loadWelcome').mockResolvedValue({
       messages: [
         {
@@ -118,9 +123,15 @@ describe('useLiveMeetingController async boundaries', () => {
     const finalizeMeeting = vi.spyOn(meetingRecordGateway, 'finalizeEndedMeeting')
     const { result } = await renderReadyController()
 
-    act(() => {
+    vi.spyOn(meetingService, 'updateMeetingTitle').mockResolvedValue({
+      meetingId: 1,
+      title: '온보딩 개선 회의',
+      userModified: true,
+    })
+
+    await act(async () => {
       if (result.current.status !== 'ready') throw new Error('controller is not ready')
-      result.current.setMeetingTitle('온보딩 개선 회의')
+      await result.current.renameMeeting('온보딩 개선 회의')
     })
 
     let completedMeeting
@@ -138,9 +149,8 @@ describe('useLiveMeetingController async boundaries', () => {
       meetingTitle: '온보딩 개선 회의',
       durationSeconds: 0,
       host: {
-        id: 'you',
+        id: '7',
         name: '윤금서',
-        avatarKey: 'you',
       },
     })
     expect(meetingLifecycleApi.endMeeting).toHaveBeenCalledWith(1)
@@ -192,9 +202,86 @@ describe('useLiveMeetingController async boundaries', () => {
 
     if (result.current.status !== 'ready') throw new Error('controller is not ready')
     expect(result.current.role).toBe('participant')
-    expect(
-      result.current.meeting.participants.find((participant) => participant.isCurrentUser)?.isHost,
-    ).toBe(false)
+  })
+
+  it('참여자 목록을 서버 역할과 내 userId로 채운다', async () => {
+    vi.spyOn(meetingParticipantApi, 'listParticipants').mockResolvedValue([
+      { id: '7', name: '윤금서', profileImageUrl: null, isCurrentUser: true, isHost: false },
+      { id: '9', name: '이동희', profileImageUrl: null, isCurrentUser: false, isHost: true },
+    ])
+    const { result } = await renderReadyController()
+
+    await waitFor(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      expect(result.current.participants).toHaveLength(2)
+    })
+    if (result.current.status !== 'ready') throw new Error('controller is not ready')
+    expect(meetingParticipantApi.listParticipants).toHaveBeenCalledWith(1, 7)
+    expect(result.current.participants.find((item) => item.isHost)?.name).toBe('이동희')
+    expect(result.current.participants.find((item) => item.isCurrentUser)?.name).toBe('윤금서')
+  })
+
+  // 서버는 입장 시점에 참여자를 기록한다. 먼저 조회하면 본인이 빠진 목록을 받는다.
+  it('입장이 끝난 뒤에 참여자를 조회한다', async () => {
+    const joined = deferred<Awaited<ReturnType<typeof meetingLifecycleApi.joinMeeting>>>()
+    vi.spyOn(meetingLifecycleApi, 'joinMeeting').mockReturnValue(joined.promise)
+    const listParticipants = vi.spyOn(meetingParticipantApi, 'listParticipants')
+
+    renderHook(() => useLiveMeetingController('1', 7))
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(listParticipants).not.toHaveBeenCalled()
+
+    await act(async () => {
+      joined.resolve({
+        meetingId: 1,
+        title: '2차 대면회의',
+        status: 'IN_PROGRESS',
+        role: 'HOST',
+        joinedAt: '2026-08-05T00:00:00.000Z',
+        startedAt: '2026-08-05T00:00:00.000Z',
+        wsUrl: 'wss://api.example.com/ws/meetings/1/stt',
+      })
+      await Promise.resolve()
+    })
+
+    await waitFor(() => expect(listParticipants).toHaveBeenCalledWith(1, 7))
+  })
+
+  // 목록이 아직 비어 있어도 진행자가 회의를 끝낼 수 있어야 한다.
+  it('참여자 목록이 비어 있으면 종료 직전에 다시 조회한다', async () => {
+    const listParticipants = vi
+      .spyOn(meetingParticipantApi, 'listParticipants')
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        { id: '7', name: '윤금서', profileImageUrl: null, isCurrentUser: true, isHost: true },
+      ])
+    const { result } = await renderReadyController()
+
+    await waitFor(() => expect(listParticipants).toHaveBeenCalledTimes(1))
+
+    let completedMeeting
+    await act(async () => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      completedMeeting = await result.current.completeMeeting({
+        projectId: 'project-1',
+        projectTitle: '서비스 디자인',
+      })
+    })
+
+    expect(listParticipants).toHaveBeenCalledTimes(2)
+    expect(completedMeeting).toMatchObject({ host: { id: '7', name: '윤금서' } })
+  })
+
+  it('참여자 조회에 실패해도 회의 화면은 뜬다', async () => {
+    vi.spyOn(meetingParticipantApi, 'listParticipants').mockRejectedValue(new Error('실패'))
+    const { result } = await renderReadyController()
+
+    expect(result.current.status).toBe('ready')
+    if (result.current.status !== 'ready') throw new Error('controller is not ready')
+    expect(result.current.participants).toEqual([])
   })
 
   it('keeps the AI draft and pinned context while exposing a controlled send error', async () => {
@@ -275,6 +362,7 @@ describe('useLiveMeetingController async boundaries', () => {
         updatedAt: '2026-07-27T00:00:00.000Z',
       })
       sendRequest.resolve({
+        isAnswerPending: false,
         messages: [
           { id: 'stale-assistant', role: 'assistant', content: '이전 회의의 답변', context: null },
         ],
@@ -324,6 +412,104 @@ describe('useLiveMeetingController async boundaries', () => {
         throw new Error('transcript is not active')
       }
       expect(result.current.transcript.state.hintState?.status).toBe('idle')
+    })
+  })
+
+  // 입장 응답이 먼저 끝나면 화면은 이미 새 회의다. 그 사이 이전 대화가 보이면 안 된다.
+  it('회의를 옮기면 이전 회의의 대화와 추천 질문을 즉시 비운다', async () => {
+    const { result, rerender } = await renderReadyController()
+
+    await waitFor(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      expect(result.current.aiChat.model.messages).toHaveLength(1)
+    })
+
+    const nextWelcome = deferred<Awaited<ReturnType<typeof meetingAiChatApi.loadWelcome>>>()
+    vi.spyOn(meetingAiChatApi, 'loadWelcome').mockReturnValue(nextWelcome.promise)
+    vi.spyOn(transcriptService, 'listSegments').mockResolvedValue({
+      meetingId: 2,
+      segments: [transcriptDto(9, '다음 회의의 문장')],
+    })
+
+    rerender({ currentMeetingId: '2' })
+
+    await waitFor(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      expect(result.current.meeting.meetingId).toBe('2')
+    })
+    if (result.current.status !== 'ready') throw new Error('controller is not ready')
+    expect(result.current.aiChat.model.messages).toEqual([])
+    expect(result.current.aiChat.model.suggestions).toEqual([])
+    expect(result.current.aiChat.model.isLoading).toBe(true)
+
+    await act(async () => {
+      nextWelcome.resolve({
+        messages: [
+          { id: 'assistant-welcome', role: 'assistant', content: '새 회의입니다.', context: null },
+        ],
+        suggestions: [],
+      })
+      await Promise.resolve()
+    })
+  })
+
+  // 서버가 생성 중이라고 답하면 답변이 비어 온다. 사용자가 대기 중임을 알 수 있어야 한다.
+  it('생성 중 응답이면 답변 대기 상태를 유지한다', async () => {
+    vi.spyOn(meetingAiChatApi, 'sendQuestion').mockResolvedValue({
+      messages: [{ id: 'user-9', role: 'user', content: '질문', context: null }],
+      suggestions: null,
+      isAnswerPending: true,
+    })
+    const { result } = await renderReadyController()
+
+    act(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      result.current.aiChat.actions.onDraftChange('질문')
+    })
+    act(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      result.current.aiChat.actions.onSend()
+    })
+
+    await waitFor(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      expect(result.current.aiChat.model.isSending).toBe(false)
+      expect(result.current.aiChat.model.isAwaitingAnswer).toBe(true)
+    })
+  })
+
+  it('AI Chat 조회에 실패하면 사유를 남기고 재시도할 수 있다', async () => {
+    const loadWelcome = vi
+      .spyOn(meetingAiChatApi, 'loadWelcome')
+      .mockRejectedValue(new Error('AI Chat을 불러오지 못했습니다.'))
+    const { result } = await renderReadyController()
+
+    await waitFor(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      expect(result.current.aiChat.model.loadError).toBe('AI Chat을 불러오지 못했습니다.')
+      expect(result.current.aiChat.model.isLoading).toBe(false)
+    })
+
+    loadWelcome.mockResolvedValue({
+      messages: [
+        {
+          id: 'assistant-welcome',
+          role: 'assistant',
+          content: '다시 불러왔습니다.',
+          context: null,
+        },
+      ],
+      suggestions: [],
+    })
+    act(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      result.current.aiChat.actions.onRetryLoad()
+    })
+
+    await waitFor(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      expect(result.current.aiChat.model.loadError).toBeNull()
+      expect(result.current.aiChat.model.messages[0]?.content).toBe('다시 불러왔습니다.')
     })
   })
 

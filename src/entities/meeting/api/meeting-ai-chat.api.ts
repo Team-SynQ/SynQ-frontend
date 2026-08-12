@@ -9,6 +9,8 @@ export type MeetingAiChatSendResult = {
   messages: MeetingAiChatMessageResponse[]
   /** 응답마다 서버가 주는 후속 추천 질문. 없으면 기존 추천을 유지한다. */
   suggestions: MeetingAiChatSuggestionResponse[] | null
+  /** 서버가 아직 답변을 만드는 중이라 이 응답에는 답변이 없다. */
+  isAnswerPending: boolean
 }
 
 export type MeetingAiChatWelcome = {
@@ -49,6 +51,7 @@ export const meetingAiChatApi: MeetingAiChatApi = {
       // 빈 배열은 "추천을 비워라"는 뜻이다. 필드가 아예 없을 때만 기존 추천을 유지한다.
       suggestions:
         dto.suggestedQuestions === undefined ? null : toAiChatSuggestions(dto.suggestedQuestions),
+      isAnswerPending: dto.status === 'GENERATING',
     }
   },
 

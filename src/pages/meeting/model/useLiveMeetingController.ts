@@ -6,11 +6,13 @@ import {
   meetingConnectionGateway,
   meetingHintApi,
   meetingLifecycleApi,
+  meetingParticipantApi,
   meetingRecordGateway,
   type CompletedMeeting,
   type LiveMeeting,
   type LiveMeetingAiChatSuggestion,
   type LiveMeetingAiPinnedContext,
+  type LiveMeetingParticipant,
   type LiveMeetingProjectContext,
   type LiveMeetingTranscriptHint,
   type TranscriptionChannelStatus,
@@ -26,6 +28,7 @@ import type {
   TranscriptPanelProps,
   TranscriptSegment,
 } from '../../../features/live-transcription'
+import { meetingService } from '../../../shared/api/services/meeting.service'
 import { transcriptService } from '../../../shared/api/services/transcript.service'
 import { useLiveTranscription } from './useLiveTranscription'
 import { useMeetingRuntime } from './useMeetingRuntime'
@@ -41,10 +44,11 @@ type ReadyController = {
   connectionState: 'connecting' | 'connected' | 'reconnecting'
   connectionNotice: 'unstable' | 'restored' | null
   role: 'host' | 'participant'
+  participants: LiveMeetingParticipant[]
   transcript: TranscriptPanelProps
   aiChat: AiChatContentProps
   aiChatDisplayMode: AiChatDisplayMode
-  setMeetingTitle: (title: string) => void
+  renameMeeting: (title: string) => Promise<void>
   toggleRecording: () => void
   completeMeeting: (context: LiveMeetingProjectContext) => Promise<CompletedMeeting>
   changeAiChatDisplayMode: (mode: AiChatDisplayMode) => void
@@ -57,7 +61,10 @@ function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error && error.message ? error.message : fallback
 }
 
-export function useLiveMeetingController(meetingId: string): LiveMeetingController {
+export function useLiveMeetingController(
+  meetingId: string,
+  currentUserId: number | null,
+): LiveMeetingController {
   const [meeting, setMeeting] = useState<LiveMeeting | null>(null)
   const [loadError, setLoadError] = useState<{ meetingId: string; message: string } | null>(null)
   const [meetingTitle, setMeetingTitle] = useState('')
@@ -74,6 +81,11 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
   const [pinnedContext, setPinnedContext] = useState<LiveMeetingAiPinnedContext | null>(null)
   const [aiChatDisplayMode, setAiChatDisplayMode] = useState<AiChatDisplayMode>('docked')
   const [suggestions, setSuggestions] = useState<LiveMeetingAiChatSuggestion[]>([])
+  const [participants, setParticipants] = useState<LiveMeetingParticipant[]>([])
+  const [isChatLoading, setIsChatLoading] = useState(true)
+  const [chatLoadError, setChatLoadError] = useState<string | null>(null)
+  /** 서버가 생성 중이라고 답한 뒤 최종 답변을 아직 못 받은 상태. */
+  const [isAnswerPending, setIsAnswerPending] = useState(false)
   const hintCacheRef = useRef(new Map<string, LiveMeetingTranscriptHint>())
   const hintRequestSequenceRef = useRef(0)
   const composerInputRef = useRef<HTMLInputElement>(null)
@@ -113,6 +125,65 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
     [],
   )
 
+  /**
+   * 환영 문구·추천 질문과 기존 대화를 채운다. 응답이 몇 초 걸려 로딩 상태를 노출한다.
+   * 실패해도 질문 전송은 막지 않고, 재시도 경로만 열어 둔다.
+   */
+  const loadAiChat = useCallback(
+    async (requestSessionSequence: number, isActive: () => boolean) => {
+      const requestMeetingId = meetingId
+      // 이전 회의의 대화가 새 회의 화면에 남지 않도록, 조회를 시작하기 전에 비운다.
+      // 입장 응답이 먼저 끝나면 화면은 이미 새 회의다.
+      setMessages([])
+      setSuggestions([])
+      setIsAnswerPending(false)
+      setIsChatLoading(true)
+      setChatLoadError(null)
+
+      try {
+        const [welcome, history] = await Promise.all([
+          meetingAiChatApi.loadWelcome(apiMeetingId),
+          meetingAiChatApi.loadHistory(apiMeetingId),
+        ])
+        if (!isActive() || !isCurrentMeetingSession(requestMeetingId, requestSessionSequence))
+          return
+
+        setMessages([...welcome.messages, ...history])
+        setSuggestions(welcome.suggestions)
+      } catch (error) {
+        if (!isActive() || !isCurrentMeetingSession(requestMeetingId, requestSessionSequence))
+          return
+        setChatLoadError(getErrorMessage(error, 'AI Chat을 불러오지 못했습니다.'))
+      } finally {
+        if (isActive() && isCurrentMeetingSession(requestMeetingId, requestSessionSequence)) {
+          setIsChatLoading(false)
+        }
+      }
+    },
+    [apiMeetingId, isCurrentMeetingSession, meetingId],
+  )
+
+  /**
+   * 참여자 목록은 입장·스냅샷과 독립이다. 실패해도 회의 화면은 그대로 뜬다.
+   * 이전 회의의 참여자가 남지 않도록 조회 전에 비운다.
+   */
+  const loadParticipants = useCallback(
+    async (requestSessionSequence: number, isActive: () => boolean) => {
+      const requestMeetingId = meetingId
+      setParticipants([])
+
+      try {
+        const list = await meetingParticipantApi.listParticipants(apiMeetingId, currentUserId)
+        if (!isActive() || !isCurrentMeetingSession(requestMeetingId, requestSessionSequence))
+          return
+        setParticipants(list)
+      } catch {
+        // 참여자 목록이 없어도 회의 진행에는 지장이 없다.
+      }
+    },
+    [apiMeetingId, currentUserId, isCurrentMeetingSession, meetingId],
+  )
+
   useEffect(() => {
     let active = true
     const requestSessionSequence = meetingSessionRef.current.sequence + 1
@@ -136,12 +207,7 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
         if (!active || !isCurrentMeetingSession(meetingId, requestSessionSequence)) return
 
         const joinedAsHost = joinResponse.role === 'HOST'
-        setMeeting({
-          ...response,
-          participants: response.participants.map((participant) =>
-            participant.isCurrentUser ? { ...participant, isHost: joinedAsHost } : participant,
-          ),
-        })
+        setMeeting(response)
         setLoadError(null)
         setMeetingTitle(joinResponse.title)
         setRole(joinedAsHost ? 'host' : 'participant')
@@ -156,6 +222,9 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
         setSendError(null)
         setAiChatDisplayMode('docked')
         endedMeetingRef.current = null
+
+        // 서버는 입장 시점에 참여자를 기록한다. 입장보다 먼저 조회하면 본인이 빠진 목록을 받는다.
+        void loadParticipants(requestSessionSequence, () => active)
       })
       .catch((error: unknown) => {
         if (!active || !isCurrentMeetingSession(meetingId, requestSessionSequence)) return
@@ -177,22 +246,19 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
       })
       .catch(() => {})
 
-    // 환영 문구·추천 질문과 기존 대화를 함께 채운다. 둘 다 실패해도 질문 전송은 막지 않는다.
-    void Promise.all([
-      meetingAiChatApi.loadWelcome(apiMeetingId),
-      meetingAiChatApi.loadHistory(apiMeetingId).catch(() => []),
-    ])
-      .then(([welcome, history]) => {
-        if (!active || !isCurrentMeetingSession(meetingId, requestSessionSequence)) return
-        setMessages([...welcome.messages, ...history])
-        setSuggestions(welcome.suggestions)
-      })
-      .catch(() => {})
+    void loadAiChat(requestSessionSequence, () => active)
 
     return () => {
       active = false
     }
-  }, [apiMeetingId, hasValidMeetingId, isCurrentMeetingSession, meetingId])
+  }, [
+    apiMeetingId,
+    hasValidMeetingId,
+    isCurrentMeetingSession,
+    loadAiChat,
+    loadParticipants,
+    meetingId,
+  ])
 
   const loadHint = useCallback(
     async (transcriptId: string, useCache: boolean) => {
@@ -373,15 +439,32 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
       setMessages((current) => [...current, ...response.messages])
       // 서버가 답변마다 후속 질문을 준다. 주지 않으면 기존 추천을 유지한다.
       if (response.suggestions) setSuggestions(response.suggestions)
+      // 생성 중이면 답변이 아직 없다. 수신 경로는 AI 이벤트 연동에서 붙인다.
+      setIsAnswerPending(response.isAnswerPending)
       setDraft('')
     } catch {
       if (!isCurrentMeetingSession(requestMeetingId, requestSessionSequence)) return
+      setIsAnswerPending(false)
       setSendError('AI 답변을 불러오지 못했습니다. 다시 시도해 주세요.')
     } finally {
       if (isCurrentMeetingSession(requestMeetingId, requestSessionSequence)) {
         setIsSending(false)
       }
     }
+  }
+
+  /**
+   * 제목은 서버에 저장된 뒤에만 화면에 반영한다.
+   * 먼저 바꿔 두면 저장에 실패해도 바뀐 것처럼 보이고, 회의 기록에는 옛 제목이 남는다.
+   */
+  const renameMeeting = async (title: string) => {
+    const requestMeetingId = meetingId
+    const requestSessionSequence = meetingSessionRef.current.sequence
+
+    const updated = await meetingService.updateMeetingTitle(apiMeetingId, title)
+    if (!isCurrentMeetingSession(requestMeetingId, requestSessionSequence)) return
+
+    setMeetingTitle(updated.title)
   }
 
   const changeAiChatDisplayMode = (mode: AiChatDisplayMode) => {
@@ -392,7 +475,17 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
   }
 
   const completeMeeting = async (context: LiveMeetingProjectContext): Promise<CompletedMeeting> => {
-    const host = meeting.participants.find((participant) => participant.isHost)
+    /**
+     * 화면은 참여자 조회를 기다리지 않고 뜬다. 들어오자마자 종료하거나 조회가 실패했다면
+     * 목록이 비어 있어 진행자를 못 찾는다. 종료를 막지 않도록 이 시점에 한 번 더 확인한다.
+     */
+    let host = participants.find((participant) => participant.isHost)
+    if (!host) {
+      const list = await meetingParticipantApi
+        .listParticipants(apiMeetingId, currentUserId)
+        .catch(() => [])
+      host = list.find((participant) => participant.isHost)
+    }
     if (!host) {
       throw new Error('회의 진행자 정보를 찾을 수 없습니다.')
     }
@@ -415,7 +508,8 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
       host: {
         id: host.id,
         name: host.name,
-        avatarKey: host.avatarKey,
+        // 회의 기록의 아바타는 아직 고정 키를 쓴다. 기록 화면이 프로필 이미지를 받으면 함께 정리한다.
+        avatarKey: 'pm',
       },
     })
     runtime.clear()
@@ -472,11 +566,15 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
         }
       },
       onSend: () => void sendMessage(),
+      onRetryLoad: () => void loadAiChat(meetingSessionRef.current.sequence, () => true),
     },
     composerInputRef,
     model: {
       draft,
       isSending,
+      isLoading: isChatLoading,
+      isAwaitingAnswer: isSending || isAnswerPending,
+      loadError: chatLoadError,
       sendError,
       messages,
       pinnedContext,
@@ -493,10 +591,11 @@ export function useLiveMeetingController(meetingId: string): LiveMeetingControll
     connectionState: runtime.connectionState,
     connectionNotice: runtime.connectionNotice,
     role,
+    participants,
     transcript,
     aiChat,
     aiChatDisplayMode,
-    setMeetingTitle,
+    renameMeeting,
     toggleRecording: runtime.toggleRecording,
     completeMeeting,
     changeAiChatDisplayMode,

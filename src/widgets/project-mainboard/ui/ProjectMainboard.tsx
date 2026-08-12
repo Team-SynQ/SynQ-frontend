@@ -1,4 +1,4 @@
-import type { CompletedMeeting } from '../../../entities/meeting'
+import type { CompletedMeeting, OngoingMeeting } from '../../../entities/meeting'
 import type { ProjectSummary } from '../../../entities/project'
 import type { ProjectMaterialDraft } from '../../../features/project-create'
 import type { MeetingHistoryPresentation } from '../../../features/meeting-processing'
@@ -30,6 +30,8 @@ type ProjectMainboardProps = {
   onRetryMeetingSummary?: (recordId: string) => void
   onOpenMeetingDetail?: (recordId: string) => void
   onStartMeeting?: () => void
+  ongoingMeeting?: OngoingMeeting | null
+  onJoinOngoingMeeting?: () => void
   onLoadProject?: () => Promise<ProjectSummary | void> | ProjectSummary | void
   onUpdateProject?: (draft: ProjectInformationDraft) => Promise<void> | void
   perspectiveOptions?: ProjectInformationPerspective[]
@@ -54,6 +56,8 @@ export function ProjectMainboard({
   onRetryMeetingSummary,
   onOpenMeetingDetail,
   onStartMeeting,
+  ongoingMeeting,
+  onJoinOngoingMeeting,
   onLoadProject,
   onUpdateProject,
   perspectiveOptions,
@@ -83,6 +87,8 @@ export function ProjectMainboard({
           onRetryMeetingSummary={onRetryMeetingSummary}
           onOpenMeetingDetail={onOpenMeetingDetail}
           onStartMeeting={onStartMeeting}
+          ongoingMeeting={ongoingMeeting}
+          onJoinOngoingMeeting={onJoinOngoingMeeting}
           onDeleteProject={onDeleteProject}
           onLoadProject={onLoadProject}
           onUpdateProject={onUpdateProject}

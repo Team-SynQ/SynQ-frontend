@@ -8,6 +8,9 @@ import { AiChatPanel } from './AiChatPanel'
 const model: AiChatViewModel = {
   draft: '작성 중인 질문',
   isSending: false,
+  isLoading: false,
+  isAwaitingAnswer: false,
+  loadError: null,
   sendError: null,
   pinnedContext: null,
   messages: [
@@ -31,6 +34,7 @@ function createActions(): AiChatActions {
     onClearContext: vi.fn(),
     onSelectSuggestion: vi.fn(),
     onSend: vi.fn(),
+    onRetryLoad: vi.fn(),
   }
 }
 
@@ -52,7 +56,7 @@ describe('AiChatPanel', () => {
 
     expect(screen.getByRole('complementary', { name: 'AI Chat' })).toBeInTheDocument()
     expect(screen.getByText('회의가 시작되었습니다.').closest('article')).toHaveClass(
-      'max-w-[min(400px,85%)]',
+      'max-w-[min(720px,85%)]',
       'border-surface-muted',
     )
     expect(screen.getByRole('button', { name: '지난 회의 범위는?' })).toBeInTheDocument()

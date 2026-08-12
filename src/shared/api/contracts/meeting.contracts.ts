@@ -45,6 +45,13 @@ export type MeetingListItemResponse = {
   keyTopics: string[] | null
 }
 
+export type OngoingMeetingSummary = {
+  meetingId: string
+  meetingTitle: string
+  /** 진행 중 회의는 durationSeconds가 없다. 목록의 생성 시각을 시작 시각으로 쓴다. */
+  startedAt: string
+}
+
 export type MeetingTitleUpdateResponse = {
   meetingId: number
   title: string
@@ -54,11 +61,10 @@ export type MeetingTitleUpdateResponse = {
 export type MeetingParticipantResponse = {
   id: string
   name: string
-  role: string
-  avatarKey: MeetingAvatarKey
+  /** 서버가 주는 프로필 이미지. 없으면 화면이 이름 첫 글자로 대체한다. */
+  profileImageUrl: string | null
   isCurrentUser: boolean
   isHost: boolean
-  isMicrophoneOn: boolean
 }
 
 export type TranscriptSegmentResponse = {
@@ -101,7 +107,6 @@ export type LiveMeetingResponse = {
   meetingTitle: string
   elapsedSeconds: number
   recordingState: 'recording' | 'paused'
-  participants: MeetingParticipantResponse[]
   transcript: {
     status: 'waiting' | 'active'
     isSpeaking: boolean

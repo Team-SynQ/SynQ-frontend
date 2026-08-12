@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 
 import type { CompletedMeeting, LiveMeetingProjectContext } from '../entities/meeting'
+import type { CurrentUser } from '../entities/user'
 import type { AiChatDisplayMode } from '../features/meeting-ai-chat'
 import { MeetingConnectionToast } from '../features/meeting-connection'
 import type { ProjectNavigationState } from '../features/meeting-processing'
@@ -11,11 +12,13 @@ import {
   MeetingParticipantsPopover,
   MeetingSaveDialog,
   MeetingTitleEditDialog,
-  meetingParticipantAvatars,
   type MeetingParticipant,
 } from '../features/meeting-controls'
 import { MeetingRoom } from '../widgets/meeting-room'
+import { clearMeetingProjectContext } from './meeting/model/meetingProjectContext.storage'
 import { useLiveMeetingController } from './meeting/model/useLiveMeetingController'
+import { useMeetingExitGuard } from './meeting/model/useMeetingExitGuard'
+import { useMeetingProjectContext } from './meeting/model/useMeetingProjectContext'
 
 type ActiveMeetingControl =
   | 'idle'
@@ -33,14 +36,27 @@ const aiChatModeAnnouncements: Record<AiChatDisplayMode, string> = {
   launcher: 'AI Chat을 완전히 축소했습니다.',
 }
 
-export function MeetingPage() {
+export type MeetingPageProps = {
+  user?: CurrentUser
+}
+
+export function MeetingPage({ user }: MeetingPageProps = {}) {
   const location = useLocation()
   const navigate = useNavigate()
   const { meetingId = 'demo' } = useParams()
-  const controller = useLiveMeetingController(meetingId)
+  const controller = useLiveMeetingController(meetingId, user?.userId ?? null)
+  const exitGuard = useMeetingExitGuard({ enabled: controller.status === 'ready' })
+  const knownProjectContext = useMeetingProjectContext(
+    meetingId,
+    location.state as Partial<LiveMeetingProjectContext> | null,
+  )
   const [lastAction, setLastAction] = useState('회의 진행 화면 준비 완료')
   const [activeControl, setActiveControl] = useState<ActiveMeetingControl>('idle')
   const [completedMeeting, setCompletedMeeting] = useState<CompletedMeeting | null>(null)
+  const [titleSave, setTitleSave] = useState<{ pending: boolean; errorMessage: string | null }>({
+    pending: false,
+    errorMessage: null,
+  })
   const participantsTriggerRef = useRef<HTMLButtonElement>(null)
   const moreMenuTriggerRef = useRef<HTMLButtonElement>(null)
 
@@ -66,14 +82,12 @@ export function MeetingPage() {
     )
   }
 
-  const participants: MeetingParticipant[] = controller.meeting.participants.map((participant) => ({
+  const participants: MeetingParticipant[] = controller.participants.map((participant) => ({
     id: participant.id,
     name: participant.name,
-    role: participant.role,
-    avatarSrc: meetingParticipantAvatars[participant.avatarKey],
+    avatarSrc: participant.profileImageUrl ?? undefined,
     isCurrentUser: participant.isCurrentUser,
     isHost: participant.isHost,
-    isMicrophoneOn: participant.isMicrophoneOn,
   }))
   const currentUserIsHost = controller.role === 'host'
 
@@ -82,13 +96,13 @@ export function MeetingPage() {
     setLastAction(aiChatModeAnnouncements[mode])
   }
 
-  const locationState = location.state as Partial<LiveMeetingProjectContext> | null
-  const projectContext: LiveMeetingProjectContext = {
-    projectId: locationState?.projectId ?? controller.meeting.projectId,
-    projectTitle: locationState?.projectTitle ?? controller.meeting.projectTitle,
+  const projectContext: LiveMeetingProjectContext = knownProjectContext ?? {
+    projectId: controller.meeting.projectId,
+    projectTitle: controller.meeting.projectTitle,
   }
 
   const returnToProject = () => {
+    exitGuard.allowExit()
     navigate('/projects', {
       replace: true,
       state: { activeProjectId: projectContext.projectId },
@@ -98,6 +112,7 @@ export function MeetingPage() {
   const returnToProjectWithCompletedMeeting = () => {
     if (!completedMeeting) return
 
+    exitGuard.allowExit()
     navigate('/projects', {
       replace: true,
       state: {
@@ -107,10 +122,34 @@ export function MeetingPage() {
     })
   }
 
+  const closeTitleEdit = () => {
+    setTitleSave({ pending: false, errorMessage: null })
+    setActiveControl('idle')
+  }
+
+  const renameMeeting = async (nextTitle: string) => {
+    setTitleSave({ pending: true, errorMessage: null })
+    try {
+      await controller.renameMeeting(nextTitle)
+      closeTitleEdit()
+      setLastAction('회의 제목을 변경했습니다.')
+    } catch (error) {
+      setTitleSave({
+        pending: false,
+        errorMessage:
+          error instanceof Error && error.message
+            ? error.message
+            : '회의 제목을 변경하지 못했습니다.',
+      })
+    }
+  }
+
   const saveMeeting = async () => {
     setActiveControl('saving')
     try {
       const completed = await controller.completeMeeting(projectContext)
+      // 이후 이동은 저장된 기록이 들고 있다. 끝난 회의의 값을 탭에 남겨 둘 이유가 없다.
+      clearMeetingProjectContext(meetingId)
       setCompletedMeeting(completed)
       setActiveControl('save-success')
     } catch {
@@ -142,7 +181,7 @@ export function MeetingPage() {
             meetingId,
             meetingTitle: controller.meetingTitle,
             participantCount: participants.length,
-            projectTitle: controller.meeting.projectTitle,
+            projectTitle: projectContext.projectTitle,
             recordingState: controller.recordingState,
             recordingControlDisabled: controller.connectionState !== 'connected',
           },
@@ -150,7 +189,10 @@ export function MeetingPage() {
           moreMenuPopover: (
             <MeetingMoreMenu
               onClose={() => setActiveControl('idle')}
-              onEditTitle={() => setActiveControl('edit-title')}
+              onEditTitle={() => {
+                setTitleSave({ pending: false, errorMessage: null })
+                setActiveControl('edit-title')
+              }}
               open={activeControl === 'more'}
               triggerRef={moreMenuTriggerRef}
             />
@@ -174,25 +216,28 @@ export function MeetingPage() {
       ) : null}
       <MeetingTitleEditDialog
         currentTitle={controller.meetingTitle}
-        onCancel={() => setActiveControl('idle')}
-        onSubmit={(nextTitle) => {
-          controller.setMeetingTitle(nextTitle)
-          setActiveControl('idle')
-          setLastAction('회의 제목을 변경했습니다.')
-        }}
+        errorMessage={titleSave.errorMessage}
+        onCancel={closeTitleEdit}
+        onSubmit={(nextTitle) => void renameMeeting(nextTitle)}
         open={activeControl === 'edit-title'}
+        pending={titleSave.pending}
       />
       <MeetingExitDialog
         mode={currentUserIsHost ? 'end' : 'leave'}
-        onCancel={() => setActiveControl('idle')}
+        onCancel={() => {
+          exitGuard.dismiss()
+          setActiveControl('idle')
+        }}
         onConfirm={() => {
+          // 가로챈 이동은 여기서 놓아준다. 종료·나가기 처리가 끝나면 스스로 프로젝트 화면으로 보낸다.
+          exitGuard.dismiss()
           if (currentUserIsHost) {
             void saveMeeting()
             return
           }
           returnToProject()
         }}
-        open={activeControl === 'end-confirm'}
+        open={activeControl === 'end-confirm' || exitGuard.isBlocked}
       />
       {activeControl === 'saving' ? <MeetingSaveDialog open state="saving" /> : null}
       {activeControl === 'save-success' && completedMeeting ? (
