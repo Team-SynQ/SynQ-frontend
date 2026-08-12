@@ -24,13 +24,13 @@ const roleByAccountLabel: Record<AccountRoleLabel, RoleProfileRole> = {
   기타: 'ETC',
 }
 
-/** 계정 화면에는 '비용/성과'(COST_PERFORMANCE) 옵션이 없어 대응표에서도 제외됩니다. */
 const perspectiveByFocusTag: Record<AccountFocusTag, RoleProfilePerspective> = {
   일정: 'SCHEDULE',
   '기능 범위': 'SCOPE',
   '의사 결정': 'DECISION',
   '사용자 경험': 'UX',
   '기술 리스크': 'TECH_RISK',
+  '비용/성과': 'COST_PERFORMANCE',
   '고객 반응': 'CUSTOMER_REACTION',
   '운영 이슈': 'OPERATION_ISSUE',
   '액션 아이템': 'ACTION_ITEM',

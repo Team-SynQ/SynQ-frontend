@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 
-import { defaultAccountPerspectives } from '../features/account-settings'
+import { defaultAccountPerspectives, type AccountPerspective } from '../features/account-settings'
 import { AccountSettingsPage } from './AccountSettingsPage'
 
 const user = {
@@ -89,6 +89,35 @@ describe('AccountSettingsPage', () => {
       '역할·관점 삭제가 이루어졌습니다.',
     )
     expect(screen.queryByText('기획/운영')).not.toBeInTheDocument()
+  })
+
+  it('keeps a quickly added perspective when the initial load resolves late', async () => {
+    const browserUser = userEvent.setup()
+    let resolveLoad: (value: AccountPerspective[]) => void = () => {}
+    render(
+      <MemoryRouter>
+        <AccountSettingsPage
+          addPerspective={(draft) => Promise.resolve({ ...draft, id: 'added-late-load' })}
+          loadPerspectives={() =>
+            new Promise<AccountPerspective[]>((resolve) => {
+              resolveLoad = resolve
+            })
+          }
+          user={user}
+        />
+      </MemoryRouter>,
+    )
+
+    await browserUser.click(screen.getByRole('button', { name: '역할·관점 추가' }))
+    await browserUser.click(screen.getByRole('button', { name: '마케팅/브랜딩' }))
+    await browserUser.click(screen.getByRole('checkbox', { name: '고객 반응' }))
+    await browserUser.click(screen.getByRole('button', { name: '역할·관점 추가하기' }))
+    expect(await screen.findByText('마케팅/브랜딩')).toBeInTheDocument()
+
+    resolveLoad(defaultAccountPerspectives)
+
+    expect(await screen.findByText('기획/운영')).toBeInTheDocument()
+    expect(screen.getByText('마케팅/브랜딩')).toBeInTheDocument()
   })
 
   it('updates a perspective after the edit dialog saves successfully', async () => {

@@ -96,13 +96,16 @@ export type ProjectRolePerspectiveResponse = {
   perspectives: RoleProfilePerspective[]
 }
 
-export type ProjectRolePerspectiveUpdateRequest = {
-  useDefault: boolean
-  /** useDefault가 false일 때만 필요합니다. roleCategory가 'ETC'면 detailRole이 필수입니다. */
-  roleCategory?: RoleProfileRole
-  detailRole?: string
-  perspectives?: RoleProfilePerspective[]
-}
+export type ProjectRolePerspectiveUpdateRequest =
+  /** 계정 기본 프로필을 그대로 따릅니다. */
+  | { useDefault: true }
+  /** 프로젝트 전용 값을 지정합니다. roleCategory가 'ETC'면 detailRole이 필요합니다(서버 검증). */
+  | {
+      useDefault: false
+      roleCategory: RoleProfileRole
+      detailRole?: string
+      perspectives: RoleProfilePerspective[]
+    }
 
 export type ProjectRolePerspectiveUpdateResponse = {
   projectId: number

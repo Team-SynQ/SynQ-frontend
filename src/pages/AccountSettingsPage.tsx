@@ -71,7 +71,12 @@ export function AccountSettingsPage({
 
     loadPerspectives()
       .then((loaded) => {
-        if (isSubscribed) setPerspectives(loaded)
+        if (!isSubscribed) return
+        // 조회가 늦게 끝나도, 그 사이 사용자가 추가한 항목이 사라지지 않게 병합합니다.
+        setPerspectives((current) => {
+          const loadedIds = new Set(loaded.map(({ id }) => id))
+          return [...loaded, ...current.filter(({ id }) => !loadedIds.has(id))]
+        })
       })
       .catch(() => {
         // 조회 실패 로그는 API 래퍼가 남기고, 화면은 빈 목록을 유지합니다.
