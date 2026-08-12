@@ -41,6 +41,24 @@ describe('AccountPerspectiveAddDialog', () => {
       }),
     )
     expect(screen.queryByRole('dialog', { name: '새 역할/관점 추가하기' })).not.toBeInTheDocument()
+    expect(await screen.findByRole('status', { name: '설정 저장 성공' })).toHaveTextContent(
+      '역할·관점 설정이 저장되었습니다.',
+    )
+  })
+
+  it('keeps the dialog open and shows the warning toast when saving fails', async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn().mockRejectedValue(new Error('save failed'))
+    render(<DialogHarness onSubmit={onSubmit} />)
+
+    await user.click(screen.getByRole('button', { name: '개발/기술' }))
+    await user.click(screen.getByRole('checkbox', { name: '기술 리스크' }))
+    await user.click(screen.getByRole('button', { name: '역할·관점 추가하기' }))
+
+    expect(await screen.findByRole('status', { name: '설정 저장 실패' })).toHaveTextContent(
+      '역할·관점 설정을 저장하지 못했습니다. 다시 시도해 주세요.',
+    )
+    expect(screen.getByRole('dialog', { name: '새 역할/관점 추가하기' })).toBeInTheDocument()
   })
 })
 

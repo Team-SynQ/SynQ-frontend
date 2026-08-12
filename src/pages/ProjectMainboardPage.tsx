@@ -134,6 +134,26 @@ const deleteProjectReferenceMaterial = async (projectId: string, materialId: str
   }
 }
 
+const renameProjectReferenceMaterial = async (
+  projectId: string,
+  materialId: string,
+  nextName: string,
+) => {
+  const referenceId = Number(materialId)
+
+  // 서버에 등록되지 않은 화면 전용 항목은 서버에 수정 요청할 대상이 없습니다.
+  if (!Number.isInteger(referenceId)) return
+
+  console.log('[projectReference] 참고자료 제목 수정 시작', { projectId, referenceId })
+  try {
+    await projectApi.updateProjectReferenceName(Number(projectId), referenceId, { name: nextName })
+    console.log('[projectReference] 참고자료 제목 수정 성공', { projectId, referenceId })
+  } catch (error) {
+    console.error('[projectReference] 참고자료 제목 수정 실패', { projectId, referenceId, error })
+    throw error
+  }
+}
+
 const updateProjectInformation = async (projectId: string, draft: ProjectInformationDraft) => {
   console.log('[project] 프로젝트 정보 수정 시작', { projectId })
 
@@ -210,7 +230,7 @@ export function ProjectMainboardPage({
   onSubmitProject,
   addProjectReferences = addProjectReferenceMaterials,
   deleteProjectReference = deleteProjectReferenceMaterial,
-  renameProjectReference,
+  renameProjectReference = renameProjectReferenceMaterial,
   loadCompletedMeetings = loadCompletedMeetingHistory,
   loadOngoingMeeting = loadOngoingProjectMeeting,
   updateCompletedMeetingTitle = updateCompletedMeetingHistoryTitle,

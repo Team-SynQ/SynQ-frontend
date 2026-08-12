@@ -12,6 +12,10 @@ export type UserNameUpdateRequest = {
   name: string
 }
 
+export type ProfileImageResponse = {
+  profileImageUrl: string
+}
+
 export type RoleProfileRole =
   | 'PLANNING_OPERATION'
   | 'DESIGN_CONTENT'
