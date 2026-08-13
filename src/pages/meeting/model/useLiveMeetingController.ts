@@ -44,6 +44,8 @@ type ReadyController = {
   connectionState: 'connecting' | 'connected' | 'reconnecting'
   connectionNotice: 'unstable' | 'restored' | null
   role: 'host' | 'participant'
+  /** 서버가 회의 종료를 알린 상태. 참여자를 회의 화면에서 내보내야 한다. */
+  endedByServer: boolean
   participants: LiveMeetingParticipant[]
   transcript: TranscriptPanelProps
   aiChat: AiChatContentProps
@@ -96,9 +98,14 @@ export function useLiveMeetingController(
     endedAt: string
   } | null>(null)
   const [channelStatus, setChannelStatus] = useState<TranscriptionChannelStatus>('connecting')
-  // 진행자만 전송 채널을 쓴다. 끊긴 채널은 연결 복구 중과 같은 규칙으로 다룬다.
+  /**
+   * 서버가 회의 종료를 알렸을 때 true. 참여자에게만 의미가 있다.
+   * 진행자는 자기 종료·저장 흐름을 타고 있고, 정상 종료 때도 같은 메시지가 오기 때문이다.
+   */
+  const [endedByServer, setEndedByServer] = useState(false)
+  // 끊긴 채널은 진행자·참여자 모두에게 연결 복구 중과 같은 상황이다. 회의가 끝난 뒤에는 알리지 않는다.
   const isChannelDegraded =
-    role === 'host' && (channelStatus === 'error' || channelStatus === 'closed')
+    !endedByServer && (channelStatus === 'error' || channelStatus === 'closed')
   const runtime = useMeetingRuntime({
     enabled: meeting?.meetingId === meetingId,
     meetingId,
@@ -107,14 +114,21 @@ export function useLiveMeetingController(
   })
   const apiMeetingId = Number(meetingId)
   const hasValidMeetingId = Number.isSafeInteger(apiMeetingId) && apiMeetingId > 0
+  const handleMeetingEnded = useCallback(() => {
+    // 정상 종료 때도 같은 메시지가 온다. 진행자는 이미 자기 종료·저장 흐름을 타고 있으므로 무시한다.
+    if (role === 'host') return
+    setEndedByServer(true)
+  }, [role])
   const liveTranscription = useLiveTranscription({
-    enabled: hasValidMeetingId && meeting?.meetingId === meetingId,
+    // 종료된 회의에는 다시 붙지 않는다. enabled가 false면 재연결 타이머도 서지 않는다.
+    enabled: hasValidMeetingId && meeting?.meetingId === meetingId && !endedByServer,
     meetingId: apiMeetingId,
     role,
     wsUrl,
     isRecording: runtime.recordingState === 'recording',
     channelStatus,
     onChannelStatusChange: setChannelStatus,
+    onMeetingEnded: handleMeetingEnded,
     editingSegmentId: editState.status === 'editing' ? editState.transcriptId : null,
   })
 
@@ -221,6 +235,7 @@ export function useLiveMeetingController(
         setIsSending(false)
         setSendError(null)
         setAiChatDisplayMode('docked')
+        setEndedByServer(false)
         endedMeetingRef.current = null
 
         // 서버는 입장 시점에 참여자를 기록한다. 입장보다 먼저 조회하면 본인이 빠진 목록을 받는다.
@@ -591,6 +606,7 @@ export function useLiveMeetingController(
     connectionState: runtime.connectionState,
     connectionNotice: runtime.connectionNotice,
     role,
+    endedByServer,
     participants,
     transcript,
     aiChat,

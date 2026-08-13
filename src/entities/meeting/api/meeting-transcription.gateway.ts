@@ -9,6 +9,11 @@ export type TranscriptionMessage =
   | { kind: 'interim'; text: string }
   /** 확정 발화. 서버가 이미 저장한 세그먼트다. */
   | { kind: 'final'; segment: TranscriptSegmentResponse }
+  /**
+   * 회의가 끝났다. 정상 종료와 진행자 이탈에 의한 강제 종료 모두 이 메시지를 보낸다.
+   * 전사 봉투를 그대로 쓰고 type만 다르며 나머지 필드는 비어 있다.
+   */
+  | { kind: 'meetingEnded' }
 
 export type TranscriptionChannel = {
   sendAudio(chunk: ArrayBuffer): void
@@ -92,6 +97,7 @@ export function parseTranscriptionMessage(raw: unknown): TranscriptionMessage | 
     return null
   }
 
+  if (data.type === 'MEETING_ENDED') return { kind: 'meetingEnded' }
   if (data.type !== 'TRANSCRIPT') return null
 
   const text = String(data.text ?? data.content ?? '')
