@@ -217,12 +217,13 @@ describe('ProjectMainboardPage', () => {
   })
 
   // 진행자가 회의를 멈추면 이 버튼도 멈춰야 회의 화면과 어긋나지 않는다.
-  it('진행자가 일시정지하면 회의 중 버튼의 시간도 서버 값으로 맞추고 멈춘다', async () => {
+  it('진행자가 일시정지·재개하면 회의 중 버튼도 서버 값을 따라간다', async () => {
     vi.useFakeTimers()
     const loadOngoingMeeting = vi
       .fn<() => Promise<OngoingMeeting | null>>()
       .mockResolvedValueOnce({ ...ongoingMeeting, activeSeconds: 30, paused: false })
-      .mockResolvedValue({ ...ongoingMeeting, activeSeconds: 100, paused: true })
+      .mockResolvedValueOnce({ ...ongoingMeeting, activeSeconds: 100, paused: true })
+      .mockResolvedValue({ ...ongoingMeeting, activeSeconds: 100, paused: false })
 
     renderProjectMainboardPage({
       loadProjects: () => Promise.resolve([projectOne]),
@@ -247,6 +248,17 @@ describe('ProjectMainboardPage', () => {
       await vi.advanceTimersByTimeAsync(5_000)
     })
     expect(screen.getByText('01:40')).toBeInTheDocument()
+
+    // 재개도 같은 경로다. 서버가 준 누적 시간에서 다시 흐르기 시작한다.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000)
+    })
+    expect(screen.getByText('01:40')).toBeInTheDocument()
+
+    act(() => {
+      vi.advanceTimersByTime(1000)
+    })
+    expect(screen.getByText('01:41')).toBeInTheDocument()
   })
 
   it('늦게 도착한 이전 폴링 응답이 끝난 회의를 되살리지 않는다', async () => {
