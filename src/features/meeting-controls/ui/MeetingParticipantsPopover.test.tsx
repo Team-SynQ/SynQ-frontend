@@ -34,6 +34,42 @@ describe('MeetingParticipantsPopover', () => {
     expect(items[3]).toHaveTextContent('김도진')
   })
 
+  it('프로필 이미지가 있으면 이미지로, 없으면 이름 첫 글자로 그린다', () => {
+    render(
+      <MeetingParticipantsPopover
+        onClose={vi.fn()}
+        open
+        participants={[
+          { id: '1', name: '윤금서', avatarSrc: 'https://cdn.example.com/profile/1.png' },
+          { id: '2', name: '이동희' },
+        ]}
+      />,
+    )
+
+    expect(screen.getByTestId('participant-avatar-1')).toHaveAttribute(
+      'src',
+      'https://cdn.example.com/profile/1.png',
+    )
+    expect(screen.getByTestId('participant-avatar-2')).toHaveTextContent('이')
+  })
+
+  // src가 깨졌을 때 폴백이 없으면 alt=""인 빈 이미지가 자리만 차지해 프로필이 비어 보인다.
+  it('프로필 이미지를 불러오지 못하면 이름 첫 글자로 대신한다', () => {
+    render(
+      <MeetingParticipantsPopover
+        onClose={vi.fn()}
+        open
+        participants={[
+          { id: '1', name: '윤금서', avatarSrc: 'https://cdn.example.com/broken.png' },
+        ]}
+      />,
+    )
+
+    fireEvent.error(screen.getByTestId('participant-avatar-1'))
+
+    expect(screen.getByTestId('participant-avatar-1')).toHaveTextContent('윤')
+  })
+
   it('dismisses on Escape', () => {
     const onClose = vi.fn()
     const triggerRef = createRef<HTMLButtonElement>()
