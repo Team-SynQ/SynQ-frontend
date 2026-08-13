@@ -422,6 +422,7 @@ describe('ProjectMainboardPage', () => {
 
     expect(await screen.findByText('프로젝트 나가기 완료')).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '서비스 디자인' })).not.toBeInTheDocument()
+    expect(screen.getByText(/아직 생성한 프로젝트가 없습니다/)).toBeInTheDocument()
   })
 
   it('prefers the project selected by return navigation state', async () => {
