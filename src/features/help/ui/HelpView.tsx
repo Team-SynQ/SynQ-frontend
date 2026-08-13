@@ -103,26 +103,25 @@ export function HelpView({ renderMeetingTutorial }: HelpViewProps) {
         </div>
       </header>
 
-      <div className="flex min-h-0 w-[880px] flex-1 flex-col items-center gap-l pb-s">
-        <div className="flex min-h-0 w-full flex-1 items-start justify-center overflow-y-auto pt-[44px]">
-          {activeTab === 'introduction' ? (
-            <HelpBoardImage
-              imageDisplaySize={introduction.imageDisplaySize}
-              imageSrc={introduction.imageSrc}
-              title={introduction.title}
+      {/* 화면 높이와 무관하게 이미지→점(32px)→텍스트(16px)→버튼(32px) 간격이 고정되도록 한 스크롤 컬럼에 담습니다. */}
+      <div className="flex min-h-0 w-[880px] flex-1 flex-col items-center overflow-y-auto pb-s pt-[44px]">
+        {activeTab === 'introduction' ? (
+          <HelpBoardImage
+            imageDisplaySize={introduction.imageDisplaySize}
+            imageSrc={introduction.imageSrc}
+            title={introduction.title}
+          />
+        ) : (
+          (renderMeetingTutorial?.(meetingStep) ?? (
+            <div
+              aria-label={`회의 사용법 ${meetingStep}단계 프레임`}
+              className="h-[530px] w-[880px] shrink-0 rounded-m bg-surface-muted"
+              role="img"
             />
-          ) : (
-            (renderMeetingTutorial?.(meetingStep) ?? (
-              <div
-                aria-label={`회의 사용법 ${meetingStep}단계 프레임`}
-                className="h-[530px] w-[880px] shrink-0 rounded-m bg-surface-muted"
-                role="img"
-              />
-            ))
-          )}
-        </div>
+          ))
+        )}
 
-        <div className="flex shrink-0 flex-col items-center gap-s">
+        <div className="mt-l flex shrink-0 flex-col items-center gap-s">
           <div
             aria-label={`${activeStep}/3 단계`}
             className="flex h-[6px] items-center gap-[6px]"
@@ -144,13 +143,14 @@ export function HelpView({ renderMeetingTutorial }: HelpViewProps) {
             <h2 className="m-0 typo-title-02 text-fg-primary">
               {activeTab === 'introduction' ? introduction.title : meeting.title}
             </h2>
-            <p className="m-0 whitespace-pre-line typo-body-01 text-fg-secondary">
+            {/* 설명이 1줄인 단계에서도 2줄 높이를 예약해, 다음 버튼 위치가 단계·탭 전환에도 고정되게 합니다. */}
+            <p className="m-0 min-h-[52px] whitespace-pre-line typo-body-01 text-fg-secondary">
               {activeTab === 'introduction' ? introduction.description : meeting.description}
             </p>
           </div>
         </div>
 
-        <Button className="w-[375px]" onClick={handleNext} size="large">
+        <Button className="mt-l w-[375px] shrink-0" onClick={handleNext} size="large">
           {activeStep === 3 ? '다시보기' : '다음'}
         </Button>
       </div>
