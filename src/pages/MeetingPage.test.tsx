@@ -11,6 +11,8 @@ import {
   meetingParticipantApi,
   meetingRecordGateway,
   meetingTranscriptionGateway,
+  type TranscriptionChannelStatus,
+  type TranscriptionMessage,
 } from '../entities/meeting'
 import type { ProjectNavigationState } from '../features/meeting-processing'
 import { resetLiveMeetingMockDb } from '../shared/api/mock/db/liveMeeting.mockDb'
@@ -527,6 +529,85 @@ describe('MeetingPage controls', () => {
 
     expect(await screen.findByText('팀 질문')).toBeInTheDocument()
     expect(screen.getByText('온보딩 개선의 완료 기준은 무엇인가요?')).toBeInTheDocument()
+  })
+
+  it('참여자는 서버가 알린 회의 종료를 안내받고 프로젝트로 나간다', async () => {
+    vi.spyOn(meetingLifecycleApi, 'joinMeeting').mockResolvedValue({
+      meetingId: 1,
+      title: '2차 대면회의',
+      status: 'IN_PROGRESS',
+      role: 'MEMBER',
+      joinedAt: '2026-08-05T00:00:00.000Z',
+      startedAt: '2026-08-05T00:00:00.000Z',
+      wsUrl: 'wss://api.example.com/ws/meetings/1/stt',
+    })
+    let notify: ((message: TranscriptionMessage) => void) | undefined
+    vi.spyOn(meetingTranscriptionGateway, 'connect').mockImplementation((options) => {
+      notify = options.onMessage
+      void Promise.resolve().then(() => options.onStatus('connected'))
+      return { close: () => {}, sendAudio: () => {} }
+    })
+    const user = userEvent.setup()
+    await renderMeetingPage('/meetings/1/live', {
+      projectId: 'project-1',
+      projectTitle: '서비스 디자인',
+    })
+
+    await act(async () => {
+      notify?.({ kind: 'meetingEnded' })
+    })
+
+    expect(
+      await screen.findByRole('dialog', { name: '진행자가 회의를 종료했습니다.' }),
+    ).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '확인' }))
+
+    expect(await screen.findByText('프로젝트 메인 project-1')).toBeInTheDocument()
+  })
+
+  // 정상 종료 때도 같은 메시지가 브로드캐스트된다. 진행자는 자기 저장 흐름을 타야 한다.
+  it('진행자 화면에는 종료 안내가 뜨지 않는다', async () => {
+    let notify: ((message: TranscriptionMessage) => void) | undefined
+    vi.spyOn(meetingTranscriptionGateway, 'connect').mockImplementation((options) => {
+      notify = options.onMessage
+      void Promise.resolve().then(() => options.onStatus('connected'))
+      return { close: () => {}, sendAudio: () => {} }
+    })
+    await renderMeetingPage()
+
+    await act(async () => {
+      notify?.({ kind: 'meetingEnded' })
+    })
+
+    expect(
+      screen.queryByRole('dialog', { name: '진행자가 회의를 종료했습니다.' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('참여자에게도 연결 상태 불안정을 알린다', async () => {
+    vi.spyOn(meetingLifecycleApi, 'joinMeeting').mockResolvedValue({
+      meetingId: 1,
+      title: '2차 대면회의',
+      status: 'IN_PROGRESS',
+      role: 'MEMBER',
+      joinedAt: '2026-08-05T00:00:00.000Z',
+      startedAt: '2026-08-05T00:00:00.000Z',
+      wsUrl: 'wss://api.example.com/ws/meetings/1/stt',
+    })
+    let changeStatus: ((status: TranscriptionChannelStatus) => void) | undefined
+    vi.spyOn(meetingTranscriptionGateway, 'connect').mockImplementation((options) => {
+      changeStatus = options.onStatus
+      void Promise.resolve().then(() => options.onStatus('connected'))
+      return { close: () => {}, sendAudio: () => {} }
+    })
+    await renderMeetingPage()
+
+    await act(async () => {
+      changeStatus?.('closed')
+    })
+
+    expect(await screen.findByText('연결 상태 불안정')).toBeInTheDocument()
   })
 
   it('freezes the host controls and timer while restoring a refreshed meeting', async () => {
