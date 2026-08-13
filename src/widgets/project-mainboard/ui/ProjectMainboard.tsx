@@ -38,6 +38,8 @@ type ProjectMainboardProps = {
   onUpdateProject?: (draft: ProjectInformationDraft) => Promise<void> | void
   perspectiveOptions?: ProjectInformationPerspective[]
   onDeleteProject?: () => Promise<void> | void
+  /** 일반 멤버가 프로젝트를 나갔을 때. 목록 갱신은 상위 화면이 합니다. */
+  onLeaveProject?: () => Promise<void> | void
 }
 
 export function ProjectMainboard({
@@ -65,6 +67,7 @@ export function ProjectMainboard({
   onUpdateProject,
   perspectiveOptions,
   onDeleteProject,
+  onLeaveProject,
 }: ProjectMainboardProps) {
   return (
     <section
@@ -94,6 +97,7 @@ export function ProjectMainboard({
           ongoingMeeting={ongoingMeeting}
           onJoinOngoingMeeting={onJoinOngoingMeeting}
           onDeleteProject={onDeleteProject}
+          onLeaveProject={onLeaveProject}
           onLoadProject={onLoadProject}
           onUpdateProject={onUpdateProject}
           project={project}

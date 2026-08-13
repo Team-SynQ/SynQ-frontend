@@ -62,6 +62,8 @@ type ProjectCreatedDashboardProps = {
   onUpdateProject?: (draft: ProjectInformationDraft) => Promise<void> | void
   perspectiveOptions?: ProjectInformationPerspective[]
   onDeleteProject?: () => Promise<void> | void
+  /** 일반 멤버가 프로젝트를 나갔을 때. 목록 갱신은 상위 화면이 합니다. */
+  onLeaveProject?: () => Promise<void> | void
 }
 
 const projectDateFormatter = new Intl.DateTimeFormat('ko-KR', {
@@ -93,6 +95,7 @@ export function ProjectCreatedDashboard({
   onUpdateProject,
   perspectiveOptions,
   onDeleteProject,
+  onLeaveProject,
 }: ProjectCreatedDashboardProps) {
   const navigate = useNavigate()
 
@@ -112,6 +115,7 @@ export function ProjectCreatedDashboard({
         </div>
         <ProjectSettingsMenu
           onDeleteProject={onDeleteProject}
+          onLeaveProject={onLeaveProject}
           onLoadProject={onLoadProject}
           onUpdateProject={onUpdateProject}
           perspectiveOptions={
