@@ -188,3 +188,43 @@ export type MeetingDetailResponse = CompletedMeetingSummary & {
   round: string
   personalSummary: PersonalSummary
 }
+
+export type AiSummaryJobResult = {
+  jobId: string
+  status: string
+  failedPersonalSummaryCount: number
+  modelName: string
+  promptVersion: string
+  errorMessage: string | null
+  completedAt: string | null
+}
+
+export type MeetingDiscussionSection = {
+  title: string
+  details: string[]
+}
+
+export type OverallMeetingSummaryResult = {
+  meetingId: number
+  title: string
+  version: number
+  oneLineSummary: string
+  keyTopics: string[]
+  discussionSections: MeetingDiscussionSection[]
+  decisions: string[]
+  tentativeDirections: string[]
+  confirmationItems: string[]
+  generatedAt: string
+}
+
+export type PersonalMeetingSummaryResult = {
+  meetingId: number
+  userId: number
+  version: number
+  role: string
+  personalSummary: string
+  keyPoints: string[]
+  myActionItems: string[]
+  followUpQuestions: string[]
+  generatedAt: string
+}

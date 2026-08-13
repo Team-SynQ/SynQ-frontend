@@ -1,18 +1,28 @@
 import React, { useEffect, useState, type Ref } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Button, Modal, ChatInput } from '../shared/ui'
 import { ProjectSidebar, type ProjectSidebarUser } from '../widgets/project-sidebar'
-import { fetchMeetingDetail, updateMeetingTitle } from '../shared/api/mock/services/meeting.mock'
+import { meetingService } from '../shared/api/services/meeting.service'
+import { transcriptService } from '../shared/api/services/transcript.service'
+import { aiChatService } from '../shared/api/services/aiChat.service'
+import { participantService } from '../shared/api/services/participant.service'
+import { hintService } from '../shared/api/services/hint.service'
+import type { AiChatSendRequest } from '../shared/api/contracts/aiChat.contracts'
+import { listProjectSummaries } from '../entities/project'
+import { toTranscriptSegments } from '../entities/meeting/api/transcript.adapter'
 import type {
-  MeetingDetailResponse,
+  OverallMeetingSummaryResult,
+  PersonalMeetingSummaryResult,
   AiChatPinnedContext as AiChatPinnedContextModel,
 } from '../shared/api/contracts/meeting.contracts'
 import { MeetingSettingsMenu, type MeetingMember } from '../features/meeting-settings'
 import { cn } from '../shared/lib/cn'
 
-// ==========================================
-// 1. AI Chat 관련 타입 및 컴포넌트 정의
-// ==========================================
+function formatSecondsToTime(seconds: number): string {
+  const mins = Math.floor(seconds / 60)
+  const secs = Math.floor(seconds % 60)
+  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+}
 
 export interface AiChatMessage {
   id: string
@@ -89,23 +99,29 @@ export function AiChatMessageList({ messages, variant }: AiChatMessageListProps)
       role="log"
       tabIndex={0}
     >
-      {messages.map((message) => (
-        <article
-          className={cn(
-            'rounded-m p-s typo-transcription-body-01 whitespace-pre-wrap',
-            variant === 'floating' ? 'max-w-[300px]' : 'max-w-[400px]',
-            message.role === 'assistant'
-              ? cn(
-                  'self-start rounded-bl-none border bg-surface-elevated text-gray-700',
-                  variant === 'floating' ? 'border-line-default' : 'border-gray-100',
-                )
-              : 'self-end rounded-br-none bg-gray-700 text-fg-inverse',
-          )}
-          key={message.id}
-        >
-          {message.content}
-        </article>
-      ))}
+      {messages.length === 0 ? (
+        <div className="flex h-full items-center justify-center text-xs text-gray-400">
+          대화 내역이 없습니다.
+        </div>
+      ) : (
+        messages.map((message) => (
+          <article
+            className={cn(
+              'rounded-m p-s typo-transcription-body-01 whitespace-pre-wrap',
+              variant === 'floating' ? 'max-w-[300px]' : 'max-w-[400px]',
+              message.role === 'assistant'
+                ? cn(
+                    'self-start rounded-bl-none border bg-surface-elevated text-gray-700',
+                    variant === 'floating' ? 'border-line-default' : 'border-gray-100',
+                  )
+                : 'self-end rounded-br-none bg-gray-700 text-fg-inverse',
+            )}
+            key={message.id}
+          >
+            {message.content}
+          </article>
+        ))
+      )}
     </div>
   )
 }
@@ -224,10 +240,8 @@ export function AiChatPanel(props: AiChatPanelProps) {
     <aside
       aria-labelledby="meeting-ai-chat-title"
       className={cn(
-        'flex flex-col h-full bg-surface-elevated',
-        floating
-          ? 'border border-gray-200 rounded-m shadow-2xl overflow-hidden'
-          : 'border-l border-gray-200',
+        'flex flex-col h-full bg-surface-elevated border-l border-gray-200',
+        floating ? 'border border-gray-200 rounded-m shadow-2xl overflow-hidden' : '',
       )}
     >
       <header className="flex h-[52px] shrink-0 items-center justify-between border-b border-gray-200 px-5 bg-white">
@@ -241,12 +255,7 @@ export function AiChatPanel(props: AiChatPanelProps) {
             ref={collapseButtonRef}
             className="p-1 hover:bg-gray-100 rounded transition-colors text-gray-500"
           >
-            <img
-              alt="접기"
-              aria-hidden="true"
-              className="size-4"
-              src="/assets/images/collapse.png"
-            />
+            <img alt="접기" aria-hidden="true" className="size-4" src="/assets/images/collapse.png" />
           </button>
           <button
             aria-label={resizeLabel}
@@ -268,12 +277,9 @@ export function AiChatPanel(props: AiChatPanelProps) {
   )
 }
 
-// ==========================================
-// 2. 메인 MeetingDetailPage 컴포넌트
-// ==========================================
-
 export interface TranscriptItem {
   id: string
+  segmentId: number
   time: string
   text: string
   isEdited?: boolean
@@ -292,65 +298,29 @@ interface MeetingDetailPageProps {
 export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
   const { meetingRecordId = '' } = useParams()
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState<'personal' | 'allSummary' | 'allRecord'>('allRecord')
-  const [loadedMeetingData, setMeetingData] = useState<MeetingDetailResponse | null>(null)
-  const [failedMeetingRecordId, setFailedMeetingRecordId] = useState<string>()
+  const location = useLocation()
+  const locationState = location.state as { meetingTitle?: string } | null
 
-  const [editModalRecordId, setEditModalRecordId] = useState<string>()
+  const [activeTab, setActiveTab] = useState<'personal' | 'allSummary' | 'allRecord'>('allRecord')
+
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editTitleInput, setEditTitleInput] = useState('')
 
-  const [transcripts, setTranscripts] = useState<TranscriptItem[]>([
-    {
-      id: 'tr-1',
-      time: '00:04',
-      text: '안녕하세요. 오늘 회의에서는 신규 온보딩 개선 방향과 이번 분기 개발 일정을 중심으로 논의하겠습니다. 특히 사용자 이탈률 개선을 위한 우선순위와 베타 출시 일정까지 함께 정리해보면 좋겠습니다.',
-      hasHint: false,
-    },
-    {
-      id: 'tr-2',
-      time: '00:23',
-      text: '지난 한 달 데이터를 보면 신규 가입자의 약 42%가 온보딩을 완료하기 전에 이탈했습니다. 특히 두 번째 단계에서 가장 높은 이탈률이 발생했고, 평균 완료 시간도 예상보다 길었습니다.',
-      hasHint: true,
-      hintData: {
-        meaning: '사용자 첫 경험 개선이 이번 프로젝트의 핵심 과제로 제기되었습니다.',
-        myImpact: '온보딩 UI 개편 일정이 프로젝트 우선순위에 반영될 수 있습니다.',
-        teamQuestion: '가장 먼저 개선해야 할 온보딩 단계는 어디인가요?',
-      },
-    },
-    {
-      id: 'tr-3',
-      time: '00:53',
-      text: '그렇다면 이번 분기에는 온보딩 개선을 최우선 과제로 진행하는 방향이 좋겠습니다. 다른 신규 기능보다 먼저 사용자 경험을 개선하는 것이 효과가 클 것으로 보입니다.',
-      hasHint: false,
-    },
-    {
-      id: 'tr-4',
-      time: '01:22',
-      text: '현재 개발 일정으로는 4월 말 베타, 5월 초 정식 출시가 가능하지만 QA 일정이 다소 부족할 수 있습니다. 기능 범위를 조정하면 일정은 충분히 맞출 수 있을 것 같습니다.',
-      hasHint: false,
-    },
-    {
-      id: 'tr-5',
-      time: '01:33',
-      text: '현재 온보딩은 정보를 한 번에 너무 많이 보여주고 있습니다. 핵심 기능을 먼저 체험할 수 있도록 단계를 줄이고, 필요한 설명은 이후에 자연스럽게 안내하는 방식이 좋을 것 같습니다.',
-      hasHint: false,
-    },
-  ])
+  const [transcripts, setTranscripts] = useState<TranscriptItem[]>([])
+  const [isLoadingTranscripts, setIsLoadingTranscripts] = useState(false)
+  const [fallbackDurationSeconds, setFallbackDurationSeconds] = useState<number | null>(null)
+
+  const [overallSummary, setOverallSummary] = useState<OverallMeetingSummaryResult | null>(null)
+  const [isLoadingOverallSummary, setIsLoadingOverallSummary] = useState(false)
+
+  const [personalSummary, setPersonalSummary] = useState<PersonalMeetingSummaryResult | null>(null)
+  const [isLoadingPersonalSummary, setIsLoadingPersonalSummary] = useState(false)
+
+  const [sidebarProjects, setSidebarProjects] = useState<{ id: string; name: string }[]>([])
+  const [participants, setParticipants] = useState<MeetingMember[]>([])
 
   const [chatModel, setChatModel] = useState<AiChatViewModel>({
-    messages: [
-      {
-        id: 'msg-1',
-        role: 'user',
-        content: '이탈 원인이 무엇인지 분석해줘',
-      },
-      {
-        id: 'msg-2',
-        role: 'assistant',
-        content:
-          '현재 회의 내용과 프로젝트 데이터를 종합하면 이탈 원인은 다음과 같습니다.\n\n• 2단계에서 정보량이 많아 사용자의 인지 부담이 증가했습니다.\n• 핵심 기능을 체험하기 전 긴 설명이 이어져 초기 흥미가 감소했을 가능성이 있습니다.\n• 평균 완료 시간이 길어질수록 온보딩 중 이탈률이 증가하는 패턴이 확인됩니다.\n\n추천 개선안\n• 핵심 기능을 먼저 경험하도록 온보딩 순서를 재구성합니다.\n• 설명 중심 화면을 줄이고, 필요한 시점에 안내를 제공합니다.\n• 2단계를 세분화하거나 정보를 축약하여 완료 시간을 단축합니다.',
-      },
-    ],
+    messages: [],
     draft: '',
     suggestions: [
       { id: 'sug-1', label: '지난 회의에서는 이 범위 어디까지 정했어?' },
@@ -359,84 +329,228 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
     isSending: false,
   })
 
-  const sampleProjects = [
-    { id: 'proj-1', name: '회의 보조 AI, 씽큐' },
-    { id: 'proj-2', name: '서비스 디자인' },
-  ]
-  const [activeProjectId, setActiveProjectId] = useState<string>('proj-1')
-
-  const sampleMembers: MeetingMember[] = [
-    {
-      id: 'm-1',
-      name: '윤금서',
-      role: 'Design (you)',
-      isOwner: true,
-      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Geumseo',
-    },
-    {
-      id: 'm-2',
-      name: '캐서디',
-      role: '딜러',
-      isOwner: false,
-    },
-    {
-      id: 'm-3',
-      name: '애쉬',
-      role: '딜러',
-      isOwner: false,
-    },
-    {
-      id: 'm-4',
-      name: '도로롱',
-      role: '개발',
-      isOwner: false,
-      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Dororong',
-    },
-  ]
+  const apiMeetingId = Number(meetingRecordId)
+  const hasValidMeetingId = Number.isSafeInteger(apiMeetingId) && apiMeetingId > 0
 
   useEffect(() => {
     let active = true
 
-    void fetchMeetingDetail(meetingRecordId)
-      .then((data) => {
+    void listProjectSummaries()
+      .then((projects) => {
         if (!active) return
-        setMeetingData(data)
-        setFailedMeetingRecordId(undefined)
-        setEditTitleInput(data.meetingTitle)
+        setSidebarProjects(projects.map((p) => ({ id: p.id, name: p.name })))
       })
-      .catch(() => {
-        if (active) setFailedMeetingRecordId(meetingRecordId)
+      .catch((err) => {
+        console.error('사이드바 프로젝트 목록 조회 실패:', err)
       })
 
     return () => {
       active = false
     }
-  }, [meetingRecordId])
+  }, [])
 
-  if (failedMeetingRecordId === meetingRecordId) {
-    return (
-      <main className="flex h-screen flex-col items-center justify-center gap-s bg-surface-default">
-        <p className="m-0 typo-body-01 text-fg-secondary" role="alert">
-          회의 기록을 불러오지 못했습니다.
-        </p>
-        <Button onClick={() => navigate('/projects')} size="medium">
-          메인보드로 이동
-        </Button>
-      </main>
-    )
-  }
+  useEffect(() => {
+    if (!hasValidMeetingId) return
 
-  const meetingData = loadedMeetingData?.recordId === meetingRecordId ? loadedMeetingData : null
+    let active = true
 
-  if (!meetingData) {
-    return <div className="flex h-screen items-center justify-center">로딩 중...</div>
-  }
+    void participantService
+      .listParticipants(apiMeetingId)
+      .then((res) => {
+        if (!active) return
+        setParticipants(
+          res.map((p) => ({
+            id: String(p.userId),
+            name: p.name,
+            role: p.role === 'HOST' ? 'HOST' : 'MEMBER',
+            isOwner: p.role === 'HOST',
+            avatarUrl: p.profileImageUrl || undefined,
+          })),
+        )
+      })
+      .catch(() => {})
 
-  const { personalSummary } = meetingData
+    return () => {
+      active = false
+    }
+  }, [apiMeetingId, hasValidMeetingId])
+
+  useEffect(() => {
+    if (!hasValidMeetingId) return
+
+    let active = true
+    setIsLoadingTranscripts(true)
+
+    void (async () => {
+      try {
+        const [transcriptRes, hintResult] = await Promise.all([
+          transcriptService.listSegments(apiMeetingId),
+          hintService.listHintRecords(apiMeetingId).catch(() => ({ meetingId: apiMeetingId, hints: [] })),
+        ])
+
+        if (!active) return
+
+        if (transcriptRes.segments.length > 0) {
+          const maxEndMs = Math.max(...transcriptRes.segments.map((s) => s.endMs))
+          setFallbackDurationSeconds(Math.floor(maxEndMs / 1000))
+        } else {
+          setFallbackDurationSeconds(0)
+        }
+
+        const convertedSegments = toTranscriptSegments(transcriptRes.segments)
+        const hintMap = new Map(hintResult.hints.map((h) => [h.segmentId, h]))
+
+        const mappedItems: TranscriptItem[] = convertedSegments.map((segment) => {
+          const segmentIdNum = Number(segment.id)
+          const hint = hintMap.get(segmentIdNum)
+          const hasHint = Boolean(hint && (hint.meaning || hint.myImpact || hint.teamQuestion))
+
+          return {
+            id: segment.id,
+            segmentId: segmentIdNum,
+            time: formatSecondsToTime(segment.startedAtSeconds),
+            text: segment.text,
+            isEdited: segment.isEdited,
+            hasHint,
+            hintData: hasHint && hint ? {
+              meaning: hint.meaning || '',
+              myImpact: hint.myImpact || '',
+              teamQuestion: hint.teamQuestion || '',
+            } : undefined,
+          }
+        })
+
+        setTranscripts(mappedItems)
+      } catch (err) {
+        console.error('전사 또는 힌트 데이터 조회 실패:', err)
+      } finally {
+        if (active) setIsLoadingTranscripts(false)
+      }
+    })()
+
+    return () => {
+      active = false
+    }
+  }, [apiMeetingId, hasValidMeetingId])
+
+  useEffect(() => {
+    if (!hasValidMeetingId) return
+
+    let active = true
+    setIsLoadingOverallSummary(true)
+
+    void meetingService
+      .getOverallSummary(apiMeetingId)
+      .then((res) => {
+        if (!active) return
+        setOverallSummary(res)
+      })
+      .catch((err) => {
+        console.error('전체 요약 데이터 조회 실패:', err)
+      })
+      .finally(() => {
+        if (active) setIsLoadingOverallSummary(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [apiMeetingId, hasValidMeetingId])
+
+  useEffect(() => {
+    if (!hasValidMeetingId) return
+
+    let active = true
+    setIsLoadingPersonalSummary(true)
+
+    void meetingService
+      .getPersonalSummary(apiMeetingId)
+      .then((res) => {
+        if (!active) return
+        setPersonalSummary(res)
+      })
+      .catch((err) => {
+        console.error('개인 요약 데이터 조회 실패:', err)
+      })
+      .finally(() => {
+        if (active) setIsLoadingPersonalSummary(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [apiMeetingId, hasValidMeetingId])
+
+  useEffect(() => {
+    if (!hasValidMeetingId) return
+
+    let active = true
+
+    const loadChatData = async () => {
+      try {
+        const historyResult = await aiChatService.listMessages(apiMeetingId)
+        if (!active) return
+
+        const formattedMessages: AiChatMessage[] = []
+        historyResult.messages.forEach((dto) => {
+          formattedMessages.push({
+            id: `${dto.id}-q`,
+            role: 'user',
+            content: dto.question,
+          })
+          if (dto.answer) {
+            formattedMessages.push({
+              id: `${dto.id}-a`,
+              role: 'assistant',
+              content: dto.answer,
+            })
+          }
+        })
+
+        setChatModel((prev) => ({
+          ...prev,
+          messages: formattedMessages,
+        }))
+      } catch (err) {
+        console.error('AI Chat 대화 내역 불러오기 실패:', err)
+      }
+
+      try {
+        const welcomeResult = await aiChatService.getWelcome(apiMeetingId)
+        if (!active) return
+        if (welcomeResult.suggestedQuestions && welcomeResult.suggestedQuestions.length > 0) {
+          setChatModel((prev) => ({
+            ...prev,
+            suggestions: welcomeResult.suggestedQuestions.map((q, idx) => ({
+              id: `sug-${idx}`,
+              label: q,
+            })),
+          }))
+        }
+      } catch (err) {
+        // 추천 질문 로드 실패 시 기본값 유지
+      }
+    }
+
+    void loadChatData()
+
+    return () => {
+      active = false
+    }
+  }, [apiMeetingId, hasValidMeetingId])
+
+  const displayTitle = overallSummary?.title || locationState?.meetingTitle || '회의 기록'
+  const displayRoleTag = personalSummary?.role || ''
+  const displayDateIso = overallSummary?.generatedAt || personalSummary?.generatedAt || new Date().toISOString()
+  const displayDurationSeconds = fallbackDurationSeconds ?? 0
 
   const formatDuration = (seconds: number) => {
+    if (seconds <= 0) return '0초'
     const minutes = Math.floor(seconds / 60)
-    return `${minutes}분`
+    const secs = seconds % 60
+    if (minutes === 0) return `${secs}초`
+    if (secs === 0) return `${minutes}분`
+    return `${minutes}분 ${secs}초`
   }
 
   const formatDate = (isoString: string) => {
@@ -448,27 +562,53 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
   }
 
   const handleConfirmEditTitle = async () => {
-    if (!editTitleInput.trim()) return
-    const targetRecordId = meetingData.recordId
+    if (!editTitleInput.trim() || !hasValidMeetingId) return
     const nextTitle = editTitleInput.trim()
-    await updateMeetingTitle(targetRecordId, nextTitle)
-    setMeetingData((prev) =>
-      prev?.recordId === targetRecordId ? { ...prev, meetingTitle: nextTitle } : prev,
-    )
-    setEditModalRecordId((current) => (current === targetRecordId ? undefined : current))
+
+    try {
+      await meetingService.updateMeetingTitle(apiMeetingId, nextTitle)
+      if (overallSummary) {
+        setOverallSummary((prev) => (prev ? { ...prev, title: nextTitle } : prev))
+      }
+      setIsEditModalOpen(false)
+    } catch (error) {
+      console.error('회의 제목 수정 실패:', error)
+      alert('회의 제목을 수정하지 못했습니다.')
+    }
   }
+
+  const handleDeleteMeeting = async () => {
+    if (!hasValidMeetingId) return
+    if (confirm('회의를 삭제하시겠습니까?')) {
+      try {
+        await meetingService.deleteMeeting(apiMeetingId)
+        navigate('/projects')
+      } catch (error) {
+        console.error('회의 삭제 실패:', error)
+        alert('회의를 삭제하지 못했습니다.')
+      }
+    }
+  }
+
+  const activeProjectId = sidebarProjects[0]?.id
 
   return (
     <div className="flex h-screen w-full bg-white overflow-hidden relative">
       <ProjectSidebar
         accountSettingsActions={{
           onOpenAccountInfo: () => navigate('/settings/account'),
+          onOpenHelp: () => navigate('/settings/help'),
+          onOpenTerms: () => navigate('/settings/policy'),
         }}
         user={user}
-        projects={sampleProjects}
+        projects={sidebarProjects}
         activeProjectId={activeProjectId}
-        onSelectProject={(id) => setActiveProjectId(id)}
-        onAddProject={() => {}}
+        onSelectProject={(id) => {
+          navigate('/projects', { state: { activeProjectId: id } })
+        }}
+        onAddProject={() => {
+          navigate('/projects', { state: { openCreateProject: true } })
+        }}
       />
 
       <main className="flex-1 h-full overflow-hidden flex flex-col bg-white text-gray-900 pb-20">
@@ -476,40 +616,34 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
           <div className="max-w-6xl mx-auto">
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-3">
-                <button className="text-gray-400 hover:text-gray-600 transition-colors">
+                <button
+                  onClick={() => navigate('/projects')}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
                   <img src="/assets/images/arrow-left.png" alt="뒤로가기" className="size-5" />
                 </button>
-                <h1 className="text-2xl font-bold">{meetingData.meetingTitle}</h1>
-                <span className="px-2 py-0.5 bg-brand-primary/10 text-brand-primary text-xs font-medium rounded">
-                  {meetingData.roleTag}
-                </span>
-                <span className="px-2.5 py-0.5 bg-brand-primary/10 text-brand-primary text-xs font-medium rounded">
-                  {meetingData.perspectiveTag}
-                </span>
+                <h1 className="text-2xl font-bold">{displayTitle}</h1>
+                {displayRoleTag && (
+                  <span className="px-2 py-0.5 bg-brand-primary/10 text-brand-primary text-xs font-medium rounded">
+                    {displayRoleTag}
+                  </span>
+                )}
               </div>
 
               <div className="flex items-center gap-2">
-                <Button size="small" variant="primaryFill" className="text-xs px-3">
-                  프로젝트로 돌아가기
-                </Button>
                 <MeetingSettingsMenu
-                  members={sampleMembers}
+                  members={participants}
                   onEditTitle={() => {
-                    setEditTitleInput(meetingData.meetingTitle)
-                    setEditModalRecordId(meetingData.recordId)
+                    setEditTitleInput(displayTitle)
+                    setIsEditModalOpen(true)
                   }}
-                  onDeleteMeeting={() => {
-                    if (confirm('회의를 삭제하시겠습니까?')) {
-                      console.log('회의 삭제 진행')
-                    }
-                  }}
+                  onDeleteMeeting={handleDeleteMeeting}
                 />
               </div>
             </div>
 
             <div className="text-sm text-gray-400 mb-8 ml-8">
-              {meetingData.round} &nbsp;|&nbsp; {formatDate(meetingData.completedAt)} &nbsp;|&nbsp;{' '}
-              {formatDuration(meetingData.durationSeconds)}
+              {formatDate(displayDateIso)} &nbsp;|&nbsp; {formatDuration(displayDurationSeconds)}
             </div>
 
             <div className="border-b border-gray-200">
@@ -551,73 +685,23 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
 
         <div className="flex-1 min-h-0 overflow-y-auto">
           {activeTab === 'personal' && (
-            <div className="max-w-6xl mx-auto px-12 py-8 space-y-10 pb-16">
-              <section>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="px-2.5 py-0.5 bg-brand-primary text-fg-inverse text-xs font-bold rounded">
-                    {personalSummary.roleBadge}
-                  </span>
-                  <h2 className="text-lg font-bold text-gray-900">내 관점 요약</h2>
-                </div>
-                <p className="text-sm text-gray-700 leading-relaxed bg-[#F8F9FA] p-5 rounded-xl">
-                  {personalSummary.roleSummary}
-                </p>
-              </section>
-
-              <section>
-                <h2 className="text-lg font-bold text-gray-900 mb-3">나에게 영향 있는 내용</h2>
-                <ul className="space-y-2">
-                  {personalSummary.impacts.map((item, idx) => (
-                    <li
-                      key={idx}
-                      className="flex items-start text-sm text-gray-700 leading-relaxed"
-                    >
-                      <span className="mr-2 text-gray-400">•</span>
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-
-              <section>
-                <h2 className="text-lg font-bold text-gray-900 mb-3">내 액션 아이템</h2>
-                <ul className="space-y-2">
-                  {personalSummary.actionItems.map((item, idx) => (
-                    <li
-                      key={idx}
-                      className="flex items-start text-sm text-gray-700 leading-relaxed"
-                    >
-                      <span className="mr-2 text-gray-400">•</span>
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-
-              <section>
-                <h2 className="text-lg font-bold text-gray-900 mb-4">다시 확인하면 좋은 질문</h2>
-                <div className="space-y-3">
-                  {personalSummary.questions.map((q, idx) => (
-                    <div
-                      key={idx}
-                      className="p-4 bg-[#F8F9FA] rounded-xl text-sm text-gray-800 hover:bg-gray-100 transition-colors"
-                    >
-                      {q}
-                    </div>
-                  ))}
-                </div>
-              </section>
-            </div>
+            <MeetingPersonalSummaryTab
+              summary={personalSummary}
+              isLoading={isLoadingPersonalSummary}
+              defaultRoleTag={displayRoleTag}
+            />
           )}
 
           {activeTab === 'allSummary' && (
             <div className="max-w-6xl mx-auto px-12 py-8">
-              <MeetingAllSummaryTab />
+              <MeetingAllSummaryTab summary={overallSummary} isLoading={isLoadingOverallSummary} />
             </div>
           )}
 
           {activeTab === 'allRecord' && (
             <MeetingAllRecordTab
+              apiMeetingId={apiMeetingId}
+              isLoading={isLoadingTranscripts}
               transcripts={transcripts}
               setTranscripts={setTranscripts}
               chatModel={chatModel}
@@ -629,7 +713,7 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
 
       {activeTab === 'allRecord' && <AudioPlayerControls />}
 
-      {editModalRecordId === meetingData.recordId && (
+      {isEditModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <Modal
             type="form"
@@ -637,7 +721,7 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
             confirmLabel="제목 변경하기"
             cancelLabel="취소"
             onConfirm={handleConfirmEditTitle}
-            onCancel={() => setEditModalRecordId(undefined)}
+            onCancel={() => setIsEditModalOpen(false)}
           >
             <div className="flex flex-col gap-xs pt-xs">
               <label className="typo-body-02 font-medium text-fg-primary flex items-center justify-between">
@@ -660,11 +744,85 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
   )
 }
 
-// ==========================================
-// 3. 전체 기록 탭 및 AI Chat 스플릿 뷰
-// ==========================================
+interface MeetingPersonalSummaryTabProps {
+  summary: PersonalMeetingSummaryResult | null
+  isLoading: boolean
+  defaultRoleTag: string
+}
+
+function MeetingPersonalSummaryTab({
+  summary,
+  isLoading,
+  defaultRoleTag,
+}: MeetingPersonalSummaryTabProps) {
+  if (isLoading) {
+    return <div className="py-12 text-center text-sm text-gray-400">개인 요약을 불러오는 중입니다...</div>
+  }
+
+  if (!summary) {
+    return <div className="py-12 text-center text-sm text-gray-400">생성된 개인 요약이 없습니다.</div>
+  }
+
+  return (
+    <div className="max-w-6xl mx-auto px-12 py-8 space-y-10 pb-16">
+      <section>
+        <div className="flex items-center gap-2 mb-3">
+          {summary.role || defaultRoleTag ? (
+            <span className="px-2.5 py-0.5 bg-brand-primary text-fg-inverse text-xs font-bold rounded">
+              {summary.role || defaultRoleTag}
+            </span>
+          ) : null}
+          <h2 className="text-lg font-bold text-gray-900">내 관점 요약</h2>
+        </div>
+        <p className="text-sm text-gray-700 leading-relaxed bg-[#F8F9FA] p-5 rounded-xl">
+          {summary.personalSummary}
+        </p>
+      </section>
+
+      <section>
+        <h2 className="text-lg font-bold text-gray-900 mb-3">나에게 영향 있는 내용</h2>
+        <ul className="space-y-2">
+          {summary.keyPoints.map((item, idx) => (
+            <li key={idx} className="flex items-start text-sm text-gray-700 leading-relaxed">
+              <span className="mr-2 text-gray-400">•</span>
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section>
+        <h2 className="text-lg font-bold text-gray-900 mb-3">내 액션 아이템</h2>
+        <ul className="space-y-2">
+          {summary.myActionItems.map((item, idx) => (
+            <li key={idx} className="flex items-start text-sm text-gray-700 leading-relaxed">
+              <span className="mr-2 text-gray-400">•</span>
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section>
+        <h2 className="text-lg font-bold text-gray-900 mb-4">다시 확인하면 좋은 질문</h2>
+        <div className="space-y-3">
+          {summary.followUpQuestions.map((q, idx) => (
+            <div
+              key={idx}
+              className="p-4 bg-[#F8F9FA] rounded-xl text-sm text-gray-800 hover:bg-gray-100 transition-colors"
+            >
+              {q}
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  )
+}
 
 interface MeetingAllRecordTabProps {
+  apiMeetingId: number
+  isLoading: boolean
   transcripts: TranscriptItem[]
   setTranscripts: React.Dispatch<React.SetStateAction<TranscriptItem[]>>
   chatModel: AiChatViewModel
@@ -672,38 +830,87 @@ interface MeetingAllRecordTabProps {
 }
 
 function MeetingAllRecordTab({
+  apiMeetingId,
+  isLoading,
   transcripts,
   setTranscripts,
   chatModel,
   setChatModel,
 }: MeetingAllRecordTabProps) {
-  const [onlyTranscript, setOnlyTranscript] = useState(true)
+  const [onlyTranscript, setOnlyTranscript] = useState(false)
   const [includeMyAiRecord, setIncludeMyAiRecord] = useState(true)
   const [aiChatVariant, setAiChatVariant] = useState<'docked' | 'floating'>('docked')
   const [isHintOpen, setIsHintOpen] = useState(true)
+  const [chatWidth, setChatWidth] = useState(420)
+
+  const handleResizeMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault()
+    const startX = e.clientX
+    const startWidth = chatWidth
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = startX - moveEvent.clientX
+      const newWidth = Math.min(Math.max(startWidth + deltaX, 300), 650)
+      setChatWidth(newWidth)
+    }
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+  }
 
   const chatActions: AiChatActions = {
     onDraftChange: (draft) => setChatModel((prev) => ({ ...prev, draft })),
-    onSend: () => {
-      if (!chatModel.draft.trim()) return
+    onSend: async () => {
+      if (!chatModel.draft.trim() || chatModel.isSending) return
+      const text = chatModel.draft.trim()
+      const clientRequestId = `req-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+      const userMsgId = `user-${Date.now()}`
+
       setChatModel((prev) => ({
         ...prev,
-        messages: [
-          ...prev.messages,
-          { id: Date.now().toString(), role: 'user', content: prev.draft },
-        ],
+        messages: [...prev.messages, { id: userMsgId, role: 'user', content: text }],
         draft: '',
+        isSending: true,
+        sendError: null,
       }))
+
+      try {
+        const sendReq: AiChatSendRequest = {
+          question: text,
+          linkedSegmentId: chatModel.pinnedContext ? Number(chatModel.pinnedContext.transcriptId) : undefined,
+          clientRequestId,
+        }
+
+        const response = await aiChatService.sendQuestion(apiMeetingId, sendReq)
+
+        if (response.answer) {
+          setChatModel((prev) => ({
+            ...prev,
+            messages: [
+              ...prev.messages,
+              { id: `${response.id}-a`, role: 'assistant', content: response.answer! },
+            ],
+            isSending: false,
+          }))
+        } else {
+          setChatModel((prev) => ({ ...prev, isSending: false }))
+        }
+      } catch (err) {
+        console.error('AI 질문 전송 실패:', err)
+        setChatModel((prev) => ({ ...prev, isSending: false, sendError: '답변을 불러오지 못했습니다.' }))
+      }
     },
     onSelectSuggestion: (id) => {
       const selected = chatModel.suggestions.find((s) => s.id === id)
       if (selected) {
         setChatModel((prev) => ({
           ...prev,
-          messages: [
-            ...prev.messages,
-            { id: Date.now().toString(), role: 'user', content: selected.label },
-          ],
+          draft: selected.label,
         }))
       }
     },
@@ -714,6 +921,7 @@ function MeetingAllRecordTab({
 
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingText, setEditingText] = useState<string>('')
+  const [isSaving, setIsSaving] = useState(false)
 
   const handleStartEdit = (item: TranscriptItem) => {
     setEditingId(item.id)
@@ -725,15 +933,25 @@ function MeetingAllRecordTab({
     setEditingText('')
   }
 
-  const handleSaveEdit = (id: string) => {
-    if (!editingText.trim()) return
-    setTranscripts((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, text: editingText.trim(), isEdited: true } : item,
-      ),
-    )
-    setEditingId(null)
-    setEditingText('')
+  const handleSaveEdit = async (item: TranscriptItem) => {
+    if (!editingText.trim() || isSaving) return
+    setIsSaving(true)
+
+    try {
+      await transcriptService.updateSegment(apiMeetingId, item.segmentId, editingText.trim())
+      setTranscripts((prev) =>
+        prev.map((t) =>
+          t.id === item.id ? { ...t, text: editingText.trim(), isEdited: true } : t,
+        ),
+      )
+      setEditingId(null)
+      setEditingText('')
+    } catch (error) {
+      console.error('전사 내용 수정 실패:', error)
+      alert('전사 내용을 수정하지 못했습니다.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -768,126 +986,152 @@ function MeetingAllRecordTab({
       </div>
 
       <div className="flex-1 min-h-0 flex overflow-hidden">
-        <div className="flex-1 flex flex-col min-w-0 h-full">
+        <div className="flex-1 flex flex-col min-w-0 h-full border-r border-gray-200">
           <div className="h-[52px] shrink-0 border-b border-gray-200 px-12 flex items-center">
             <h2 className="text-base font-bold text-gray-900">전체 전사</h2>
           </div>
 
           <div className="flex-1 overflow-y-auto px-12 py-6 space-y-6">
-            {transcripts.map((item) => {
-              const isEditing = editingId === item.id
-              const isChanged = isEditing && editingText !== item.text
+            {isLoading ? (
+              <div className="py-12 text-center text-sm text-gray-400">
+                전사 데이터를 불러오는 중입니다...
+              </div>
+            ) : transcripts.length === 0 ? (
+              <div className="py-12 text-center text-sm text-gray-400">
+                저장된 전사 기록이 없습니다.
+              </div>
+            ) : (
+              transcripts.map((item) => {
+                const isEditing = editingId === item.id
+                const isChanged = isEditing && editingText !== item.text
 
-              if (isEditing) {
+                if (isEditing) {
+                  return (
+                    <div key={item.id} className="p-5 bg-[#F8F9FA] rounded-2xl space-y-3">
+                      <div className="flex items-center justify-between text-xs text-gray-400 font-mono">
+                        <span>{item.time}</span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={handleCancelEdit}
+                            disabled={isSaving}
+                            className="px-3 py-1 bg-white border border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors text-xs"
+                          >
+                            취소
+                          </button>
+                          <button
+                            onClick={() => handleSaveEdit(item)}
+                            disabled={!isChanged || isSaving}
+                            className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
+                              isChanged && !isSaving
+                                ? 'bg-brand-primary text-white hover:bg-blue-600'
+                                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            }`}
+                          >
+                            {isSaving ? '저장 중...' : '저장'}
+                          </button>
+                        </div>
+                      </div>
+
+                      <textarea
+                        value={editingText}
+                        onChange={(e) => setEditingText(e.target.value)}
+                        rows={3}
+                        className="w-full p-4 bg-white border border-gray-200 rounded-xl text-sm text-gray-800 leading-relaxed focus:outline-none focus:border-brand-primary resize-none"
+                      />
+                    </div>
+                  )
+                }
+
                 return (
-                  <div key={item.id} className="p-5 bg-[#F8F9FA] rounded-2xl space-y-3">
+                  <div key={item.id} className="space-y-3">
                     <div className="flex items-center justify-between text-xs text-gray-400 font-mono">
                       <span>{item.time}</span>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={handleCancelEdit}
-                          className="px-3 py-1 bg-white border border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors text-xs"
-                        >
-                          취소
-                        </button>
-                        <button
-                          onClick={() => handleSaveEdit(item.id)}
-                          disabled={!isChanged}
-                          className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
-                            isChanged
-                              ? 'bg-brand-primary text-white hover:bg-blue-600'
-                              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                          }`}
-                        >
-                          저장
-                        </button>
-                      </div>
-                    </div>
-
-                    <textarea
-                      value={editingText}
-                      onChange={(e) => setEditingText(e.target.value)}
-                      rows={3}
-                      className="w-full p-4 bg-white border border-gray-200 rounded-xl text-sm text-gray-800 leading-relaxed focus:outline-none focus:border-brand-primary resize-none"
-                    />
-                  </div>
-                )
-              }
-
-              return (
-                <div key={item.id} className="space-y-3">
-                  <div className="flex items-center justify-between text-xs text-gray-400 font-mono">
-                    <span>{item.time}</span>
-                    {item.isEdited && (
-                      <span className="text-xs font-medium text-brand-primary">수정됨</span>
-                    )}
-                  </div>
-
-                  <div className="relative group">
-                    <p className="text-sm text-gray-800 leading-relaxed pr-8">{item.text}</p>
-                    <button
-                      onClick={() => handleStartEdit(item)}
-                      aria-label="편집"
-                      className="absolute right-0 top-0 text-gray-400 hover:text-gray-600 transition-colors opacity-80 group-hover:opacity-100"
-                    >
-                      <img src="/assets/images/edit.png" alt="편집" className="size-4" />
-                    </button>
-                  </div>
-
-                  {item.hasHint && item.hintData && (
-                    <div className="mt-3 p-4 bg-[#F8F9FA] rounded-2xl border border-gray-100 space-y-3">
-                      <div
-                        className="flex items-center justify-between cursor-pointer select-none"
-                        onClick={() => setIsHintOpen(!isHintOpen)}
-                      >
-                        <span className="text-xs font-bold text-gray-800">SynQ 힌트</span>
-                        <img
-                          src="/assets/images/chevron-down.png"
-                          alt="열기/접기"
-                          className={`size-4 transition-transform ${isHintOpen ? 'rotate-180' : ''}`}
-                        />
-                      </div>
-
-                      {isHintOpen && (
-                        <div className="space-y-2.5 pt-1">
-                          <div className="flex items-start gap-3 text-xs">
-                            <span className="shrink-0 px-2.5 py-1 bg-white border border-gray-200 text-gray-700 font-semibold rounded-md min-w-[56px] text-center">
-                              의미
-                            </span>
-                            <p className="text-gray-700 pt-0.5 leading-relaxed">
-                              {item.hintData.meaning}
-                            </p>
-                          </div>
-
-                          <div className="flex items-start gap-3 text-xs">
-                            <span className="shrink-0 px-2.5 py-1 bg-white border border-gray-200 text-gray-700 font-semibold rounded-md min-w-[56px] text-center">
-                              내 영향
-                            </span>
-                            <p className="text-gray-700 pt-0.5 leading-relaxed">
-                              {item.hintData.myImpact}
-                            </p>
-                          </div>
-
-                          <div className="flex items-start gap-3 text-xs">
-                            <span className="shrink-0 px-2.5 py-1 bg-white border border-gray-200 text-gray-700 font-semibold rounded-md min-w-[56px] text-center">
-                              팀 질문
-                            </span>
-                            <p className="text-gray-700 pt-0.5 leading-relaxed">
-                              {item.hintData.teamQuestion}
-                            </p>
-                          </div>
-                        </div>
+                      {item.isEdited && (
+                        <span className="text-xs font-medium text-brand-primary">수정됨</span>
                       )}
                     </div>
-                  )}
-                </div>
-              )
-            })}
+
+                    <div className="relative group">
+                      <p className="text-sm text-gray-800 leading-relaxed pr-8">{item.text}</p>
+                      <button
+                        onClick={() => handleStartEdit(item)}
+                        aria-label="편집"
+                        className="absolute right-0 top-0 text-gray-400 hover:text-gray-600 transition-colors opacity-80 group-hover:opacity-100"
+                      >
+                        <img src="/assets/images/edit.png" alt="편집" className="size-4" />
+                      </button>
+                    </div>
+
+                    {/* '전사만 보기' 체크박스가 해제되어 있을 때만 AI 힌트 카드를 노출 */}
+                    {!onlyTranscript && item.hasHint && item.hintData && (
+                      <div className="mt-3 p-4 bg-[#F8F9FA] rounded-2xl border border-gray-100 space-y-3">
+                        <div
+                          className="flex items-center justify-between cursor-pointer select-none"
+                          onClick={() => setIsHintOpen(!isHintOpen)}
+                        >
+                          <span className="text-xs font-bold text-gray-800">SynQ 힌트</span>
+                          <img
+                            src="/assets/images/chevron-down.png"
+                            alt="열기/접기"
+                            className={`size-4 transition-transform ${isHintOpen ? 'rotate-180' : ''}`}
+                          />
+                        </div>
+
+                        {isHintOpen && (
+                          <div className="space-y-2.5 pt-1">
+                            {item.hintData.meaning && (
+                              <div className="flex items-start gap-3 text-xs">
+                                <span className="shrink-0 px-2.5 py-1 bg-white border border-gray-200 text-gray-700 font-semibold rounded-md min-w-[56px] text-center">
+                                  의미
+                                </span>
+                                <p className="text-gray-700 pt-0.5 leading-relaxed">
+                                  {item.hintData.meaning}
+                                </p>
+                              </div>
+                            )}
+
+                            {item.hintData.myImpact && (
+                              <div className="flex items-start gap-3 text-xs">
+                                <span className="shrink-0 px-2.5 py-1 bg-white border border-gray-200 text-gray-700 font-semibold rounded-md min-w-[56px] text-center">
+                                  내 영향
+                                </span>
+                                <p className="text-gray-700 pt-0.5 leading-relaxed">
+                                  {item.hintData.myImpact}
+                                </p>
+                              </div>
+                            )}
+
+                            {item.hintData.teamQuestion && (
+                              <div className="flex items-start gap-3 text-xs">
+                                <span className="shrink-0 px-2.5 py-1 bg-white border border-gray-200 text-gray-700 font-semibold rounded-md min-w-[56px] text-center">
+                                  팀 질문
+                                </span>
+                                <p className="text-gray-700 pt-0.5 leading-relaxed">
+                                  {item.hintData.teamQuestion}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })
+            )}
           </div>
         </div>
 
         {includeMyAiRecord && aiChatVariant === 'docked' && (
-          <div className="w-[420px] shrink-0 h-full">
+          <div
+            style={{ width: `${chatWidth}px` }}
+            className="shrink-0 h-full relative group pl-2 bg-[#F8F9FA]"
+          >
+            <div
+              onMouseDown={handleResizeMouseDown}
+              className="absolute top-0 left-0 bottom-0 w-2 cursor-col-resize hover:bg-brand-primary/40 z-10 transition-colors"
+              title="드래그하여 너비 조절"
+            />
             <AiChatPanel
               variant="docked"
               model={chatModel}
@@ -971,78 +1215,26 @@ function AudioPlayerControls() {
   )
 }
 
-function MeetingAllSummaryTab() {
-  const keywords = [
-    'MVP 기능 설계',
-    '일정 재조율',
-    '역할 재배분',
-    '로그인/회원가입 포함',
-    'QA 리소스 확보',
-    '베타 범위 조정',
-    '온보딩 개선',
-    '결제 모듈 연동',
-    '핵심 기능 우선순위',
-    '스프린트 계획',
-    '후속 액션',
-    '사용자 이탈률',
-  ]
+interface MeetingAllSummaryTabProps {
+  summary: OverallMeetingSummaryResult | null
+  isLoading: boolean
+}
 
-  const mainDiscussions = [
-    {
-      title: '온보딩 개선 우선순위',
-      items: [
-        '신규 사용자 이탈률 감소를 위해 온보딩 개선을 최우선 과제로 선정',
-        '핵심 기능을 먼저 노출하는 구조로 개편 필요',
-      ],
-    },
-    {
-      title: '출시 일정 검토',
-      items: [
-        '4월 말 베타, 5월 초 정식 출시 일정 공유',
-        '현재 일정 기준으로는 QA 기간이 다소 부족할 가능성 논의',
-      ],
-    },
-    {
-      title: '리소스 및 개발 일정',
-      items: [
-        '결제 모듈 개발과 온보딩 개발 일정이 일부 겹침',
-        '기능 범위를 조정해 일정 리스크를 줄이는 방안 검토',
-      ],
-    },
-    {
-      title: 'QA 계획',
-      items: [
-        '테스트 기간 확보 필요',
-        '베타 전 주요 사용자 시나리오 중심으로 우선 검증하기로 의견 제시',
-      ],
-    },
-  ]
+function MeetingAllSummaryTab({ summary, isLoading }: MeetingAllSummaryTabProps) {
+  if (isLoading) {
+    return <div className="py-12 text-center text-sm text-gray-400">전체 요약을 불러오는 중입니다...</div>
+  }
 
-  const decisions = [
-    '온보딩 개선을 이번 분기 최우선 개발 과제로 진행한다.',
-    '4월 말 베타, 5월 초 정식 출시를 목표 일정으로 유지한다.',
-    '핵심 사용자 경험 개선 기능부터 우선 개발한다.',
-    '다음 스프린트 계획에 온보딩 개선 일정을 반영한다.',
-  ]
-
-  const discussionDirections = [
-    'QA 기간 확보를 위해 출시 일정을 조정할지 검토한다.',
-    '베타 버전 기능 범위를 일부 축소하는 방안을 검토한다.',
-    '결제 모듈 개발 리소스 재배분 여부를 다음 회의에서 논의한다.',
-  ]
-
-  const actionNeeds = [
-    'QA 인력 추가 확보 가능 여부 확인',
-    '디자인 완료 일정 및 개발 착수 일정 확정',
-    '결제 모듈 개발 일정과 온보딩 일정 충돌 여부 확인',
-  ]
+  if (!summary) {
+    return <div className="py-12 text-center text-sm text-gray-400">생성된 전체 요약이 없습니다.</div>
+  }
 
   return (
     <div className="space-y-10 pb-16 text-gray-900">
       <section>
         <h2 className="text-lg font-bold mb-4">핵심 키워드</h2>
         <div className="flex flex-wrap gap-2">
-          {keywords.map((kw, idx) => (
+          {summary.keyTopics.map((kw, idx) => (
             <span
               key={idx}
               className="px-3 py-1 bg-brand-primary/10 text-brand-primary text-xs font-medium rounded-md"
@@ -1055,20 +1247,17 @@ function MeetingAllSummaryTab() {
 
       <section>
         <h2 className="text-lg font-bold mb-3">한 줄 요약</h2>
-        <p className="text-sm text-gray-800 leading-relaxed">
-          온보딩 개선을 이번 분기 핵심 과제로 확정하고, 출시 일정과 QA 리소스 확보 방안을 중심으로
-          논의했습니다.
-        </p>
+        <p className="text-sm text-gray-800 leading-relaxed">{summary.oneLineSummary}</p>
       </section>
 
       <section>
         <h2 className="text-lg font-bold mb-4">주요 논의</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {mainDiscussions.map((card, idx) => (
+          {summary.discussionSections.map((card, idx) => (
             <div key={idx} className="p-5 bg-surface-muted rounded-2xl border border-gray-100">
               <h3 className="text-base font-bold text-gray-900 mb-3">{card.title}</h3>
               <ul className="space-y-2">
-                {card.items.map((item, itemIdx) => (
+                {card.details.map((item, itemIdx) => (
                   <li
                     key={itemIdx}
                     className="flex items-start text-xs text-gray-700 leading-relaxed"
@@ -1086,7 +1275,7 @@ function MeetingAllSummaryTab() {
       <section>
         <h2 className="text-lg font-bold mb-3">결정된 내용</h2>
         <ul className="space-y-2">
-          {decisions.map((item, idx) => (
+          {summary.decisions.map((item, idx) => (
             <li key={idx} className="flex items-start text-sm text-gray-800 leading-relaxed">
               <span className="mr-2 text-gray-400">•</span>
               <span>{item}</span>
@@ -1103,7 +1292,7 @@ function MeetingAllSummaryTab() {
           </span>
         </div>
         <ul className="space-y-2">
-          {discussionDirections.map((item, idx) => (
+          {summary.tentativeDirections.map((item, idx) => (
             <li key={idx} className="flex items-start text-sm text-gray-800 leading-relaxed">
               <span className="mr-2 text-gray-400">•</span>
               <span>{item}</span>
@@ -1115,7 +1304,7 @@ function MeetingAllSummaryTab() {
       <section>
         <h2 className="text-lg font-bold mb-3">확인 필요 내용</h2>
         <ul className="space-y-2">
-          {actionNeeds.map((item, idx) => (
+          {summary.confirmationItems.map((item, idx) => (
             <li key={idx} className="flex items-start text-sm text-gray-800 leading-relaxed">
               <span className="mr-2 text-gray-400">•</span>
               <span>{item}</span>
