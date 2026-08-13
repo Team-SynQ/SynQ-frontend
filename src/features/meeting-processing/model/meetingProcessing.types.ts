@@ -15,4 +15,6 @@ export type ProjectNavigationState = {
   processingMeetingRecordId?: string
   /** 초대 참여 후 역할·관점 설정을 마치고 돌아온 경우 저장 성공 토스트를 띄웁니다. */
   roleProfileSaved?: boolean
+  /** 참여 요청을 보내고 돌아온 경우 승인 대기 안내 토스트를 띄웁니다. */
+  joinRequestSent?: boolean
 }

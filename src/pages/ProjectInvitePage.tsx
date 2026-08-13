@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
 import {
-  joinProjectByInviteToken,
   loadProjectInvitationInfo,
   ProjectInviteDialog,
   savePendingInviteToken,
@@ -13,14 +12,14 @@ import { readAccessToken } from '../shared/lib/authStorage'
 type InviteViewState =
   | { step: 'loading' }
   | { step: 'confirm'; info: ProjectInvitationInfoResponse }
-  | { step: 'approved'; projectId: number; projectTitle: string; justJoined: boolean }
+  /** 이미 참여한 사람이 링크를 다시 연 경우입니다. */
+  | { step: 'approved'; projectTitle: string }
   | { step: 'rejected'; projectTitle: string | null }
 
 export function ProjectInvitePage() {
   const { inviteToken = '' } = useParams()
   const navigate = useNavigate()
   const [viewState, setViewState] = useState<InviteViewState>({ step: 'loading' })
-  const [pending, setPending] = useState(false)
 
   useEffect(() => {
     let isSubscribed = true
@@ -30,12 +29,7 @@ export function ProjectInvitePage() {
         if (!isSubscribed) return
         setViewState(
           info.alreadyJoined
-            ? {
-                step: 'approved',
-                projectId: info.projectId,
-                projectTitle: info.title,
-                justJoined: false,
-              }
+            ? { step: 'approved', projectTitle: info.title }
             : { step: 'confirm', info },
         )
       })
@@ -49,8 +43,12 @@ export function ProjectInvitePage() {
     }
   }, [inviteToken])
 
-  const handleJoin = async () => {
-    if (viewState.step !== 'confirm' || pending) return
+  /**
+   * 참여 요청에는 역할·관점이 함께 실려야 하므로 여기서 바로 요청을 보내지 않습니다.
+   * 설정 3단계를 거친 뒤 마지막 화면에서 요청이 나갑니다.
+   */
+  const handleJoin = () => {
+    if (viewState.step !== 'confirm') return
 
     // 참여에는 로그인이 필요하므로, 토큰을 보관해 두고 로그인 후 이 화면으로 복귀합니다.
     if (!readAccessToken()) {
@@ -59,31 +57,16 @@ export function ProjectInvitePage() {
       return
     }
 
-    setPending(true)
-    try {
-      const joined = await joinProjectByInviteToken(inviteToken)
-      setViewState({
-        step: 'approved',
-        projectId: joined.projectId,
-        projectTitle: viewState.info.title,
-        justJoined: true,
-      })
-    } catch {
-      setViewState({ step: 'rejected', projectTitle: viewState.info.title })
-    } finally {
-      setPending(false)
-    }
+    navigate('/invite/setup/role', {
+      state: {
+        inviteToken,
+        projectId: viewState.info.projectId,
+        projectName: viewState.info.title,
+      },
+    })
   }
 
-  // 방금 참여했다면 이 프로젝트에서 쓸 역할·관점 설정으로 이어집니다.
-  // projectId는 설정 화면이 저장 API를 부를 때 필요하므로 함께 넘깁니다.
   const handleComplete = () => {
-    if (viewState.step === 'approved' && viewState.justJoined) {
-      navigate('/invite/setup/role', {
-        state: { projectId: viewState.projectId, projectName: viewState.projectTitle },
-      })
-      return
-    }
     navigate('/projects', { replace: true })
   }
 
@@ -97,7 +80,6 @@ export function ProjectInvitePage() {
           maxMemberCount={viewState.step === 'confirm' ? viewState.info.maxMemberCount : undefined}
           onComplete={handleComplete}
           onJoin={handleJoin}
-          pending={pending}
           projectTitle={
             viewState.step === 'confirm' ? viewState.info.title : viewState.projectTitle
           }

@@ -5,6 +5,11 @@ import type {
   ProjectInvitationInfoResponse,
   ProjectInvitationResponse,
   ProjectJoinRequest,
+  ProjectJoinRequestApproveResponse,
+  ProjectJoinRequestCreateRequest,
+  ProjectJoinRequestCreateResponse,
+  ProjectJoinRequestListResponse,
+  ProjectJoinRequestRejectResponse,
   ProjectJoinResponse,
   ProjectLinkReferenceResponse,
   ProjectListItemResponse,
@@ -47,6 +52,19 @@ export type ProjectApi = {
   deleteProjectMember(projectId: number, memberId: number): Promise<void>
   getProjectInvitationInfo(inviteToken: string): Promise<ProjectInvitationInfoResponse>
   joinProject(request: ProjectJoinRequest): Promise<ProjectJoinResponse>
+  createProjectJoinRequest(
+    projectId: number,
+    request: ProjectJoinRequestCreateRequest,
+  ): Promise<ProjectJoinRequestCreateResponse>
+  getProjectJoinRequests(projectId: number): Promise<ProjectJoinRequestListResponse>
+  approveProjectJoinRequest(
+    projectId: number,
+    requestId: number,
+  ): Promise<ProjectJoinRequestApproveResponse>
+  rejectProjectJoinRequest(
+    projectId: number,
+    requestId: number,
+  ): Promise<ProjectJoinRequestRejectResponse>
   getProjectRolePerspective(projectId: number): Promise<ProjectRolePerspectiveResponse>
   updateProjectRolePerspective(
     projectId: number,
@@ -135,6 +153,31 @@ export const projectApi: ProjectApi = {
     const response = await axiosInstance.post<ApiResponse<ProjectJoinResponse>>(
       '/projects/join',
       request,
+    )
+    return response.data.result
+  },
+  async createProjectJoinRequest(projectId, request) {
+    const response = await axiosInstance.post<ApiResponse<ProjectJoinRequestCreateResponse>>(
+      `/projects/${projectId}/join-requests`,
+      request,
+    )
+    return response.data.result
+  },
+  async getProjectJoinRequests(projectId) {
+    const response = await axiosInstance.get<ApiResponse<ProjectJoinRequestListResponse>>(
+      `/projects/${projectId}/join-requests`,
+    )
+    return response.data.result
+  },
+  async approveProjectJoinRequest(projectId, requestId) {
+    const response = await axiosInstance.patch<ApiResponse<ProjectJoinRequestApproveResponse>>(
+      `/projects/${projectId}/join-requests/${requestId}/approve`,
+    )
+    return response.data.result
+  },
+  async rejectProjectJoinRequest(projectId, requestId) {
+    const response = await axiosInstance.patch<ApiResponse<ProjectJoinRequestRejectResponse>>(
+      `/projects/${projectId}/join-requests/${requestId}/reject`,
     )
     return response.data.result
   },

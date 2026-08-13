@@ -165,6 +165,51 @@ export type ProjectJoinRequest = {
   inviteToken: string
 }
 
+/** 요청에 실은 역할·관점이 어디서 온 값인지 알립니다. 저장되는 값은 함께 보낸 값 그대로입니다. */
+export type ProjectJoinSettingSource = 'DEFAULT' | 'ONBOARDING' | 'PROJECT_CUSTOM'
+
+export type ProjectJoinRequestCreateRequest = {
+  inviteToken: string
+  settingSource: ProjectJoinSettingSource
+  roleCategory: RoleProfileRole
+  /** roleCategory가 'ETC'일 때만 서버가 요구합니다. */
+  detailRole?: string
+  /** 최대 3개입니다. */
+  perspectives: RoleProfilePerspective[]
+}
+
+export type ProjectJoinRequestCreateResponse = {
+  requestId: number
+  projectId: number
+  status: string
+  requestedAt: string
+}
+
+export type ProjectJoinRequestItemResponse = {
+  requestId: number
+  userId: number
+  name: string
+  requestedAt: string
+}
+
+export type ProjectJoinRequestListResponse = {
+  pendingCount: number
+  requests: ProjectJoinRequestItemResponse[]
+}
+
+export type ProjectJoinRequestApproveResponse = {
+  requestId: number
+  memberId: number
+  userId: number
+  status: string
+  joinedAt: string
+}
+
+export type ProjectJoinRequestRejectResponse = {
+  requestId: number
+  status: string
+}
+
 export type ProjectJoinResponse = {
   projectId: number
   title: string

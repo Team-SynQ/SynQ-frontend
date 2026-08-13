@@ -13,6 +13,8 @@ import { ProjectInviteIcon, ProjectMemberAvatar } from './ProjectMoreOptionsPopo
 
 type ProjectMemberManagementDialogProps = {
   joinRequests: ProjectJoinRequest[]
+  /** 처리 중인 요청. 응답을 기다리는 동안 그 행의 버튼을 잠급니다. */
+  pendingRequestId?: string
   members: ProjectMember[]
   maxMemberCount?: number
   onApproveRequest: (request: ProjectJoinRequest) => void
@@ -26,6 +28,7 @@ type ProjectMemberManagementDialogProps = {
 
 export function ProjectMemberManagementDialog({
   joinRequests,
+  pendingRequestId,
   members,
   maxMemberCount = PROJECT_MEMBER_LIMIT,
   onApproveRequest,
@@ -69,18 +72,23 @@ export function ProjectMemberManagementDialog({
                 >
                   <ProjectMemberAvatar custom={false} id={request.id} />
                   <span className="min-w-0 flex-1 truncate typo-body-01 text-fg-secondary">
-                    {request.name}/{request.role}
+                    {request.name}
                   </span>
                   <time className="shrink-0 typo-caption text-gray-500">{request.requestedAt}</time>
                   <div className="flex shrink-0 gap-xs">
                     <Button
+                      disabled={pendingRequestId === request.id}
                       onClick={() => onRejectRequest(request)}
                       size="small"
                       variant="fillGray100"
                     >
                       거절
                     </Button>
-                    <Button onClick={() => onApproveRequest(request)} size="small">
+                    <Button
+                      disabled={pendingRequestId === request.id}
+                      onClick={() => onApproveRequest(request)}
+                      size="small"
+                    >
                       승인
                     </Button>
                   </div>

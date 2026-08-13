@@ -4,7 +4,7 @@ import type {
   ProjectMemberResponse,
 } from '../../../shared/api/contracts/project.contracts'
 
-import type { ProjectMember } from '../model/projectSettings.mock'
+import type { ProjectJoinRequest, ProjectMember } from '../model/projectSettings.mock'
 
 export type ProjectMemberList = {
   members: ProjectMember[]
@@ -64,6 +64,57 @@ export async function createProjectInviteLink(projectId: number): Promise<string
     return inviteUrl
   } catch (error) {
     console.error('[projectMember] 초대 링크 발급 실패', { projectId, error })
+    throw error
+  }
+}
+
+/** 서버는 요청자의 역할을 주지 않습니다. 화면도 이름과 요청 시각만 보여 줍니다. */
+export async function loadProjectJoinRequests(projectId: number): Promise<ProjectJoinRequest[]> {
+  console.log('[projectJoinRequest] 참여 요청 목록 조회 시작', { projectId })
+
+  try {
+    const response = await projectApi.getProjectJoinRequests(projectId)
+    console.log('[projectJoinRequest] 참여 요청 목록 조회 성공', {
+      projectId,
+      pendingCount: response.pendingCount,
+    })
+    return response.requests.map((request) => ({
+      id: String(request.requestId),
+      name: request.name,
+      requestedAt: request.requestedAt,
+    }))
+  } catch (error) {
+    console.error('[projectJoinRequest] 참여 요청 목록 조회 실패', { projectId, error })
+    throw error
+  }
+}
+
+export async function approveProjectJoinRequest(
+  projectId: number,
+  requestId: number,
+): Promise<void> {
+  console.log('[projectJoinRequest] 참여 요청 승인 시작', { projectId, requestId })
+
+  try {
+    await projectApi.approveProjectJoinRequest(projectId, requestId)
+    console.log('[projectJoinRequest] 참여 요청 승인 성공', { projectId, requestId })
+  } catch (error) {
+    console.error('[projectJoinRequest] 참여 요청 승인 실패', { projectId, requestId, error })
+    throw error
+  }
+}
+
+export async function rejectProjectJoinRequest(
+  projectId: number,
+  requestId: number,
+): Promise<void> {
+  console.log('[projectJoinRequest] 참여 요청 거절 시작', { projectId, requestId })
+
+  try {
+    await projectApi.rejectProjectJoinRequest(projectId, requestId)
+    console.log('[projectJoinRequest] 참여 요청 거절 성공', { projectId, requestId })
+  } catch (error) {
+    console.error('[projectJoinRequest] 참여 요청 거절 실패', { projectId, requestId, error })
     throw error
   }
 }
