@@ -221,3 +221,5 @@ SPA 라우팅은 CloudFront Function이 처리합니다. 확장자가 없는 경
   -> AI Chat으로 추가 질문
   -> 회의 종료 후 회의 정리 확인
 ```
+
+<-i soongsil-key.pem prettier fix -->
