@@ -255,7 +255,12 @@ export function AiChatPanel(props: AiChatPanelProps) {
             ref={collapseButtonRef}
             className="p-1 hover:bg-gray-100 rounded transition-colors text-gray-500"
           >
-            <img alt="접기" aria-hidden="true" className="size-4" src="/assets/images/collapse.png" />
+            <img
+              alt="접기"
+              aria-hidden="true"
+              className="size-4"
+              src="/assets/images/collapse.png"
+            />
           </button>
           <button
             aria-label={resizeLabel}
@@ -552,7 +557,8 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
 
   const displayTitle = overallSummary?.title || locationState?.meetingTitle || '회의 기록'
   const displayRoleTag = personalSummary?.role || ''
-  const displayDateIso = overallSummary?.generatedAt || personalSummary?.generatedAt || new Date().toISOString()
+  const displayDateIso =
+    overallSummary?.generatedAt || personalSummary?.generatedAt || new Date().toISOString()
   const displayDurationSeconds = fallbackDurationSeconds ?? 0
 
   const formatDuration = (seconds: number) => {
@@ -767,11 +773,17 @@ function MeetingPersonalSummaryTab({
   defaultRoleTag,
 }: MeetingPersonalSummaryTabProps) {
   if (isLoading) {
-    return <div className="py-12 text-center text-sm text-gray-400">개인 요약을 불러오는 중입니다...</div>
+    return (
+      <div className="py-12 text-center text-sm text-gray-400">
+        개인 요약을 불러오는 중입니다...
+      </div>
+    )
   }
 
   if (!summary) {
-    return <div className="py-12 text-center text-sm text-gray-400">생성된 개인 요약이 없습니다.</div>
+    return (
+      <div className="py-12 text-center text-sm text-gray-400">생성된 개인 요약이 없습니다.</div>
+    )
   }
 
   return (
@@ -893,7 +905,9 @@ function MeetingAllRecordTab({
       try {
         const sendReq: AiChatSendRequest = {
           question: text,
-          linkedSegmentId: chatModel.pinnedContext ? Number(chatModel.pinnedContext.transcriptId) : undefined,
+          linkedSegmentId: chatModel.pinnedContext
+            ? Number(chatModel.pinnedContext.transcriptId)
+            : undefined,
           clientRequestId,
         }
 
@@ -913,7 +927,11 @@ function MeetingAllRecordTab({
         }
       } catch (err) {
         console.error('AI 질문 전송 실패:', err)
-        setChatModel((prev) => ({ ...prev, isSending: false, sendError: '답변을 불러오지 못했습니다.' }))
+        setChatModel((prev) => ({
+          ...prev,
+          isSending: false,
+          sendError: '답변을 불러오지 못했습니다.',
+        }))
       }
     },
     onSelectSuggestion: (id) => {
@@ -1232,11 +1250,17 @@ interface MeetingAllSummaryTabProps {
 
 function MeetingAllSummaryTab({ summary, isLoading }: MeetingAllSummaryTabProps) {
   if (isLoading) {
-    return <div className="py-12 text-center text-sm text-gray-400">전체 요약을 불러오는 중입니다...</div>
+    return (
+      <div className="py-12 text-center text-sm text-gray-400">
+        전체 요약을 불러오는 중입니다...
+      </div>
+    )
   }
 
   if (!summary) {
-    return <div className="py-12 text-center text-sm text-gray-400">생성된 전체 요약이 없습니다.</div>
+    return (
+      <div className="py-12 text-center text-sm text-gray-400">생성된 전체 요약이 없습니다.</div>
+    )
   }
 
   return (
