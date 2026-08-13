@@ -66,22 +66,25 @@ export function MeetingHeader({
         <time className="p-xs typo-transcription-body-01 text-fg-secondary">
           {formatElapsedTime(model.elapsedSeconds)}
         </time>
-        <Button
-          aria-label={recordingControlLabel}
-          aria-pressed={isPaused}
-          className="size-[42px] rounded-full px-0!"
-          disabled={model.recordingControlDisabled}
-          onClick={actions.onToggleRecording}
-          size="medium"
-          variant="basic"
-        >
-          <img
-            alt=""
-            aria-hidden="true"
-            className="size-[42px]"
-            src={isPaused ? playIcon : pauseIcon}
-          />
-        </Button>
+        {/* 회의를 멈추고 다시 시작하는 것은 진행자만 할 수 있다. */}
+        {model.isHost ? (
+          <Button
+            aria-label={recordingControlLabel}
+            aria-pressed={isPaused}
+            className="size-[42px] rounded-full px-0!"
+            disabled={model.recordingControlDisabled}
+            onClick={actions.onToggleRecording}
+            size="medium"
+            variant="basic"
+          >
+            <img
+              alt=""
+              aria-hidden="true"
+              className="size-[42px]"
+              src={isPaused ? playIcon : pauseIcon}
+            />
+          </Button>
+        ) : null}
         <Button onClick={actions.onEndMeeting} size="medium">
           {model.isHost ? '회의 종료' : '나가기'}
         </Button>
