@@ -51,18 +51,20 @@ export function AiChatPanel(props: AiChatPanelProps) {
     <aside
       aria-labelledby="meeting-ai-chat-title"
       className={cn(
-        'grid h-full min-h-0 bg-surface-elevated',
+        // 열을 지정하지 않으면 암묵적 열이 auto가 되어 자식들의 최소 콘텐츠 폭 아래로 줄지 않는다.
+        // 중간 모드(400px)에서 내용이 패널 밖으로 밀려 헤더 버튼과 추천 질문이 잘렸다.
+        'grid h-full min-h-0 grid-cols-[minmax(0,1fr)] bg-surface-elevated',
         model.pinnedContext
           ? 'grid-rows-[60px_auto_minmax(0,1fr)_auto]'
           : 'grid-rows-[60px_minmax(0,1fr)_auto]',
         floating && 'overflow-hidden rounded-m',
       )}
     >
-      <header className="flex items-center justify-between border border-line-default px-m">
-        <h2 className="m-0 typo-title-02 text-gray-700" id="meeting-ai-chat-title">
+      <header className="flex min-w-0 items-center justify-between border border-line-default px-m">
+        <h2 className="m-0 min-w-0 truncate typo-title-02 text-gray-700" id="meeting-ai-chat-title">
           AI Chat
         </h2>
-        <div className="flex items-center gap-xs">
+        <div className="flex shrink-0 items-center gap-xs">
           <Button
             aria-label="AI Chat 런처로 축소"
             className="size-[32px] px-0!"

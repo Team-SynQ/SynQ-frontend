@@ -26,7 +26,7 @@ export function AiChatMessageList({
       aria-live="polite"
       aria-relevant="additions text"
       className={cn(
-        'flex min-h-0 flex-col gap-m overflow-y-auto border-x border-line-default bg-surface-muted',
+        'flex min-h-0 min-w-0 flex-col gap-m overflow-y-auto border-x border-line-default bg-surface-muted',
         variant === 'floating' ? 'px-m py-[28px]' : 'p-m',
       )}
       role="log"
