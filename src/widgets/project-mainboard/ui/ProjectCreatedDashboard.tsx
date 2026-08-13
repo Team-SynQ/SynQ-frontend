@@ -370,7 +370,7 @@ function ProjectReferenceMaterialItem({
           {material.name}
         </span>
         <time
-          className="w-[62px] text-center typo-body-02 text-fg-secondary"
+          className="shrink-0 whitespace-nowrap typo-body-02 text-fg-secondary"
           dateTime={material.createdAt}
         >
           {projectDateFormatter.format(new Date(material.createdAt))}

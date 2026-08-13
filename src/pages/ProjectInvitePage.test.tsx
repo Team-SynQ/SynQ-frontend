@@ -17,6 +17,12 @@ const invitationInfoFixture = {
   maxMemberCount: 10,
   alreadyJoined: false,
   expiresAt: '2026-12-31T00:00:00.000Z',
+  owner: {
+    userId: 7,
+    name: '김소유',
+    profileImageUrl: null,
+    roleCategory: 'PLANNING_OPERATION' as const,
+  },
 }
 
 async function renderInviteAt(path: string) {
@@ -71,6 +77,24 @@ describe('ProjectInvitePage', () => {
     ).toBeInTheDocument()
     expect(screen.getByLabelText('현재 인원 5명, 최대 10명')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '참여 요청하기' })).toBeInTheDocument()
+
+    // 소유자 이름·역할과 소유자 뱃지가 함께 보입니다.
+    expect(screen.getByLabelText('프로젝트 소유자 김소유')).toBeInTheDocument()
+    expect(screen.getByText('김소유/기획/운영')).toBeInTheDocument()
+    expect(screen.getByText('소유자')).toBeInTheDocument()
+  })
+
+  it('keeps the confirm dialog readable when the owner info is missing', async () => {
+    vi.spyOn(projectApi, 'getProjectInvitationInfo').mockResolvedValue({
+      ...invitationInfoFixture,
+      owner: undefined,
+    })
+
+    await renderInviteAt('/invite/valid-token')
+
+    expect(await screen.findByRole('button', { name: '참여 요청하기' })).toBeInTheDocument()
+    expect(screen.queryByText(/김소유/)).not.toBeInTheDocument()
+    expect(screen.queryByText('소유자')).not.toBeInTheDocument()
   })
 
   async function completeRoleAndPerspectiveSetup(user: ReturnType<typeof userEvent.setup>) {

@@ -78,6 +78,7 @@ export function ProjectInvitePage() {
             viewState.step === 'confirm' ? viewState.info.currentMemberCount : undefined
           }
           maxMemberCount={viewState.step === 'confirm' ? viewState.info.maxMemberCount : undefined}
+          owner={viewState.step === 'confirm' ? viewState.info.owner : undefined}
           onComplete={handleComplete}
           onJoin={handleJoin}
           projectTitle={
