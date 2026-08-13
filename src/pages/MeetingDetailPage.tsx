@@ -255,12 +255,7 @@ export function AiChatPanel(props: AiChatPanelProps) {
             ref={collapseButtonRef}
             className="p-1 hover:bg-gray-100 rounded transition-colors text-gray-500"
           >
-            <img
-              alt="접기"
-              aria-hidden="true"
-              className="size-4"
-              src="/assets/images/collapse.png"
-            />
+            <img alt="접기" aria-hidden="true" className="size-4" src="/assets/images/collapse.png" />
           </button>
           <button
             aria-label={resizeLabel}
@@ -384,7 +379,9 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
     if (!hasValidMeetingId) return
 
     let active = true
-    setIsLoadingTranscripts(true)
+    queueMicrotask(() => {
+      if (active) setIsLoadingTranscripts(true)
+    })
 
     void (async () => {
       try {
@@ -447,7 +444,9 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
     if (!hasValidMeetingId) return
 
     let active = true
-    setIsLoadingOverallSummary(true)
+    queueMicrotask(() => {
+      if (active) setIsLoadingOverallSummary(true)
+    })
 
     void meetingService
       .getOverallSummary(apiMeetingId)
@@ -471,7 +470,9 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
     if (!hasValidMeetingId) return
 
     let active = true
-    setIsLoadingPersonalSummary(true)
+    queueMicrotask(() => {
+      if (active) setIsLoadingPersonalSummary(true)
+    })
 
     void meetingService
       .getPersonalSummary(apiMeetingId)
@@ -537,7 +538,7 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
             })),
           }))
         }
-      } catch (err) {
+      } catch {
         // 추천 질문 로드 실패 시 기본값 유지
       }
     }
@@ -551,8 +552,7 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
 
   const displayTitle = overallSummary?.title || locationState?.meetingTitle || '회의 기록'
   const displayRoleTag = personalSummary?.role || ''
-  const displayDateIso =
-    overallSummary?.generatedAt || personalSummary?.generatedAt || new Date().toISOString()
+  const displayDateIso = overallSummary?.generatedAt || personalSummary?.generatedAt || new Date().toISOString()
   const displayDurationSeconds = fallbackDurationSeconds ?? 0
 
   const formatDuration = (seconds: number) => {
@@ -767,17 +767,11 @@ function MeetingPersonalSummaryTab({
   defaultRoleTag,
 }: MeetingPersonalSummaryTabProps) {
   if (isLoading) {
-    return (
-      <div className="py-12 text-center text-sm text-gray-400">
-        개인 요약을 불러오는 중입니다...
-      </div>
-    )
+    return <div className="py-12 text-center text-sm text-gray-400">개인 요약을 불러오는 중입니다...</div>
   }
 
   if (!summary) {
-    return (
-      <div className="py-12 text-center text-sm text-gray-400">생성된 개인 요약이 없습니다.</div>
-    )
+    return <div className="py-12 text-center text-sm text-gray-400">생성된 개인 요약이 없습니다.</div>
   }
 
   return (
@@ -899,9 +893,7 @@ function MeetingAllRecordTab({
       try {
         const sendReq: AiChatSendRequest = {
           question: text,
-          linkedSegmentId: chatModel.pinnedContext
-            ? Number(chatModel.pinnedContext.transcriptId)
-            : undefined,
+          linkedSegmentId: chatModel.pinnedContext ? Number(chatModel.pinnedContext.transcriptId) : undefined,
           clientRequestId,
         }
 
@@ -921,11 +913,7 @@ function MeetingAllRecordTab({
         }
       } catch (err) {
         console.error('AI 질문 전송 실패:', err)
-        setChatModel((prev) => ({
-          ...prev,
-          isSending: false,
-          sendError: '답변을 불러오지 못했습니다.',
-        }))
+        setChatModel((prev) => ({ ...prev, isSending: false, sendError: '답변을 불러오지 못했습니다.' }))
       }
     },
     onSelectSuggestion: (id) => {
@@ -1085,7 +1073,6 @@ function MeetingAllRecordTab({
                       </button>
                     </div>
 
-                    {/* '전사만 보기' 체크박스가 해제되어 있을 때만 AI 힌트 카드를 노출 */}
                     {!onlyTranscript && item.hasHint && item.hintData && (
                       <div className="mt-3 p-4 bg-[#F8F9FA] rounded-2xl border border-gray-100 space-y-3">
                         <div
@@ -1245,17 +1232,11 @@ interface MeetingAllSummaryTabProps {
 
 function MeetingAllSummaryTab({ summary, isLoading }: MeetingAllSummaryTabProps) {
   if (isLoading) {
-    return (
-      <div className="py-12 text-center text-sm text-gray-400">
-        전체 요약을 불러오는 중입니다...
-      </div>
-    )
+    return <div className="py-12 text-center text-sm text-gray-400">전체 요약을 불러오는 중입니다...</div>
   }
 
   if (!summary) {
-    return (
-      <div className="py-12 text-center text-sm text-gray-400">생성된 전체 요약이 없습니다.</div>
-    )
+    return <div className="py-12 text-center text-sm text-gray-400">생성된 전체 요약이 없습니다.</div>
   }
 
   return (
