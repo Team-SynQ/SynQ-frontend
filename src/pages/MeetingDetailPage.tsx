@@ -22,6 +22,18 @@ import type {
 import { MeetingSettingsMenu, type MeetingMember } from '../features/meeting-settings'
 import { cn } from '../shared/lib/cn'
 
+// 역할 프로필 응답 타입 정의 (ESLint any 타입 사용 방지)
+interface RoleProfileItem {
+  isDefault?: boolean
+  role?: string
+  detailRole?: string
+  perspectives?: string[]
+}
+
+interface RoleProfileResponse {
+  result?: RoleProfileItem[]
+}
+
 // 영문 Enum 코드를 한글 레이블로 변환하는 맵퍼
 const ROLE_LABEL_MAP: Record<string, string> = {
   PLANNING_OPERATION: '기획/운영',
@@ -279,7 +291,7 @@ export function AiChatPanel(props: AiChatPanelProps) {
             ─
           </button>
 
-          {/* 크기 조절 (줄이기/확장) 버튼 복원 (요구사항 1 반영) */}
+          {/* 크기 조절 버튼 */}
           <button
             aria-label={resizeLabel}
             onClick={onResize}
@@ -404,12 +416,12 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
 
     void userApi
       .getMyRoleProfiles()
-      .then((res: any) => {
+      .then((res: RoleProfileItem[] | RoleProfileResponse) => {
         if (!active) return
         const profiles = Array.isArray(res) ? res : res?.result || []
         if (profiles.length === 0) return
 
-        const defaultProfile = profiles.find((p: any) => p.isDefault) || profiles[0]
+        const defaultProfile = profiles.find((p: RoleProfileItem) => p.isDefault) || profiles[0]
         setUserRoleProfile({
           role: defaultProfile.detailRole || defaultProfile.role || '',
           perspectives: defaultProfile.perspectives || [],
@@ -1134,7 +1146,7 @@ function MeetingAllRecordTab({
   return (
     <div className="flex flex-col h-full overflow-hidden text-gray-900 relative">
       <div className="flex-1 min-h-0 flex overflow-hidden">
-        {/* 좌측 전사 영역: 단일 경계선 구성을 위해 border-r 제거 */}
+        {/* 좌측 전사 영역 */}
         <div className="flex-1 flex flex-col min-w-0 h-full">
           <div className="h-[52px] shrink-0 border-b border-gray-200 px-12 flex items-center justify-between bg-white">
             <div className="flex items-center gap-6">
@@ -1295,7 +1307,7 @@ function MeetingAllRecordTab({
           </div>
         </div>
 
-        {/* 우측 AI Chat 패널 영역: border-l border-gray-200을 적용하여 수직 경계선을 끊김없이 길게 연장 (요구사항 2 반영) */}
+        {/* 우측 AI Chat 패널 영역: border-l border-gray-200으로 단절 없는 경계선 연결 */}
         {isAiChatOpen && aiChatVariant === 'docked' && (
           <div
             style={{ width: `${chatWidth}px` }}
@@ -1391,7 +1403,7 @@ function AudioPlayerControls({ recordings }: AudioPlayerControlsProps) {
       audio.removeEventListener('timeupdate', handleTimeUpdate)
       audio.removeEventListener('ended', handleEnded)
     }
-  }, [recordings, currentSegmentIndex])
+  }, [recordings, currentSegmentIndex, isPlaying])
 
   const togglePlay = () => {
     if (!audioRef.current || recordings.length === 0) return
