@@ -9,3 +9,4 @@ export {
   type AccountPerspectiveDraft,
 } from './model/accountSettings.types'
 export { toAccountPerspective, toRoleProfileRequest } from './model/accountPerspectiveMapping'
+export { toProviderLabel } from './model/providerLabel'

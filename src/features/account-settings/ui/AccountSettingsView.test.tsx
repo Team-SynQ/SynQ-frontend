@@ -12,6 +12,7 @@ describe('AccountSettingsView', () => {
         email="honggildong@gmail.com"
         name="홍길동"
         perspectives={defaultAccountPerspectives}
+        providerLabel="Google 가입"
       />,
     )
 

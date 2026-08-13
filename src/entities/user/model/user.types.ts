@@ -7,6 +7,7 @@ export type CurrentUser = {
   userId: number
   name: string
   email: string
+  provider: string
   profileImageUrl: string | null
 }
 

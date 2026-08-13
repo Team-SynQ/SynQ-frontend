@@ -79,6 +79,7 @@ function toCurrentUser(me: UserMeResponse): CurrentUser {
     userId: me.userId,
     name: me.name,
     email: me.email ?? '',
+    provider: me.provider,
     profileImageUrl: me.profileImageUrl,
   }
 }

@@ -35,7 +35,7 @@ export function AccountSettingsView({
   initialProfileImageUrl,
   name,
   perspectives,
-  providerLabel = 'Google 가입',
+  providerLabel,
   onAddPerspective,
   onDeletePerspective,
   onOpenPerspectiveMenu,
@@ -94,9 +94,11 @@ export function AccountSettingsView({
               </div>
               <div className="flex items-center gap-s">
                 <span className="truncate typo-body-01 text-fg-primary">{email}</span>
-                <Badge className="bg-overlay-dark-04 text-fg-secondary" size="small">
-                  {providerLabel}
-                </Badge>
+                {providerLabel ? (
+                  <Badge className="bg-overlay-dark-04 text-fg-secondary" size="small">
+                    {providerLabel}
+                  </Badge>
+                ) : null}
               </div>
             </div>
           </div>
