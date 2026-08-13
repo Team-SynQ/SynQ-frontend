@@ -1,6 +1,10 @@
 export { AccountNameEditDialog, type AccountNameEditDialogProps } from './ui/AccountNameEditDialog'
 export { AccountSettingsMenu, type AccountSettingsActions } from './ui/AccountSettingsMenu'
 export { AccountSettingsView, type AccountSettingsViewProps } from './ui/AccountSettingsView'
+export {
+  AccountPerspectiveForm,
+  type AccountPerspectiveFormProps,
+} from './ui/AccountPerspectiveForm'
 export { ProfileImageEditor, type ProfileImageEditorProps } from './ui/ProfileImageEditor'
 export { PersonalSettingsPanel, type AccountSettingsSection } from './ui/PersonalSettingsPanel'
 export {
@@ -9,3 +13,4 @@ export {
   type AccountPerspectiveDraft,
 } from './model/accountSettings.types'
 export { toAccountPerspective, toRoleProfileRequest } from './model/accountPerspectiveMapping'
+export { toProviderLabel } from './model/providerLabel'

@@ -32,7 +32,11 @@ type AccountSettingsPageProps = {
   setDefaultPerspective?: (perspectiveId: string) => Promise<void> | void
 } & Pick<
   AccountSettingsViewProps,
-  'initialProfileImageUrl' | 'onSaveName' | 'onSaveProfileImage' | 'onUploadProfileImage'
+  | 'initialProfileImageUrl'
+  | 'onSaveName'
+  | 'onSaveProfileImage'
+  | 'onUploadProfileImage'
+  | 'providerLabel'
 >
 
 const loadAccountPerspectives = async () => (await loadMyRoleProfiles()).map(toAccountPerspective)
@@ -63,6 +67,7 @@ export function AccountSettingsPage({
   onSaveName,
   onSaveProfileImage,
   onUploadProfileImage,
+  providerLabel,
   user,
 }: AccountSettingsPageProps) {
   const navigate = useNavigate()
@@ -163,6 +168,7 @@ export function AccountSettingsPage({
           onUpdatePerspective={handleUpdatePerspective}
           onUploadProfileImage={onUploadProfileImage}
           perspectives={perspectives}
+          providerLabel={providerLabel}
         />
       </div>
     </main>

@@ -45,6 +45,8 @@ type ProjectCreatedDashboardProps = {
   onRenameMeeting?: (recordId: string, nextTitle: string) => Promise<void>
   onDeleteMeeting?: (recordId: string) => Promise<void>
   meetings?: CompletedMeeting[]
+  /** 회의 기록을 수정·삭제할 수 있는지 가리는 기준. 그 회의를 진행한 사람만 가능합니다. */
+  currentUserId?: number | null
   meetingHistoryLoading?: boolean
   meetingHistoryPresentation?: MeetingHistoryPresentation
   meetingProcessingOverlayOpen?: boolean
@@ -60,6 +62,8 @@ type ProjectCreatedDashboardProps = {
   onUpdateProject?: (draft: ProjectInformationDraft) => Promise<void> | void
   perspectiveOptions?: ProjectInformationPerspective[]
   onDeleteProject?: () => Promise<void> | void
+  /** 일반 멤버가 프로젝트를 나갔을 때. 목록 갱신은 상위 화면이 합니다. */
+  onLeaveProject?: () => Promise<void> | void
 }
 
 const projectDateFormatter = new Intl.DateTimeFormat('ko-KR', {
@@ -76,6 +80,7 @@ export function ProjectCreatedDashboard({
   onRenameMeeting,
   onDeleteMeeting,
   meetings = [],
+  currentUserId = null,
   meetingHistoryLoading = false,
   meetingHistoryPresentation,
   meetingProcessingOverlayOpen = false,
@@ -90,6 +95,7 @@ export function ProjectCreatedDashboard({
   onUpdateProject,
   perspectiveOptions,
   onDeleteProject,
+  onLeaveProject,
 }: ProjectCreatedDashboardProps) {
   const navigate = useNavigate()
 
@@ -109,6 +115,7 @@ export function ProjectCreatedDashboard({
         </div>
         <ProjectSettingsMenu
           onDeleteProject={onDeleteProject}
+          onLeaveProject={onLeaveProject}
           onLoadProject={onLoadProject}
           onUpdateProject={onUpdateProject}
           perspectiveOptions={
@@ -182,6 +189,7 @@ export function ProjectCreatedDashboard({
         </section>
       ) : (
         <ProjectMeetingHistory
+          currentUserId={currentUserId}
           isLoading={meetingHistoryLoading}
           onRetryMeetingSummary={onRetryMeetingSummary}
           meetings={meetings}
@@ -370,7 +378,7 @@ function ProjectReferenceMaterialItem({
           {material.name}
         </span>
         <time
-          className="w-[62px] text-center typo-body-02 text-fg-secondary"
+          className="shrink-0 whitespace-nowrap typo-body-02 text-fg-secondary"
           dateTime={material.createdAt}
         >
           {projectDateFormatter.format(new Date(material.createdAt))}

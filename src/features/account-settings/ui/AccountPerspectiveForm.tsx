@@ -17,6 +17,8 @@ export type AccountPerspectiveFormProps = {
   initialValue?: AccountPerspectiveDraft
   onCancel: () => void
   onSubmit: (perspective: AccountPerspectiveDraft) => Promise<void> | void
+  /** 시안에 취소 버튼이 없는 화면에서는 끕니다. 닫기는 모달의 X가 담당합니다. */
+  showCancel?: boolean
   submitLabel: string
 }
 
@@ -24,6 +26,7 @@ export function AccountPerspectiveForm({
   initialValue,
   onCancel,
   onSubmit,
+  showCancel = true,
   submitLabel,
 }: AccountPerspectiveFormProps) {
   const initialRole = accountRoleOptions.find(
@@ -164,15 +167,17 @@ export function AccountPerspectiveForm({
       </div>
 
       <div className="flex w-full shrink-0 gap-s">
-        <Button
-          className="w-[91px]"
-          disabled={isSubmitting}
-          onClick={onCancel}
-          size="large"
-          variant="fillGray100"
-        >
-          취소
-        </Button>
+        {showCancel ? (
+          <Button
+            className="w-[91px]"
+            disabled={isSubmitting}
+            onClick={onCancel}
+            size="large"
+            variant="fillGray100"
+          >
+            취소
+          </Button>
+        ) : null}
         <Button className="min-w-0 flex-1" disabled={!canSubmit} size="large" type="submit">
           {submitLabel}
         </Button>

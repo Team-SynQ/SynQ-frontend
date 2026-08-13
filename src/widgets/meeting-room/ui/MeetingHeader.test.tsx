@@ -9,7 +9,6 @@ import { MeetingHeader } from './MeetingHeader'
 const baseModel: MeetingHeaderViewModel = {
   elapsedSeconds: 0,
   isHost: true,
-  liveStatus: 'live',
   meetingId: 'demo',
   meetingTitle: '2차 대면회의',
   participantCount: 4,
@@ -75,6 +74,47 @@ describe('MeetingHeader', () => {
     )
 
     expect(screen.getByRole('button', { name: '회의 일시정지' })).toBeDisabled()
+  })
+
+  // 참여자에게는 버튼이 없으므로, 배지가 없으면 시간이 왜 멈췄는지 알 수 없다.
+  it('일시정지 중에는 Live 자리에 일시정지를 보여 준다', () => {
+    const { rerender } = render(
+      <MeetingHeader
+        actions={actions}
+        model={baseModel}
+        moreMenuOpen={false}
+        participantsOpen={false}
+      />,
+    )
+
+    expect(screen.getByText('Live')).toBeInTheDocument()
+
+    rerender(
+      <MeetingHeader
+        actions={actions}
+        model={{ ...baseModel, isHost: false, recordingState: 'paused' }}
+        moreMenuOpen={false}
+        participantsOpen={false}
+      />,
+    )
+
+    expect(screen.getByText('일시정지')).toBeInTheDocument()
+    expect(screen.queryByText('Live')).not.toBeInTheDocument()
+  })
+
+  // 참여자는 회의를 멈출 수 없다.
+  it('참여자에게는 일시정지 버튼을 보여 주지 않는다', () => {
+    render(
+      <MeetingHeader
+        actions={actions}
+        model={{ ...baseModel, isHost: false }}
+        moreMenuOpen={false}
+        participantsOpen={false}
+      />,
+    )
+
+    expect(screen.queryByRole('button', { name: '회의 일시정지' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '회의 다시 시작' })).not.toBeInTheDocument()
   })
 
   it.each([

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import { formatElapsedTime } from '../../../entities/meeting'
-import chevronRightIcon from '../../../shared/assets/icons/chevron-right.svg'
+import chevronRightIcon from '../../../shared/assets/icons/chevron-right-inverse.svg'
 
 type OngoingMeetingButtonProps = {
   /** 회의 시작 시각. 목록 응답의 생성 시각을 쓴다. */

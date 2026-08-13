@@ -59,29 +59,39 @@ export function MeetingHeader({
           </Button>
           {participantsPopover}
         </div>
-        <LiveStatus className="h-[32px] border-0 bg-semantic-error-surface px-m font-normal" />
+        {/* 배경색을 조건부로 덮지 않고 분기한다. cn은 tailwind-merge가 아니라 override 승자가 보장되지 않는다. */}
+        {isPaused ? (
+          <LiveStatus className="h-[32px] border-0 px-m font-normal" status="offline">
+            일시정지
+          </LiveStatus>
+        ) : (
+          <LiveStatus className="h-[32px] border-0 bg-semantic-error-surface px-m font-normal" />
+        )}
       </div>
 
       <div className="flex shrink-0 items-center gap-s whitespace-nowrap">
         <time className="p-xs typo-transcription-body-01 text-fg-secondary">
           {formatElapsedTime(model.elapsedSeconds)}
         </time>
-        <Button
-          aria-label={recordingControlLabel}
-          aria-pressed={isPaused}
-          className="size-[42px] rounded-full px-0!"
-          disabled={model.recordingControlDisabled}
-          onClick={actions.onToggleRecording}
-          size="medium"
-          variant="basic"
-        >
-          <img
-            alt=""
-            aria-hidden="true"
-            className="size-[42px]"
-            src={isPaused ? playIcon : pauseIcon}
-          />
-        </Button>
+        {/* 회의를 멈추고 다시 시작하는 것은 진행자만 할 수 있다. */}
+        {model.isHost ? (
+          <Button
+            aria-label={recordingControlLabel}
+            aria-pressed={isPaused}
+            className="size-[42px] rounded-full px-0!"
+            disabled={model.recordingControlDisabled}
+            onClick={actions.onToggleRecording}
+            size="medium"
+            variant="basic"
+          >
+            <img
+              alt=""
+              aria-hidden="true"
+              className="size-[42px]"
+              src={isPaused ? playIcon : pauseIcon}
+            />
+          </Button>
+        ) : null}
         <Button onClick={actions.onEndMeeting} size="medium">
           {model.isHost ? '회의 종료' : '나가기'}
         </Button>

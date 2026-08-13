@@ -8,6 +8,7 @@ import {
   loadProjectJoinRequests,
   loadProjectMembers,
   rejectProjectJoinRequest,
+  leaveProject,
   removeProjectMember,
   type ProjectMemberList,
 } from '../api/projectMembers.api'
@@ -27,7 +28,11 @@ import { ProjectInformationEditDialog } from './ProjectInformationEditDialog'
 import { ProjectDeleteDialog } from './ProjectDeleteDialog'
 import { ProjectMemberExportDialog } from './ProjectMemberExportDialog'
 import { ProjectMemberManagementDialog } from './ProjectMemberManagementDialog'
+import { ProjectLeaveDialog } from './ProjectLeaveDialog'
 import { ProjectMoreOptionsPopover } from './ProjectMoreOptionsPopover'
+import { ProjectRolePerspectiveDialog } from './ProjectRolePerspectiveDialog'
+import { saveProjectRolePerspective } from '../api/projectRolePerspective.api'
+import type { AccountPerspectiveDraft } from '../../account-settings'
 
 type SettingsToast = {
   title: string
@@ -37,6 +42,8 @@ type SettingsToast = {
 
 type ProjectSettingsMenuProps = {
   project: ProjectSummary
+  /** 프로젝트를 나간 뒤 목록을 갱신하는 것은 상위 화면이 담당합니다. */
+  onLeaveProject?: () => Promise<void> | void
   perspectiveOptions?: ProjectInformationPerspective[]
   onLoadProject?: () => Promise<ProjectSummary | void> | ProjectSummary | void
   onUpdateProject?: (draft: ProjectInformationDraft) => Promise<void> | void
@@ -47,10 +54,13 @@ type ProjectSettingsMenuProps = {
   rejectJoinRequest?: (projectId: number, requestId: number) => Promise<void>
   createInviteLink?: (projectId: number) => Promise<string>
   exportMember?: (projectId: number, memberId: number) => Promise<void>
+  leaveProjectAsMember?: (projectId: number) => Promise<void>
+  saveRolePerspective?: (projectId: number, draft: AccountPerspectiveDraft) => Promise<void>
 }
 
 export function ProjectSettingsMenu({
   project,
+  onLeaveProject,
   perspectiveOptions = [],
   onLoadProject,
   onUpdateProject,
@@ -61,6 +71,8 @@ export function ProjectSettingsMenu({
   rejectJoinRequest = rejectProjectJoinRequest,
   createInviteLink = createProjectInviteLink,
   exportMember = removeProjectMember,
+  leaveProjectAsMember = leaveProject,
+  saveRolePerspective = saveProjectRolePerspective,
 }: ProjectSettingsMenuProps) {
   const managementTitleId = useId()
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -73,6 +85,9 @@ export function ProjectSettingsMenu({
   const [pendingRequestId, setPendingRequestId] = useState<string>()
   const [memberList, setMemberList] = useState<ProjectMemberList>()
   const [exportCandidate, setExportCandidate] = useState<ProjectMember>()
+  const [isLeaveOpen, setIsLeaveOpen] = useState(false)
+  const [isLeavePending, setIsLeavePending] = useState(false)
+  const [isRolePerspectiveOpen, setIsRolePerspectiveOpen] = useState(false)
   const [toastMessage, setToastMessage] = useState<SettingsToast>()
   const settingsToast = useTransientVisibility()
   const showSettingsToast = settingsToast.show
@@ -88,6 +103,11 @@ export function ProjectSettingsMenu({
   const apiProjectId = project.apiProjectId
   const members = memberList?.members ?? []
   const maxMemberCount = memberList?.maxCount ?? PROJECT_MEMBER_LIMIT
+  /**
+   * 소유자 여부는 멤버 목록에서만 알 수 있습니다. 프로젝트 목록 응답에는 소유자 정보가 없습니다.
+   * 목록을 받기 전에는 소유자가 아닌 것으로 봅니다 — 소유자 전용 메뉴를 잘못 열어 주지 않기 위해서입니다.
+   */
+  const isOwner = members.some((member) => member.isCurrentUser && member.isOwner)
 
   useEffect(() => {
     if (!isPopoverOpen) return
@@ -112,9 +132,9 @@ export function ProjectSettingsMenu({
     }
   }, [apiProjectId, isPopoverOpen, loadMembers, showToast])
 
-  // 참여 요청은 소유자만 조회할 수 있습니다. 실패해도 멤버 목록은 그대로 보여 줍니다.
+  // 참여 요청은 소유자만 조회할 수 있습니다. 멤버가 부르면 403이 나므로 아예 부르지 않습니다.
   useEffect(() => {
-    if (!isPopoverOpen) return
+    if (!isPopoverOpen || !isOwner) return
 
     let isSubscribed = true
     void loadJoinRequests(apiProjectId)
@@ -130,7 +150,48 @@ export function ProjectSettingsMenu({
     return () => {
       isSubscribed = false
     }
-  }, [apiProjectId, isPopoverOpen, loadJoinRequests])
+  }, [apiProjectId, isOwner, isPopoverOpen, loadJoinRequests])
+
+  const handleLeaveProject = async () => {
+    if (isLeavePending) return
+
+    setIsLeavePending(true)
+    try {
+      await leaveProjectAsMember(apiProjectId)
+      setIsLeaveOpen(false)
+      setIsPopoverOpen(false)
+      // 나간 프로젝트를 목록에서 지우고 다른 프로젝트로 옮기는 것은 상위 화면이 한다.
+      await onLeaveProject?.()
+    } catch {
+      showToast({
+        title: '프로젝트 나가기 실패',
+        description: '프로젝트를 나가지 못했습니다. 다시 시도해 주세요.',
+        type: 'error',
+      })
+    } finally {
+      setIsLeavePending(false)
+    }
+  }
+
+  const handleSaveRolePerspective = async (draft: AccountPerspectiveDraft) => {
+    try {
+      await saveRolePerspective(apiProjectId, draft)
+    } catch {
+      showToast({
+        title: '역할·관점 저장 실패',
+        description: '역할·관점을 저장하지 못했습니다. 다시 시도해 주세요.',
+        type: 'error',
+      })
+      return
+    }
+
+    setIsRolePerspectiveOpen(false)
+    showToast({
+      title: '역할·관점 저장 완료',
+      description: '이 프로젝트에 적용할 역할과 관점을 변경했습니다.',
+      type: 'success',
+    })
+  }
 
   const handleCopyInviteLink = async () => {
     try {
@@ -341,12 +402,15 @@ export function ProjectSettingsMenu({
         </Button>
 
         <ProjectMoreOptionsPopover
+          isOwner={isOwner}
           joinRequestCount={joinRequests.length}
           maxMemberCount={maxMemberCount}
           memberCount={memberList?.currentCount}
           members={members}
           onClose={() => setIsPopoverOpen(false)}
+          onEditRolePerspective={() => setIsRolePerspectiveOpen(true)}
           onInviteMembers={() => void handleCopyInviteLink()}
+          onLeaveProject={() => setIsLeaveOpen(true)}
           onManageMembers={handleOpenManagement}
           onEditProject={() => void handleOpenInformation()}
           onDeleteProject={handleOpenDelete}
@@ -381,6 +445,23 @@ export function ProjectSettingsMenu({
         pendingRequestId={pendingRequestId}
         open={isManagementOpen}
         titleId={managementTitleId}
+      />
+
+      <ProjectLeaveDialog
+        onCancel={() => {
+          if (!isLeavePending) setIsLeaveOpen(false)
+        }}
+        onConfirm={() => void handleLeaveProject()}
+        open={isLeaveOpen}
+        pending={isLeavePending}
+        projectName={project.name}
+      />
+
+      <ProjectRolePerspectiveDialog
+        onClose={() => setIsRolePerspectiveOpen(false)}
+        onSubmit={handleSaveRolePerspective}
+        open={isRolePerspectiveOpen}
+        projectId={apiProjectId}
       />
 
       <ProjectMemberExportDialog

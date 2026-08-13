@@ -69,9 +69,19 @@ async function renderReadyController(meetingId = '1', currentUserId: number | nu
   return hook
 }
 
+/** 가짜 타이머에서는 RTL `waitFor`가 실제 타이머를 기다리다 멈춘다. 대기 중인 프로미스를 직접 흘려보낸다. */
+async function flushPendingAsync() {
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(0)
+    await vi.advanceTimersByTimeAsync(0)
+  })
+}
+
 describe('useLiveMeetingController async boundaries', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
+    // 가짜 타이머를 쓴 테스트가 실패해도 다음 테스트가 멈추지 않게 여기서 되돌린다.
+    vi.useRealTimers()
     window.sessionStorage.clear()
     resetLiveMeetingMockDb()
     deliverMessage = () => {}
@@ -85,6 +95,20 @@ describe('useLiveMeetingController async boundaries', () => {
       joinedAt: '2026-08-05T00:00:00.000Z',
       startedAt: '2026-08-05T00:00:00.000Z',
       wsUrl: 'wss://api.example.com/ws/meetings/1/stt',
+      paused: false,
+      activeSeconds: 0,
+    }))
+    vi.spyOn(meetingLifecycleApi, 'pauseMeeting').mockImplementation(async (meetingId) => ({
+      meetingId,
+      status: 'IN_PROGRESS',
+      paused: true,
+      activeSeconds: 0,
+    }))
+    vi.spyOn(meetingLifecycleApi, 'resumeMeeting').mockImplementation(async (meetingId) => ({
+      meetingId,
+      status: 'IN_PROGRESS',
+      paused: false,
+      activeSeconds: 0,
     }))
     vi.spyOn(meetingLifecycleApi, 'endMeeting').mockImplementation(async (meetingId) => ({
       meetingId,
@@ -162,9 +186,9 @@ describe('useLiveMeetingController async boundaries', () => {
   it('stops the speaking state while manually paused', async () => {
     const { result } = await renderReadyController()
 
-    act(() => {
+    await act(async () => {
       if (result.current.status !== 'ready') throw new Error('controller is not ready')
-      result.current.toggleRecording()
+      await result.current.toggleRecording()
     })
 
     if (result.current.status !== 'ready' || result.current.transcript.state.kind !== 'active') {
@@ -196,6 +220,8 @@ describe('useLiveMeetingController async boundaries', () => {
       joinedAt: '2026-08-05T00:00:00.000Z',
       startedAt: '2026-08-05T00:00:00.000Z',
       wsUrl: 'wss://api.example.com/ws/meetings/1/stt',
+      paused: false,
+      activeSeconds: 0,
     })
 
     const { result } = await renderReadyController()
@@ -243,6 +269,8 @@ describe('useLiveMeetingController async boundaries', () => {
         joinedAt: '2026-08-05T00:00:00.000Z',
         startedAt: '2026-08-05T00:00:00.000Z',
         wsUrl: 'wss://api.example.com/ws/meetings/1/stt',
+        paused: false,
+        activeSeconds: 0,
       })
       await Promise.resolve()
     })
@@ -282,6 +310,208 @@ describe('useLiveMeetingController async boundaries', () => {
     expect(result.current.status).toBe('ready')
     if (result.current.status !== 'ready') throw new Error('controller is not ready')
     expect(result.current.participants).toEqual([])
+  })
+
+  // 서버에 참여자 입·퇴장 이벤트가 없어 주기적으로 다시 읽는다.
+  // 폴링 타이머는 렌더 시점에 걸리므로 가짜 타이머를 먼저 켜 둔다.
+  it('주기가 지나면 참여자 목록을 다시 조회해 갱신한다', async () => {
+    const listParticipants = vi.spyOn(meetingParticipantApi, 'listParticipants')
+    vi.useFakeTimers()
+    const { result } = renderHook(() => useLiveMeetingController('1', 7))
+
+    await flushPendingAsync()
+    expect(listParticipants).toHaveBeenCalledTimes(1)
+
+    listParticipants.mockResolvedValue([
+      { id: '7', name: '윤금서', profileImageUrl: null, isCurrentUser: true, isHost: true },
+      { id: '9', name: '이동희', profileImageUrl: null, isCurrentUser: false, isHost: false },
+    ])
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15_000)
+    })
+
+    expect(listParticipants).toHaveBeenCalledTimes(2)
+    if (result.current.status !== 'ready') throw new Error('controller is not ready')
+    expect(result.current.participants.map((participant) => participant.name)).toEqual([
+      '윤금서',
+      '이동희',
+    ])
+  })
+
+  // 입장 시점 조회가 첫 폴링보다 늦게 끝나면 낡은 목록이 최신을 덮을 수 있다.
+  it('늦게 도착한 입장 시점 조회가 폴링 결과를 덮지 않는다', async () => {
+    const slowInitialRequest =
+      deferred<Awaited<ReturnType<typeof meetingParticipantApi.listParticipants>>>()
+    const listParticipants = vi
+      .spyOn(meetingParticipantApi, 'listParticipants')
+      .mockReturnValueOnce(slowInitialRequest.promise)
+      .mockResolvedValue([
+        { id: '7', name: '윤금서', profileImageUrl: null, isCurrentUser: true, isHost: true },
+        { id: '9', name: '이동희', profileImageUrl: null, isCurrentUser: false, isHost: false },
+      ])
+    vi.useFakeTimers()
+    const { result } = renderHook(() => useLiveMeetingController('1', 7))
+
+    await flushPendingAsync()
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15_000)
+    })
+    if (result.current.status !== 'ready') throw new Error('controller is not ready')
+    expect(result.current.participants).toHaveLength(2)
+
+    // 이제서야 입장 시점 조회가 끝난다. 그때의 목록에는 이동희가 없다.
+    await act(async () => {
+      slowInitialRequest.resolve([
+        { id: '7', name: '윤금서', profileImageUrl: null, isCurrentUser: true, isHost: true },
+      ])
+      await Promise.resolve()
+    })
+
+    expect(listParticipants).toHaveBeenCalledTimes(2)
+    if (result.current.status !== 'ready') throw new Error('controller is not ready')
+    expect(result.current.participants).toHaveLength(2)
+  })
+
+  // 진행자 타이머는 일시정지를 제외한 누적 시간이라, 서버가 준 값으로 맞춰야 두 화면이 같아진다.
+  it('진행자의 일시정지는 서버 응답의 누적 시간으로 맞춘다', async () => {
+    const pauseMeeting = vi
+      .spyOn(meetingLifecycleApi, 'pauseMeeting')
+      .mockResolvedValue({ meetingId: 1, status: 'IN_PROGRESS', paused: true, activeSeconds: 163 })
+    const { result } = await renderReadyController()
+
+    await act(async () => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      await result.current.toggleRecording()
+    })
+
+    expect(pauseMeeting).toHaveBeenCalledWith(1)
+    if (result.current.status !== 'ready') throw new Error('controller is not ready')
+    expect(result.current.recordingState).toBe('paused')
+    expect(result.current.elapsedSeconds).toBe(163)
+  })
+
+  it('참여자는 일시정지 알림을 받아 시간을 멈춘다', async () => {
+    vi.spyOn(meetingLifecycleApi, 'joinMeeting').mockImplementation(async (meetingId) => ({
+      meetingId,
+      title: '2차 대면회의',
+      status: 'IN_PROGRESS',
+      role: 'MEMBER',
+      joinedAt: '2026-08-05T00:00:00.000Z',
+      startedAt: '2026-08-05T00:00:00.000Z',
+      wsUrl: 'wss://api.example.com/ws/meetings/1/stt',
+      paused: false,
+      activeSeconds: 0,
+    }))
+    vi.useFakeTimers()
+    const { result } = renderHook(() => useLiveMeetingController('1', 7))
+    await flushPendingAsync()
+
+    act(() => {
+      deliverMessage({ kind: 'meetingPauseState', paused: true, activeSeconds: 163 })
+    })
+    await flushPendingAsync()
+
+    if (result.current.status !== 'ready') throw new Error('controller is not ready')
+    expect(result.current.recordingState).toBe('paused')
+    expect(result.current.elapsedSeconds).toBe(163)
+
+    // 멈춘 뒤에는 더 흐르지 않는다.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_000)
+    })
+    if (result.current.status !== 'ready') throw new Error('controller is not ready')
+    expect(result.current.elapsedSeconds).toBe(163)
+  })
+
+  // 늦게 입장해도 진행자와 같은 시간을 봐야 한다.
+  it('입장 응답의 누적 시간과 일시정지 상태로 시작한다', async () => {
+    vi.spyOn(meetingLifecycleApi, 'joinMeeting').mockImplementation(async (meetingId) => ({
+      meetingId,
+      title: '2차 대면회의',
+      status: 'IN_PROGRESS',
+      role: 'MEMBER',
+      joinedAt: '2026-08-05T00:00:00.000Z',
+      startedAt: '2026-08-05T00:00:00.000Z',
+      wsUrl: 'wss://api.example.com/ws/meetings/1/stt',
+      paused: true,
+      activeSeconds: 240,
+    }))
+    const { result } = await renderReadyController()
+
+    await waitFor(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      expect(result.current.elapsedSeconds).toBe(240)
+    })
+    if (result.current.status !== 'ready') throw new Error('controller is not ready')
+    expect(result.current.recordingState).toBe('paused')
+  })
+
+  it('서버가 회의 종료를 알리면 경과 시간이 멈춘다', async () => {
+    vi.spyOn(meetingLifecycleApi, 'joinMeeting').mockImplementation(async (meetingId) => ({
+      meetingId,
+      title: '2차 대면회의',
+      status: 'IN_PROGRESS',
+      role: 'MEMBER',
+      joinedAt: '2026-08-05T00:00:00.000Z',
+      startedAt: '2026-08-05T00:00:00.000Z',
+      wsUrl: 'wss://api.example.com/ws/meetings/1/stt',
+      paused: false,
+      activeSeconds: 0,
+    }))
+    vi.useFakeTimers()
+    const { result } = renderHook(() => useLiveMeetingController('1', 7))
+
+    await flushPendingAsync()
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3_000)
+    })
+    if (result.current.status !== 'ready') throw new Error('controller is not ready')
+    const elapsedBeforeEnd = result.current.elapsedSeconds
+    expect(elapsedBeforeEnd).toBeGreaterThan(0)
+
+    act(() => {
+      deliverMessage({ kind: 'meetingEnded' })
+    })
+    await flushPendingAsync()
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_000)
+    })
+
+    if (result.current.status !== 'ready') throw new Error('controller is not ready')
+    expect(result.current.elapsedSeconds).toBe(elapsedBeforeEnd)
+  })
+
+  it('회의가 종료되면 참여자 목록 폴링을 멈춘다', async () => {
+    vi.spyOn(meetingLifecycleApi, 'joinMeeting').mockImplementation(async (meetingId) => ({
+      meetingId,
+      title: '2차 대면회의',
+      status: 'IN_PROGRESS',
+      role: 'MEMBER',
+      joinedAt: '2026-08-05T00:00:00.000Z',
+      startedAt: '2026-08-05T00:00:00.000Z',
+      wsUrl: 'wss://api.example.com/ws/meetings/1/stt',
+      paused: false,
+      activeSeconds: 0,
+    }))
+    const listParticipants = vi.spyOn(meetingParticipantApi, 'listParticipants')
+    vi.useFakeTimers()
+    const { result } = renderHook(() => useLiveMeetingController('1', 7))
+
+    await flushPendingAsync()
+    expect(listParticipants).toHaveBeenCalledTimes(1)
+
+    act(() => {
+      deliverMessage({ kind: 'meetingEnded' })
+    })
+    await flushPendingAsync()
+    if (result.current.status !== 'ready') throw new Error('controller is not ready')
+    expect(result.current.endedByServer).toBe(true)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30_000)
+    })
+
+    expect(listParticipants).toHaveBeenCalledTimes(1)
   })
 
   it('keeps the AI draft and pinned context while exposing a controlled send error', async () => {

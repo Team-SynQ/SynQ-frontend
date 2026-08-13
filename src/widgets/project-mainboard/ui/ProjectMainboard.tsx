@@ -20,6 +20,8 @@ type ProjectMainboardProps = {
   onRenameMeeting?: (recordId: string, nextTitle: string) => Promise<void>
   onDeleteMeeting?: (recordId: string) => Promise<void>
   meetings?: CompletedMeeting[]
+  /** 회의 기록을 수정·삭제할 수 있는지 가리는 기준. 그 회의를 진행한 사람만 가능합니다. */
+  currentUserId?: number | null
   /** 프로젝트 목록을 아직 불러오는 중이면 빈 상태 대신 아무것도 그리지 않습니다. */
   projectsLoading?: boolean
   meetingHistoryLoading?: boolean
@@ -36,6 +38,8 @@ type ProjectMainboardProps = {
   onUpdateProject?: (draft: ProjectInformationDraft) => Promise<void> | void
   perspectiveOptions?: ProjectInformationPerspective[]
   onDeleteProject?: () => Promise<void> | void
+  /** 일반 멤버가 프로젝트를 나갔을 때. 목록 갱신은 상위 화면이 합니다. */
+  onLeaveProject?: () => Promise<void> | void
 }
 
 export function ProjectMainboard({
@@ -47,6 +51,7 @@ export function ProjectMainboard({
   onRenameMeeting,
   onDeleteMeeting,
   meetings = [],
+  currentUserId = null,
   projectsLoading = false,
   meetingHistoryLoading = false,
   meetingHistoryPresentation,
@@ -62,6 +67,7 @@ export function ProjectMainboard({
   onUpdateProject,
   perspectiveOptions,
   onDeleteProject,
+  onLeaveProject,
 }: ProjectMainboardProps) {
   return (
     <section
@@ -72,6 +78,7 @@ export function ProjectMainboard({
     >
       {project ? (
         <ProjectCreatedDashboard
+          currentUserId={currentUserId}
           perspectiveOptions={perspectiveOptions}
           meetingHistoryLoading={meetingHistoryLoading}
           onAddMaterials={onAddMaterials}
@@ -90,6 +97,7 @@ export function ProjectMainboard({
           ongoingMeeting={ongoingMeeting}
           onJoinOngoingMeeting={onJoinOngoingMeeting}
           onDeleteProject={onDeleteProject}
+          onLeaveProject={onLeaveProject}
           onLoadProject={onLoadProject}
           onUpdateProject={onUpdateProject}
           project={project}

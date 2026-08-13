@@ -22,6 +22,24 @@ describe('parseTranscriptionMessage', () => {
     expect(message).toEqual({ kind: 'meetingEnded' })
   })
 
+  it('일시정지·재개 알림을 누적 활성 시간과 함께 해석한다', () => {
+    expect(
+      parseTranscriptionMessage(JSON.stringify({ type: 'MEETING_PAUSED', activeSeconds: 163 })),
+    ).toEqual({ kind: 'meetingPauseState', paused: true, activeSeconds: 163 })
+
+    expect(
+      parseTranscriptionMessage(JSON.stringify({ type: 'MEETING_RESUMED', activeSeconds: 163 })),
+    ).toEqual({ kind: 'meetingPauseState', paused: false, activeSeconds: 163 })
+  })
+
+  it('일시정지 알림에 누적 시간이 없으면 0으로 본다', () => {
+    expect(parseTranscriptionMessage(JSON.stringify({ type: 'MEETING_PAUSED' }))).toEqual({
+      kind: 'meetingPauseState',
+      paused: true,
+      activeSeconds: 0,
+    })
+  })
+
   it('확정 발화를 화면 세그먼트로 변환한다', () => {
     const message = parseTranscriptionMessage(
       JSON.stringify({

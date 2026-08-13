@@ -23,6 +23,7 @@ import { PrivacyPage } from '../../pages/PrivacyPage'
 import { ProjectInvitePage } from '../../pages/ProjectInvitePage'
 import { ProjectMainboardPage } from '../../pages/ProjectMainboardPage'
 import { TermsPage } from '../../pages/TermsPage'
+import { toProviderLabel } from '../../features/account-settings'
 import {
   changeMyName,
   changeMyProfileImage,
@@ -111,6 +112,7 @@ function AccountSettingsRoute() {
         onUserChange({ ...user, profileImageUrl: imageUrl ?? null })
       }}
       onUploadProfileImage={changeMyProfileImage}
+      providerLabel={toProviderLabel(user.provider)}
       user={user}
     />
   )

@@ -36,6 +36,8 @@ import { useLiveTranscription } from './useLiveTranscription'
 import { useMeetingRuntime } from './useMeetingRuntime'
 
 const INTERIM_SEGMENT_ID = 'interim'
+/** 프로젝트 화면의 진행 중 회의 폴링과 같은 주기를 쓴다. */
+const PARTICIPANT_POLL_INTERVAL_MS = 15_000
 
 type ReadyController = {
   status: 'ready'
@@ -53,7 +55,8 @@ type ReadyController = {
   aiChat: AiChatContentProps
   aiChatDisplayMode: AiChatDisplayMode
   renameMeeting: (title: string) => Promise<void>
-  toggleRecording: () => void
+  /** 서버에 일시정지·재개를 요청한다. 실패는 호출자가 받아 안내한다. */
+  toggleRecording: () => Promise<void>
   completeMeeting: (context: LiveMeetingProjectContext) => Promise<CompletedMeeting>
   changeAiChatDisplayMode: (mode: AiChatDisplayMode) => void
 }
@@ -63,6 +66,26 @@ type LiveMeetingController =
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error && error.message ? error.message : fallback
+}
+
+/** 폴링 결과가 직전과 같은지 본다. 목록 순서가 곧 화면 표시 순서라 순서까지 함께 비교한다. */
+function isSameParticipantList(
+  current: readonly LiveMeetingParticipant[],
+  next: readonly LiveMeetingParticipant[],
+) {
+  return (
+    current.length === next.length &&
+    current.every((participant, index) => {
+      const candidate = next[index]
+      return (
+        participant.id === candidate.id &&
+        participant.name === candidate.name &&
+        participant.profileImageUrl === candidate.profileImageUrl &&
+        participant.isCurrentUser === candidate.isCurrentUser &&
+        participant.isHost === candidate.isHost
+      )
+    })
+  )
 }
 
 export function useLiveMeetingController(
@@ -75,6 +98,11 @@ export function useLiveMeetingController(
   const [role, setRole] = useState<'host' | 'participant'>('host')
   const [wsUrl, setWsUrl] = useState<string | null>(null)
   const [meetingStartedAt, setMeetingStartedAt] = useState<string | null>(null)
+  /** 입장 응답이 알려 준 서버 기준 시간·일시정지 상태. 아직 입장 전이면 null이다. */
+  const [joinedRuntime, setJoinedRuntime] = useState<{
+    paused: boolean
+    activeSeconds: number
+  } | null>(null)
   const [selectedSegmentId, setSelectedSegmentId] = useState<string | null>(null)
   const [hintState, setHintState] = useState<TranscriptHintState>({ status: 'idle' })
   const [editState, setEditState] = useState<TranscriptEditState>({ status: 'idle' })
@@ -94,6 +122,8 @@ export function useLiveMeetingController(
   /** 힌트가 있는 전사. 캐시는 ref라 화면을 다시 그리지 못해 표시용 상태를 따로 둔다. */
   const [hintedTranscriptIds, setHintedTranscriptIds] = useState<ReadonlySet<string>>(new Set())
   const hintRequestSequenceRef = useRef(0)
+  /** 입장 시점 조회와 폴링이 같은 목록을 놓고 경쟁한다. 늦게 온 응답이 최신을 덮지 않도록 함께 센다. */
+  const participantRequestSequenceRef = useRef(0)
   const composerInputRef = useRef<HTMLInputElement>(null)
   const lastExpandedAiChatModeRef = useRef<Exclude<AiChatDisplayMode, 'launcher'>>('docked')
   const meetingSessionRef = useRef({ meetingId, sequence: 0 })
@@ -110,11 +140,16 @@ export function useLiveMeetingController(
   // 끊긴 채널은 진행자·참여자 모두에게 연결 복구 중과 같은 상황이다. 회의가 끝난 뒤에는 알리지 않는다.
   const isChannelDegraded =
     !endedByServer && (channelStatus === 'error' || channelStatus === 'closed')
+  /** 입장 응답이 도착해 이 회의의 화면이 실제로 뜬 상태. */
+  const isJoinedMeeting = meeting?.meetingId === meetingId
   const runtime = useMeetingRuntime({
-    enabled: meeting?.meetingId === meetingId,
+    // 종료된 회의는 경과 시간을 더 셀 것도, 저장할 것도 없다. 참여자가 종료 안내를 확인하는 동안에도 멈춰 있어야 한다.
+    enabled: isJoinedMeeting && !endedByServer,
     meetingId,
     restoreConnection: meetingConnectionGateway.restoreConnection,
     channelDegraded: isChannelDegraded,
+    serverActiveSeconds: joinedRuntime?.activeSeconds ?? null,
+    serverPaused: joinedRuntime?.paused ?? false,
   })
   const apiMeetingId = Number(meetingId)
   const hasValidMeetingId = Number.isSafeInteger(apiMeetingId) && apiMeetingId > 0
@@ -123,6 +158,19 @@ export function useLiveMeetingController(
     if (role === 'host') return
     setEndedByServer(true)
   }, [role])
+
+  /**
+   * 진행자가 회의를 멈추거나 다시 시작했다.
+   * 진행자는 자기 요청의 응답으로 이미 맞췄으므로 무시한다. 종료 알림과 같은 이유다.
+   */
+  const syncPauseState = runtime.syncPauseState
+  const handlePauseStateChange = useCallback(
+    (paused: boolean, activeSeconds: number) => {
+      if (role === 'host') return
+      syncPauseState(paused, activeSeconds)
+    },
+    [role, syncPauseState],
+  )
 
   const rememberHint = useCallback((hint: LiveMeetingTranscriptHint) => {
     hintCacheRef.current.set(hint.transcriptId, hint)
@@ -151,7 +199,7 @@ export function useLiveMeetingController(
   )
   const liveTranscription = useLiveTranscription({
     // 종료된 회의에는 다시 붙지 않는다. enabled가 false면 재연결 타이머도 서지 않는다.
-    enabled: hasValidMeetingId && meeting?.meetingId === meetingId && !endedByServer,
+    enabled: hasValidMeetingId && isJoinedMeeting && !endedByServer,
     meetingId: apiMeetingId,
     role,
     wsUrl,
@@ -159,6 +207,7 @@ export function useLiveMeetingController(
     channelStatus,
     onChannelStatusChange: setChannelStatus,
     onMeetingEnded: handleMeetingEnded,
+    onPauseStateChange: handlePauseStateChange,
     editingSegmentId: editState.status === 'editing' ? editState.transcriptId : null,
   })
 
@@ -176,7 +225,7 @@ export function useLiveMeetingController(
   }, [apiMeetingId, rememberHint])
 
   useMeetingAiEvents({
-    enabled: hasValidMeetingId && meeting?.meetingId === meetingId && !endedByServer,
+    enabled: hasValidMeetingId && isJoinedMeeting && !endedByServer,
     meetingId: apiMeetingId,
     onEvent: handleAiEvent,
     onConnected: reloadHintRecords,
@@ -234,12 +283,18 @@ export function useLiveMeetingController(
   const loadParticipants = useCallback(
     async (requestSessionSequence: number, isActive: () => boolean) => {
       const requestMeetingId = meetingId
+      const requestSequence = ++participantRequestSequenceRef.current
       setParticipants([])
 
       try {
         const list = await meetingParticipantApi.listParticipants(apiMeetingId, currentUserId)
-        if (!isActive() || !isCurrentMeetingSession(requestMeetingId, requestSessionSequence))
+        if (
+          !isActive() ||
+          requestSequence !== participantRequestSequenceRef.current ||
+          !isCurrentMeetingSession(requestMeetingId, requestSessionSequence)
+        ) {
           return
+        }
         setParticipants(list)
       } catch {
         // 참여자 목록이 없어도 회의 진행에는 지장이 없다.
@@ -277,6 +332,10 @@ export function useLiveMeetingController(
         setRole(joinedAsHost ? 'host' : 'participant')
         setWsUrl(joinResponse.wsUrl ?? null)
         setMeetingStartedAt(joinResponse.startedAt ?? null)
+        setJoinedRuntime({
+          paused: joinResponse.paused,
+          activeSeconds: joinResponse.activeSeconds,
+        })
         setSelectedSegmentId(null)
         // 캐시는 이 effect 시작에서 이미 비웠다. 표시용 상태는 setState라 여기서 함께 맞춘다.
         setHintedTranscriptIds(new Set())
@@ -327,6 +386,37 @@ export function useLiveMeetingController(
     meetingId,
     rememberHint,
   ])
+
+  /**
+   * 참여자는 회의 도중에도 들어오고 나간다. 서버에 입·퇴장 이벤트가 없어 주기적으로 다시 읽는다.
+   * 입장 직후 조회는 위 effect가 이미 했으므로 여기서는 첫 주기부터 시작한다.
+   * 종료된 회의는 더 볼 것이 없으므로 멈춘다.
+   */
+  useEffect(() => {
+    if (!hasValidMeetingId || !isJoinedMeeting || endedByServer) return
+
+    let isSubscribed = true
+
+    const timerId = window.setInterval(() => {
+      const requestSequence = ++participantRequestSequenceRef.current
+
+      void meetingParticipantApi
+        .listParticipants(apiMeetingId, currentUserId)
+        .then((list) => {
+          if (!isSubscribed || requestSequence !== participantRequestSequenceRef.current) return
+          // 대부분의 주기는 결과가 같다. 그대로 담으면 15초마다 화면 전체가 다시 그려진다.
+          setParticipants((current) => (isSameParticipantList(current, list) ? current : list))
+        })
+        .catch(() => {
+          // 보조 정보다. 실패해도 회의 진행을 막지 않고 다음 주기에 다시 시도한다.
+        })
+    }, PARTICIPANT_POLL_INTERVAL_MS)
+
+    return () => {
+      isSubscribed = false
+      window.clearInterval(timerId)
+    }
+  }, [apiMeetingId, currentUserId, endedByServer, hasValidMeetingId, isJoinedMeeting])
 
   const loadHint = useCallback(
     async (transcriptId: string, useCache: boolean) => {
@@ -540,6 +630,23 @@ export function useLiveMeetingController(
     setMeetingTitle(updated.title)
   }
 
+  /**
+   * 일시정지·재개는 서버에 먼저 반영하고 응답의 activeSeconds로 맞춘다.
+   * 로컬에서 먼저 바꾸면 요청이 실패했을 때 진행자와 참여자의 시간이 어긋난다.
+   */
+  const toggleRecording = async () => {
+    const requestMeetingId = meetingId
+    const requestSessionSequence = meetingSessionRef.current.sequence
+    const shouldPause = runtime.recordingState === 'recording'
+
+    const response = shouldPause
+      ? await meetingLifecycleApi.pauseMeeting(apiMeetingId)
+      : await meetingLifecycleApi.resumeMeeting(apiMeetingId)
+    if (!isCurrentMeetingSession(requestMeetingId, requestSessionSequence)) return
+
+    runtime.syncPauseState(response.paused, response.activeSeconds)
+  }
+
   const changeAiChatDisplayMode = (mode: AiChatDisplayMode) => {
     setAiChatDisplayMode(mode)
     if (mode !== 'launcher') {
@@ -670,7 +777,7 @@ export function useLiveMeetingController(
     aiChat,
     aiChatDisplayMode,
     renameMeeting,
-    toggleRecording: runtime.toggleRecording,
+    toggleRecording,
     completeMeeting,
     changeAiChatDisplayMode,
   }

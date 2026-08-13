@@ -4,13 +4,11 @@ import type {
   CreateProjectRequest,
   ProjectInvitationInfoResponse,
   ProjectInvitationResponse,
-  ProjectJoinRequest,
   ProjectJoinRequestApproveResponse,
   ProjectJoinRequestCreateRequest,
   ProjectJoinRequestCreateResponse,
   ProjectJoinRequestListResponse,
   ProjectJoinRequestRejectResponse,
-  ProjectJoinResponse,
   ProjectLinkReferenceResponse,
   ProjectListItemResponse,
   ProjectMemberListResponse,
@@ -50,8 +48,9 @@ export type ProjectApi = {
   getProjectMembers(projectId: number): Promise<ProjectMemberListResponse>
   createProjectInvitation(projectId: number): Promise<ProjectInvitationResponse>
   deleteProjectMember(projectId: number, memberId: number): Promise<void>
+  /** 일반 멤버가 스스로 프로젝트를 나간다. 소유자는 나갈 수 없고 프로젝트 삭제만 가능하다. */
+  leaveProject(projectId: number): Promise<void>
   getProjectInvitationInfo(inviteToken: string): Promise<ProjectInvitationInfoResponse>
-  joinProject(request: ProjectJoinRequest): Promise<ProjectJoinResponse>
   createProjectJoinRequest(
     projectId: number,
     request: ProjectJoinRequestCreateRequest,
@@ -140,19 +139,15 @@ export const projectApi: ProjectApi = {
     )
     return response.data.result
   },
+  async leaveProject(projectId) {
+    await axiosInstance.delete(`/projects/${projectId}/members/me`)
+  },
   async deleteProjectMember(projectId, memberId) {
     await axiosInstance.delete(`/projects/${projectId}/members/${memberId}`)
   },
   async getProjectInvitationInfo(inviteToken) {
     const response = await axiosInstance.get<ApiResponse<ProjectInvitationInfoResponse>>(
       `/projects/invitations/${inviteToken}`,
-    )
-    return response.data.result
-  },
-  async joinProject(request) {
-    const response = await axiosInstance.post<ApiResponse<ProjectJoinResponse>>(
-      '/projects/join',
-      request,
     )
     return response.data.result
   },

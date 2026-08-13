@@ -151,6 +151,13 @@ export type ProjectInvitationResponse = {
   expiresAt: string
 }
 
+export type ProjectInvitationOwnerResponse = {
+  userId: number
+  name: string
+  profileImageUrl: string | null
+  roleCategory: RoleProfileRole | null
+}
+
 export type ProjectInvitationInfoResponse = {
   projectId: number
   title: string
@@ -159,10 +166,8 @@ export type ProjectInvitationInfoResponse = {
   maxMemberCount: number
   alreadyJoined: boolean
   expiresAt: string
-}
-
-export type ProjectJoinRequest = {
-  inviteToken: string
+  /** 소유자 정보가 없는 예전 응답과의 호환을 위해 선택 필드로 둡니다. */
+  owner?: ProjectInvitationOwnerResponse | null
 }
 
 /** 요청에 실은 역할·관점이 어디서 온 값인지 알립니다. 저장되는 값은 함께 보낸 값 그대로입니다. */
@@ -208,12 +213,4 @@ export type ProjectJoinRequestApproveResponse = {
 export type ProjectJoinRequestRejectResponse = {
   requestId: number
   status: string
-}
-
-export type ProjectJoinResponse = {
-  projectId: number
-  title: string
-  description: string | null
-  memberRole: string
-  joinedAt: string
 }
