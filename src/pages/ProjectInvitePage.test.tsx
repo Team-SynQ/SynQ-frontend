@@ -81,6 +81,16 @@ describe('ProjectInvitePage', () => {
       memberRole: 'MEMBER',
       joinedAt: '2026-08-11T00:00:00.000Z',
     })
+    const updateRolePerspective = vi
+      .spyOn(projectApi, 'updateProjectRolePerspective')
+      .mockResolvedValue({
+        projectId: 42,
+        useDefault: false,
+        roleCategory: 'DEV_TECH',
+        detailRole: null,
+        perspectives: ['SCHEDULE'],
+        updatedAt: '2026-08-11T00:00:00.000Z',
+      })
     const user = userEvent.setup()
 
     await renderInviteAt('/invite/valid-token')
@@ -116,8 +126,50 @@ describe('ProjectInvitePage', () => {
 
     await user.click(screen.getByRole('button', { name: '설정 완료' }))
 
+    // 고른 값이 이 프로젝트 설정으로 저장되어야 합니다. 계정 기본 프로필과는 별개입니다.
+    await waitFor(() =>
+      expect(updateRolePerspective).toHaveBeenCalledWith(42, {
+        useDefault: false,
+        roleCategory: 'DEV_TECH',
+        perspectives: ['SCHEDULE'],
+      }),
+    )
     await waitFor(() => expect(window.location.pathname).toBe('/projects'))
     expect(await screen.findByText('역할·관점 저장 성공')).toBeInTheDocument()
+  })
+
+  it('역할·관점 저장에 실패하면 이동하지 않고 고른 값을 지킨다', async () => {
+    vi.spyOn(projectApi, 'getProjectInvitationInfo').mockResolvedValue(invitationInfoFixture)
+    vi.spyOn(projectApi, 'joinProject').mockResolvedValue({
+      projectId: 42,
+      title: '회의 보조 AI, 씽큐',
+      description: null,
+      memberRole: 'MEMBER',
+      joinedAt: '2026-08-11T00:00:00.000Z',
+    })
+    vi.spyOn(projectApi, 'updateProjectRolePerspective').mockRejectedValue(
+      new Error('역할·관점을 저장하지 못했습니다.'),
+    )
+    const user = userEvent.setup()
+
+    await renderInviteAt('/invite/valid-token')
+    await user.click(await screen.findByRole('button', { name: '참여 요청하기' }))
+    await user.click(await screen.findByRole('button', { name: '프로젝트 보기' }))
+
+    const roleButton = screen.getByAltText('개발/기술').closest('button')
+    await user.click(roleButton!)
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    await screen.findByRole('heading', { name: /어떤 내용을 중요하게 보고 싶나요/ })
+    await user.click(screen.getByRole('button', { name: '일정' }))
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    await screen.findByRole('heading', { name: '선택 결과 미리보기' })
+
+    await user.click(screen.getByRole('button', { name: '설정 완료' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('역할·관점을 저장하지 못했습니다.')
+    expect(window.location.pathname).toBe('/invite/setup/preview')
+    expect(screen.getByText('개발/기술')).toBeInTheDocument()
+    expect(screen.getByText('일정')).toBeInTheDocument()
   })
 
   it('keeps the project title in the rejected dialog when joining fails', async () => {
