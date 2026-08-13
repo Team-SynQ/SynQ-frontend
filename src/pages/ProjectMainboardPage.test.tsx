@@ -11,6 +11,7 @@ import {
   MEETING_SUMMARY_PROCESSING_MS,
 } from '../features/meeting-processing'
 import type { ProjectCreateDraft } from '../features/project-create'
+import * as projectInviteApi from '../features/project-invite/api/projectInvite.api'
 import * as projectMembersApi from '../features/project-settings/api/projectMembers.api'
 import { ProjectMainboardPage } from './ProjectMainboardPage'
 
@@ -51,6 +52,10 @@ function renderProjectMainboardPage(
 ) {
   // 테스트가 먼저 일반 멤버로 지정했으면 그것을 존중한다.
   if (!vi.isMockFunction(projectMembersApi.loadProjectMembers)) stubProjectMembers(true)
+  // 참여 요청 결과 안내는 지정한 테스트에서만 뜨게 한다.
+  if (!vi.isMockFunction(projectInviteApi.loadMyJoinRequestResults)) {
+    vi.spyOn(projectInviteApi, 'loadMyJoinRequestResults').mockResolvedValue([])
+  }
 
   const resolvedProps = {
     // 기본은 회의 진행자 본인이다. 권한이 없는 경우는 테스트가 user를 바꿔 확인한다.
@@ -423,6 +428,58 @@ describe('ProjectMainboardPage', () => {
     expect(await screen.findByText('프로젝트 나가기 완료')).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '서비스 디자인' })).not.toBeInTheDocument()
     expect(screen.getByText(/아직 생성한 프로젝트가 없습니다/)).toBeInTheDocument()
+  })
+
+  // 서버가 읽음 상태를 관리하지 않아 프론트가 본 것을 기억해야 한다.
+  it('참여 요청 결과를 오래된 것부터 하나씩 안내하고 다시 띄우지 않는다', async () => {
+    window.localStorage.clear()
+    vi.spyOn(projectInviteApi, 'loadMyJoinRequestResults').mockResolvedValue([
+      {
+        requestId: 2,
+        projectId: 2,
+        projectTitle: '두 번째 프로젝트',
+        status: 'REJECTED',
+        decidedAt: '2026-08-13T06:00:00Z',
+      },
+      {
+        requestId: 1,
+        projectId: 1,
+        projectTitle: '서비스 디자인',
+        status: 'APPROVED',
+        decidedAt: '2026-08-13T05:00:00Z',
+      },
+    ])
+    const otherProject = { ...projectOne, apiProjectId: 9, id: 'project-9', name: '다른 프로젝트' }
+    const user = userEvent.setup()
+    const { unmount } = renderProjectMainboardPage({
+      // 승인된 프로젝트가 처음 선택된 것이 아니어야 전환을 확인할 수 있다.
+      loadProjects: () => Promise.resolve([otherProject, projectOne]),
+      loadCompletedMeetings: () => Promise.resolve([]),
+    })
+
+    await screen.findByRole('heading', { name: '다른 프로젝트' })
+    // 오래된 승인 건이 먼저다.
+    await user.click(await screen.findByRole('button', { name: '프로젝트 보기' }))
+    // 승인된 프로젝트로 옮겨간다.
+    expect(await screen.findByRole('heading', { name: '서비스 디자인' })).toBeInTheDocument()
+    // 그다음 거절 건은 문구와 버튼이 다르다.
+    expect(
+      await screen.findByText(/‘두 번째 프로젝트’ 참여가 승인되지 않았어요/),
+    ).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '확인' }))
+
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: '확인' })).not.toBeInTheDocument(),
+    )
+
+    unmount()
+    renderProjectMainboardPage({
+      loadProjects: () => Promise.resolve([projectOne]),
+      loadCompletedMeetings: () => Promise.resolve([]),
+    })
+
+    await screen.findByRole('heading', { name: '서비스 디자인' })
+    expect(screen.queryByRole('button', { name: '프로젝트 보기' })).not.toBeInTheDocument()
   })
 
   it('prefers the project selected by return navigation state', async () => {
