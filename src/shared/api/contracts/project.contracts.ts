@@ -170,10 +170,6 @@ export type ProjectInvitationInfoResponse = {
   owner?: ProjectInvitationOwnerResponse | null
 }
 
-export type ProjectJoinRequest = {
-  inviteToken: string
-}
-
 /** 요청에 실은 역할·관점이 어디서 온 값인지 알립니다. 저장되는 값은 함께 보낸 값 그대로입니다. */
 export type ProjectJoinSettingSource = 'DEFAULT' | 'ONBOARDING' | 'PROJECT_CUSTOM'
 
@@ -217,12 +213,4 @@ export type ProjectJoinRequestApproveResponse = {
 export type ProjectJoinRequestRejectResponse = {
   requestId: number
   status: string
-}
-
-export type ProjectJoinResponse = {
-  projectId: number
-  title: string
-  description: string | null
-  memberRole: string
-  joinedAt: string
 }
