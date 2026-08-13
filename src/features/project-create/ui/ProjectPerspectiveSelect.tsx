@@ -50,12 +50,21 @@ export function ProjectPerspectiveSelect({
         onClick={() => setIsOpen((current) => !current)}
         type="button"
       >
-        <span className="shrink-0 truncate typo-body-02 text-fg-primary">
-          {selectedOption.label}
-        </span>
-        <span className="min-w-0 flex-1 truncate typo-body-02 text-fg-secondary">
-          {selectedOption.selectedDescription}
-        </span>
+        {selectedOption ? (
+          <>
+            <span className="shrink-0 truncate typo-body-02 text-fg-primary">
+              {selectedOption.label}
+            </span>
+            <span className="min-w-0 flex-1 truncate typo-body-02 text-fg-secondary">
+              {selectedOption.selectedDescription}
+            </span>
+          </>
+        ) : (
+          // 프로필을 아직 불러오지 못했거나 등록한 관점이 없는 경우입니다. 관점 추가로 만들 수 있습니다.
+          <span className="min-w-0 flex-1 truncate typo-body-02 text-fg-secondary">
+            아래 관점 추가로 역할·관점을 만들어 주세요
+          </span>
+        )}
         <img
           alt=""
           aria-hidden="true"

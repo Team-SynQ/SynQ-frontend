@@ -109,11 +109,13 @@ export function ProjectCreatedDashboard({
           {project.overview ? (
             <p className="m-0 typo-body-01 text-fg-secondary">{project.overview}</p>
           ) : null}
-          <div className="flex flex-wrap items-center gap-xs">
-            <span className="typo-body-01 text-fg-secondary">내 관점 :</span>
-            <Badge size="extraSmall">{project.perspectiveLabel}</Badge>
-            <Badge size="extraSmall">{project.perspectiveDescription}</Badge>
-          </div>
+          {project.perspectiveLabel ? (
+            <div className="flex flex-wrap items-center gap-xs">
+              <span className="typo-body-01 text-fg-secondary">내 관점 :</span>
+              <Badge size="extraSmall">{project.perspectiveLabel}</Badge>
+              <Badge size="extraSmall">{project.perspectiveDescription}</Badge>
+            </div>
+          ) : null}
         </div>
         <ProjectSettingsMenu
           onAddPerspective={onAddPerspective}

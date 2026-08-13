@@ -200,14 +200,10 @@ export const projectApi: ProjectApi = {
   },
 }
 
-const defaultProjectPerspective = {
-  label: 'PM',
-  description: '일정, 범위, 의사결정 영향 중심',
-} as const
-
 /**
  * 목록 화면은 프로젝트당 참고자료를 곧바로 쓰지 않으므로 여기서는 조회하지 않습니다.
  * 선택된 프로젝트의 자료만 loadProjectReferenceMaterials로 따로 불러옵니다.
+ * 관점은 목록 응답에 없으므로 비워 두고, 화면이 프로젝트별 역할·관점 조회로 채웁니다.
  */
 export async function listProjectSummaries(): Promise<ProjectSummary[]> {
   const projects = await projectApi.listProjects()
@@ -217,8 +213,8 @@ export async function listProjectSummaries(): Promise<ProjectSummary[]> {
     id: String(project.projectId),
     name: project.title,
     overview: project.description ?? '',
-    perspectiveLabel: defaultProjectPerspective.label,
-    perspectiveDescription: defaultProjectPerspective.description,
+    perspectiveLabel: '',
+    perspectiveDescription: '',
   }))
 }
 
