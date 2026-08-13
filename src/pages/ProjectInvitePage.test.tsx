@@ -215,13 +215,13 @@ describe('ProjectInvitePage', () => {
   it('stores the invite token and moves to login when logged out', async () => {
     window.localStorage.clear()
     vi.spyOn(projectApi, 'getProjectInvitationInfo').mockResolvedValue(invitationInfoFixture)
-    const joinProject = vi.spyOn(projectApi, 'joinProject')
+    const createJoinRequest = vi.spyOn(projectApi, 'createProjectJoinRequest')
     const user = userEvent.setup()
 
     await renderInviteAt('/invite/valid-token')
     await user.click(await screen.findByRole('button', { name: '참여 요청하기' }))
 
-    expect(joinProject).not.toHaveBeenCalled()
+    expect(createJoinRequest).not.toHaveBeenCalled()
     expect(window.sessionStorage.getItem('pendingInviteToken')).toBe('valid-token')
     await waitFor(() => expect(window.location.pathname).toBe('/login'))
   })

@@ -4,13 +4,11 @@ import type {
   CreateProjectRequest,
   ProjectInvitationInfoResponse,
   ProjectInvitationResponse,
-  ProjectJoinRequest,
   ProjectJoinRequestApproveResponse,
   ProjectJoinRequestCreateRequest,
   ProjectJoinRequestCreateResponse,
   ProjectJoinRequestListResponse,
   ProjectJoinRequestRejectResponse,
-  ProjectJoinResponse,
   ProjectLinkReferenceResponse,
   ProjectListItemResponse,
   ProjectMemberListResponse,
@@ -51,7 +49,6 @@ export type ProjectApi = {
   createProjectInvitation(projectId: number): Promise<ProjectInvitationResponse>
   deleteProjectMember(projectId: number, memberId: number): Promise<void>
   getProjectInvitationInfo(inviteToken: string): Promise<ProjectInvitationInfoResponse>
-  joinProject(request: ProjectJoinRequest): Promise<ProjectJoinResponse>
   createProjectJoinRequest(
     projectId: number,
     request: ProjectJoinRequestCreateRequest,
@@ -146,13 +143,6 @@ export const projectApi: ProjectApi = {
   async getProjectInvitationInfo(inviteToken) {
     const response = await axiosInstance.get<ApiResponse<ProjectInvitationInfoResponse>>(
       `/projects/invitations/${inviteToken}`,
-    )
-    return response.data.result
-  },
-  async joinProject(request) {
-    const response = await axiosInstance.post<ApiResponse<ProjectJoinResponse>>(
-      '/projects/join',
-      request,
     )
     return response.data.result
   },
