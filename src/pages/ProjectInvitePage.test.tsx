@@ -169,6 +169,7 @@ describe('ProjectInvitePage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('역할·관점을 저장하지 못했습니다.')
     expect(window.location.pathname).toBe('/invite/setup/preview')
     expect(screen.getByText('개발/기술')).toBeInTheDocument()
+    expect(screen.getByText('일정')).toBeInTheDocument()
   })
 
   it('keeps the project title in the rejected dialog when joining fails', async () => {
