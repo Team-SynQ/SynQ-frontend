@@ -32,11 +32,11 @@ function renderPage() {
 }
 
 describe('AccountSettingsPage', () => {
-  it('composes the project sidebar, personal settings panel, and account content', () => {
+  it('composes the project sidebar and account content', () => {
     renderPage()
 
     expect(screen.getAllByText(user.email)).toHaveLength(2)
-    expect(screen.getByRole('navigation', { name: '개인 설정' })).toBeInTheDocument()
+    expect(screen.queryByRole('navigation', { name: '개인 설정' })).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '계정 정보 및 보안' })).toBeInTheDocument()
   })
 

@@ -1,9 +1,12 @@
 import { useNavigate } from 'react-router-dom'
 
-import { PersonalSettingsPanel } from '../features/account-settings'
 import type { ProjectNavigationState } from '../features/meeting-processing'
 import { PolicyDocumentsView } from '../features/policy-documents'
-import { ProjectSidebar, type ProjectSidebarUser } from '../widgets/project-sidebar'
+import {
+  ProjectSidebar,
+  useSidebarProjects,
+  type ProjectSidebarUser,
+} from '../widgets/project-sidebar'
 
 export type PolicyDocumentsPageProps = {
   user: ProjectSidebarUser
@@ -11,6 +14,7 @@ export type PolicyDocumentsPageProps = {
 
 export function PolicyDocumentsPage({ user }: PolicyDocumentsPageProps) {
   const navigate = useNavigate()
+  const sidebarProjects = useSidebarProjects()
 
   return (
     <main className="flex h-screen min-h-[720px] min-w-[1024px] bg-surface-default">
@@ -25,16 +29,15 @@ export function PolicyDocumentsPage({ user }: PolicyDocumentsPageProps) {
             state: { openCreateProject: true } satisfies ProjectNavigationState,
           })
         }
+        onSelectProject={(projectId) =>
+          navigate('/projects', {
+            state: { activeProjectId: projectId } satisfies ProjectNavigationState,
+          })
+        }
+        projects={sidebarProjects}
         user={user}
       />
-      <div className="flex min-w-0 flex-1 gap-s overflow-hidden px-l py-xl">
-        <PersonalSettingsPanel
-          activeSection="policy"
-          onSelectSection={(section) => {
-            if (section === 'account') navigate('/settings/account')
-            if (section === 'help') navigate('/settings/help')
-          }}
-        />
+      <div className="flex min-w-0 flex-1 overflow-hidden px-l py-xl">
         <PolicyDocumentsView />
       </div>
     </main>

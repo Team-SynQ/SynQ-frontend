@@ -11,19 +11,20 @@ const user = {
 }
 
 describe('HelpPage', () => {
-  it('reuses the project sidebar and active personal settings panel', () => {
+  it('reuses the project sidebar with the help content', () => {
     renderHelpPage()
 
-    expect(screen.getByRole('navigation', { name: '개인 설정' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '도움말' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('heading', { name: '도움말' })).toBeInTheDocument()
+    expect(screen.queryByRole('navigation', { name: '개인 설정' })).not.toBeInTheDocument()
     expect(screen.getAllByText(user.email)).toHaveLength(1)
   })
 
-  it('moves to account settings', async () => {
+  it('moves to account settings from the sidebar profile menu', async () => {
     const browserUser = userEvent.setup()
     renderHelpPage()
 
-    await browserUser.click(screen.getByRole('button', { name: '계정 및 기본 설정' }))
+    await browserUser.click(screen.getByRole('button', { name: new RegExp(user.name) }))
+    await browserUser.click(screen.getByRole('menuitem', { name: '계정 정보 및 보안' }))
     expect(screen.getByRole('heading', { name: '계정 설정 목적지' })).toBeInTheDocument()
   })
 

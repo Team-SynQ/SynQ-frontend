@@ -29,10 +29,10 @@ describe('MeetingTutorialPreview', () => {
     expect(preview).toHaveAttribute('data-figma-node-id', frame.figmaNodeId)
     expect(preview).toHaveAttribute('src', frame.imageSrc)
     expect(preview).toHaveAttribute('height', '530')
-    expect(preview).toHaveAttribute('width', '760')
+    expect(preview).toHaveAttribute('width', '880')
     expect(preview).toHaveClass(
       'h-[530px]',
-      'w-[760px]',
+      'w-[880px]',
       'rounded-m',
       'object-cover',
       'shadow-tutorial-preview',

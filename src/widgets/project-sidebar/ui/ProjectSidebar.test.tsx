@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 
 import plusIcon from '../../../shared/assets/icons/plus.svg'
@@ -32,10 +32,32 @@ describe('ProjectSidebar', () => {
     expect(panel).toHaveClass('w-[72px]')
     expect(expandButton).toHaveAttribute('aria-expanded', 'false')
 
+    // 접힘 상태에서는 심볼 로고가 기본이고, 호버 중에만 펼치기 아이콘으로 바뀝니다.
+    const collapsedLogo = screen.getByRole('img', { name: 'SynQ' })
+    expect(expandButton).toContainElement(collapsedLogo)
+    expect(collapsedLogo).toHaveClass('group-hover:hidden')
+
     await user.click(expandButton)
 
     expect(panel).toHaveClass('w-[220px]')
     expect(onToggleSidebar).toHaveBeenCalledTimes(2)
+  })
+
+  it('moves to the projects home when the logo is clicked', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter initialEntries={['/settings/help']}>
+        <Routes>
+          <Route element={<ProjectSidebar />} path="/settings/help" />
+          <Route element={<h1>프로젝트 홈</h1>} path="/projects" />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole('button', { name: '홈으로 이동' }))
+
+    expect(screen.getByRole('heading', { name: '프로젝트 홈' })).toBeInTheDocument()
   })
 
   it('renders the active project with the shared menu item', () => {

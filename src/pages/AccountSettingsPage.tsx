@@ -9,7 +9,6 @@ import {
   type AccountPerspective,
   type AccountPerspectiveDraft,
   type AccountSettingsViewProps,
-  PersonalSettingsPanel,
 } from '../features/account-settings'
 import {
   addMyRoleProfile,
@@ -18,7 +17,11 @@ import {
   loadMyRoleProfiles,
   removeMyRoleProfile,
 } from '../entities/user'
-import { ProjectSidebar, type ProjectSidebarUser } from '../widgets/project-sidebar'
+import {
+  ProjectSidebar,
+  useSidebarProjects,
+  type ProjectSidebarUser,
+} from '../widgets/project-sidebar'
 
 type AccountSettingsPageProps = {
   user: ProjectSidebarUser
@@ -63,6 +66,7 @@ export function AccountSettingsPage({
   user,
 }: AccountSettingsPageProps) {
   const navigate = useNavigate()
+  const sidebarProjects = useSidebarProjects()
   const [accountName, setAccountName] = useState(user.name)
   const [perspectives, setPerspectives] = useState<AccountPerspective[]>([])
 
@@ -138,15 +142,15 @@ export function AccountSettingsPage({
           onOpenHelp: () => navigate('/settings/help'),
           onOpenTerms: () => navigate('/settings/policy'),
         }}
+        onSelectProject={(projectId) =>
+          navigate('/projects', {
+            state: { activeProjectId: projectId } satisfies ProjectNavigationState,
+          })
+        }
+        projects={sidebarProjects}
         user={{ ...user, name: accountName }}
       />
-      <div className="flex min-w-0 flex-1 gap-s overflow-hidden px-l py-xl">
-        <PersonalSettingsPanel
-          onSelectSection={(section) => {
-            if (section === 'help') navigate('/settings/help')
-            if (section === 'policy') navigate('/settings/policy')
-          }}
-        />
+      <div className="flex min-w-0 flex-1 overflow-hidden px-l py-xl">
         <AccountSettingsView
           email={user.email}
           initialProfileImageUrl={initialProfileImageUrl}
