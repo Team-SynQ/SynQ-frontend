@@ -42,15 +42,17 @@ describe('PolicyDocumentsView', () => {
     expect(screen.getByText('SynQ 개인정보 처리 방침')).toBeInTheDocument()
     expect(privacyTab).toHaveClass('font-semibold!', 'typo-title-02', 'text-fg-tab-active')
     expect(screen.getByText(/SynQ.*이용자의 개인정보를 중요시하며/)).toBeInTheDocument()
-    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(3)
-    expect(screen.getAllByRole('table')).toHaveLength(1)
+    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(10)
+    // 수집 항목 표와 5조의 처리 위탁 표가 함께 보입니다.
+    expect(screen.getAllByRole('table')).toHaveLength(2)
     expect(screen.getByText('간편 회원가입')).toBeInTheDocument()
     expect(
       screen.getByRole('heading', { name: '3. 개인정보의 보유 및 이용 기간' }),
     ).toBeInTheDocument()
-    expect(
-      screen.queryByRole('heading', { name: '4. 개인정보의 제3자 제공' }),
-    ).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '4. 개인정보의 제3자 제공' })).toBeInTheDocument()
+    expect(screen.getByText('AI 서비스 제공사')).toBeInTheDocument()
+    expect(screen.getByText('소셜 로그인 인증')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '10. 고지의 의무' })).toBeInTheDocument()
 
     const collectionColumns = container.querySelectorAll('table:first-of-type col')
     expect(collectionColumns[0]).toHaveStyle({ width: '180px' })

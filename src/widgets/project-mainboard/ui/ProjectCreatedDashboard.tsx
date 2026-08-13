@@ -9,8 +9,8 @@ import {
 } from '../../../entities/project'
 import {
   ProjectMaterialUploadForm,
-  projectPerspectiveOptions,
   type ProjectMaterialDraft,
+  type ProjectRolePerspectiveDraft,
 } from '../../../features/project-create'
 import {
   ProjectReferenceDeleteDialog,
@@ -61,6 +61,7 @@ type ProjectCreatedDashboardProps = {
   onLoadProject?: () => Promise<ProjectSummary | void> | ProjectSummary | void
   onUpdateProject?: (draft: ProjectInformationDraft) => Promise<void> | void
   perspectiveOptions?: ProjectInformationPerspective[]
+  onAddPerspective?: (draft: ProjectRolePerspectiveDraft) => Promise<ProjectInformationPerspective>
   onDeleteProject?: () => Promise<void> | void
   /** 일반 멤버가 프로젝트를 나갔을 때. 목록 갱신은 상위 화면이 합니다. */
   onLeaveProject?: () => Promise<void> | void
@@ -94,6 +95,7 @@ export function ProjectCreatedDashboard({
   onLoadProject,
   onUpdateProject,
   perspectiveOptions,
+  onAddPerspective,
   onDeleteProject,
   onLeaveProject,
 }: ProjectCreatedDashboardProps) {
@@ -114,17 +116,13 @@ export function ProjectCreatedDashboard({
           </div>
         </div>
         <ProjectSettingsMenu
+          onAddPerspective={onAddPerspective}
           onDeleteProject={onDeleteProject}
           onLeaveProject={onLeaveProject}
           onLoadProject={onLoadProject}
           onUpdateProject={onUpdateProject}
-          perspectiveOptions={
-            perspectiveOptions ??
-            projectPerspectiveOptions.map((option) => ({
-              label: option.label,
-              description: option.selectedDescription,
-            }))
-          }
+          // 계정 프로필이 아직 없으면 빈 목록을 준다. 화면 전용 기본 목록을 섞으면 만든 적 없는 관점이 보인다.
+          perspectiveOptions={perspectiveOptions ?? []}
           project={project}
         />
       </header>

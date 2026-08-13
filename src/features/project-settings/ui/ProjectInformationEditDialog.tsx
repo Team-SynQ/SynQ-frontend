@@ -24,6 +24,8 @@ type Props = {
   perspectiveOptions?: ProjectInformationPerspective[]
   onClose: () => void
   onSave: (draft: ProjectInformationDraft) => Promise<void> | void
+  /** 새 역할·관점을 서버에 프로필로 저장하고 드롭다운 옵션으로 돌려줍니다. 없으면 화면에서만 유지합니다. */
+  onAddPerspective?: (draft: ProjectRolePerspectiveDraft) => Promise<ProjectInformationPerspective>
 }
 
 export function ProjectInformationEditDialog({ open, ...props }: Props) {
@@ -54,6 +56,7 @@ function ProjectInformationEditForm({
   perspectiveOptions = [],
   onClose,
   onSave,
+  onAddPerspective,
 }: FormProps) {
   const nameInputId = useId()
   const overviewInputId = useId()
@@ -76,7 +79,25 @@ function ProjectInformationEditForm({
   })
   const canSave = draft.name.trim().length > 0 && !isSubmitting
 
-  const handleAddPerspective = (roleDraft: ProjectRolePerspectiveDraft) => {
+  const handleAddPerspective = async (roleDraft: ProjectRolePerspectiveDraft) => {
+    // 서버에 프로필로 저장해야 다음에 열어도 목록에 남고, 저장 시 실제 프로필로 적용된다.
+    if (onAddPerspective) {
+      try {
+        const created = await onAddPerspective(roleDraft)
+        setPerspectives((current) => [...current, created])
+        setDraft((current) => ({
+          ...current,
+          perspectiveId: created.id,
+          perspectiveLabel: created.label,
+          perspectiveDescription: created.description,
+        }))
+        setIsAddingPerspective(false)
+      } catch {
+        // 저장 실패 시 입력 폼을 유지해 다시 시도할 수 있게 한다.
+      }
+      return
+    }
+
     const role = projectRoleOptions.find((option) => option.id === roleDraft.roleId)
     const description =
       roleDraft.focusIds
@@ -89,6 +110,7 @@ function ProjectInformationEditForm({
     setPerspectives((current) => [...current, perspective])
     setDraft((current) => ({
       ...current,
+      perspectiveId: undefined,
       perspectiveLabel: perspective.label,
       perspectiveDescription: perspective.description,
     }))
@@ -117,7 +139,7 @@ function ProjectInformationEditForm({
         descriptionId={descriptionId}
         onBack={() => setIsAddingPerspective(false)}
         onClose={onClose}
-        onSubmit={handleAddPerspective}
+        onSubmit={(roleDraft) => void handleAddPerspective(roleDraft)}
         titleId={titleId}
       />
     )
@@ -161,6 +183,7 @@ function ProjectInformationEditForm({
             onChange={(perspective) =>
               setDraft((current) => ({
                 ...current,
+                perspectiveId: perspective.id,
                 perspectiveLabel: perspective.label,
                 perspectiveDescription: perspective.description,
               }))

@@ -51,7 +51,7 @@ function PolicyDataTable({ ariaLabel, columnWidths, table }: PolicyDataTableProp
   )
 }
 
-function PrivacySection({ description, items, title }: PrivacyPolicySection) {
+function PrivacySection({ description, items, note, table, title }: PrivacyPolicySection) {
   return (
     <section className="shrink-0 typo-body-01">
       <h2 className="m-0 font-medium text-fg-primary">{title}</h2>
@@ -63,6 +63,12 @@ function PrivacySection({ description, items, title }: PrivacyPolicySection) {
           ))}
         </ol>
       ) : null}
+      {table ? (
+        <div className="mt-s">
+          <PolicyDataTable ariaLabel={title} columnWidths={[220, undefined]} table={table} />
+        </div>
+      ) : null}
+      {note ? <p className="m-0 mt-xs typo-body-02 text-fg-secondary">{note}</p> : null}
     </section>
   )
 }

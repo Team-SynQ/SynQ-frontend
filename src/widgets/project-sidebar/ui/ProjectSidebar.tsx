@@ -69,6 +69,7 @@ export function ProjectSidebar({
             <AccountSettingsMenu
               email={user.email}
               name={user.name}
+              profileImageUrl={user.profileImageUrl}
               onOpenAccountInfo={() => navigate('/settings/account')}
               onOpenHelp={() => navigate('/settings/help')}
               onOpenTerms={() => navigate('/settings/policy')}

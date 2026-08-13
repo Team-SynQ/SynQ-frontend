@@ -173,6 +173,8 @@ export type CompletedMeetingSummary = {
     id: string
     name: string
     avatarKey: MeetingAvatarKey
+    /** 진행자가 등록한 프로필 이미지. 없으면 avatarKey 기본 이미지를 씁니다. */
+    profileImageUrl?: string | null
   }
   overview: string
   keywords: string[]

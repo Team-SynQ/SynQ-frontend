@@ -1,6 +1,9 @@
 import type { CompletedMeeting, OngoingMeeting } from '../../../entities/meeting'
 import type { ProjectSummary } from '../../../entities/project'
-import type { ProjectMaterialDraft } from '../../../features/project-create'
+import type {
+  ProjectMaterialDraft,
+  ProjectRolePerspectiveDraft,
+} from '../../../features/project-create'
 import type { MeetingHistoryPresentation } from '../../../features/meeting-processing'
 import type {
   ProjectInformationDraft,
@@ -37,6 +40,7 @@ type ProjectMainboardProps = {
   onLoadProject?: () => Promise<ProjectSummary | void> | ProjectSummary | void
   onUpdateProject?: (draft: ProjectInformationDraft) => Promise<void> | void
   perspectiveOptions?: ProjectInformationPerspective[]
+  onAddPerspective?: (draft: ProjectRolePerspectiveDraft) => Promise<ProjectInformationPerspective>
   onDeleteProject?: () => Promise<void> | void
   /** 일반 멤버가 프로젝트를 나갔을 때. 목록 갱신은 상위 화면이 합니다. */
   onLeaveProject?: () => Promise<void> | void
@@ -66,6 +70,7 @@ export function ProjectMainboard({
   onLoadProject,
   onUpdateProject,
   perspectiveOptions,
+  onAddPerspective,
   onDeleteProject,
   onLeaveProject,
 }: ProjectMainboardProps) {
@@ -79,6 +84,7 @@ export function ProjectMainboard({
       {project ? (
         <ProjectCreatedDashboard
           currentUserId={currentUserId}
+          onAddPerspective={onAddPerspective}
           perspectiveOptions={perspectiveOptions}
           meetingHistoryLoading={meetingHistoryLoading}
           onAddMaterials={onAddMaterials}

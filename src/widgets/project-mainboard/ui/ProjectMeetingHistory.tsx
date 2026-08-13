@@ -139,8 +139,11 @@ export function ProjectMeetingHistory({
                         <img
                           alt=""
                           aria-hidden="true"
-                          className="size-[32px] shrink-0 rounded-full"
-                          src={meetingParticipantAvatars[meeting.host.avatarKey]}
+                          className="size-[32px] shrink-0 rounded-full object-cover"
+                          src={
+                            meeting.host.profileImageUrl ??
+                            meetingParticipantAvatars[meeting.host.avatarKey]
+                          }
                         />
                         <span className="truncate typo-body-02 text-fg-secondary">
                           {meeting.host.name}

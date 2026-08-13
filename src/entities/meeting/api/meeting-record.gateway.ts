@@ -31,6 +31,7 @@ function toCompletedMeetingSummary(
       id: String(meeting.host?.userId ?? ''),
       name: meeting.host?.name ?? '',
       avatarKey: 'pm',
+      profileImageUrl: meeting.host?.profileImageUrl ?? null,
     },
     overview: '',
     keywords: meeting.keyTopics ?? [],
