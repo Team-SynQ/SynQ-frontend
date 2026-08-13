@@ -401,8 +401,28 @@ describe('ProjectMainboardPage', () => {
     await user.click(screen.getByRole('button', { name: '나가기' }))
 
     await waitFor(() => expect(leaveProject).toHaveBeenCalledWith(1))
+    expect(await screen.findByText('프로젝트 나가기 완료')).toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: '두 번째 프로젝트' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '서비스 디자인' })).not.toBeInTheDocument()
+  })
+
+  // 마지막 프로젝트를 나가면 더보기 메뉴가 사라지므로, 안내는 그 메뉴가 아닌 화면이 띄워야 한다.
+  it('마지막 프로젝트를 나가면 빈 상태가 되고 안내는 남는다', async () => {
+    stubProjectMembers(false)
+    vi.spyOn(projectMembersApi, 'leaveProject').mockResolvedValue(undefined)
+    const user = userEvent.setup()
+    renderProjectMainboardPage({
+      loadProjects: () => Promise.resolve([projectOne]),
+      loadCompletedMeetings: () => Promise.resolve([]),
+    })
+
+    await user.click(await screen.findByRole('button', { name: '프로젝트 더보기' }))
+    await user.click(await screen.findByRole('button', { name: '프로젝트 나가기' }))
+    await user.click(screen.getByRole('button', { name: '나가기' }))
+
+    expect(await screen.findByText('프로젝트 나가기 완료')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '서비스 디자인' })).not.toBeInTheDocument()
+    expect(screen.getByText(/아직 생성한 프로젝트가 없습니다/)).toBeInTheDocument()
   })
 
   it('prefers the project selected by return navigation state', async () => {

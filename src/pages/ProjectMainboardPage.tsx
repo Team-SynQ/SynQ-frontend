@@ -745,12 +745,20 @@ export function ProjectMainboardPage({
    */
   const handleLeaveProject = () => {
     if (!activeProjectId) return
+    const leftProject = projects.find((project) => project.id === activeProjectId)
+    if (!leftProject) return
 
     const nextProjects = projects.filter((project) => project.id !== activeProjectId)
     setProjects(nextProjects)
     setActiveProjectId((currentId) =>
       currentId === activeProjectId ? nextProjects[0]?.id : currentId,
     )
+    // 더보기 메뉴가 아니라 여기서 알린다. 마지막 프로젝트를 나가면 그 메뉴가 화면에서 사라진다.
+    showProjectReferenceFeedback({
+      title: '프로젝트 나가기 완료',
+      description: `‘${leftProject.name}’ 프로젝트에서 나갔습니다.`,
+      type: 'success',
+    })
   }
 
   const handleDeleteProject = async () => {
