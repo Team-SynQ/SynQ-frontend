@@ -679,7 +679,8 @@ export function ProjectMainboardPage({
         // 저장에 실패해도 프로젝트 생성은 유지하되, 사용자에게 알려 다시 설정할 수 있게 한다.
         showProjectReferenceFeedback({
           title: '관점 저장 실패',
-          description: '선택한 역할·관점을 프로젝트에 저장하지 못했습니다. 프로젝트 설정에서 다시 지정해 주세요.',
+          description:
+            '선택한 역할·관점을 프로젝트에 저장하지 못했습니다. 프로젝트 설정에서 다시 지정해 주세요.',
           type: 'error',
         })
       }
