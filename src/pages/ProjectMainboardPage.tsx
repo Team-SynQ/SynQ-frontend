@@ -40,7 +40,14 @@ import {
   type MeetingHistoryPresentation,
   type ProjectNavigationState,
 } from '../features/meeting-processing'
+import {
+  JoinRequestResultDialog,
+  loadMyJoinRequestResults,
+  markJoinRequestResultSeen,
+  readSeenJoinRequestResults,
+} from '../features/project-invite'
 import type { ProjectInformationDraft } from '../features/project-settings'
+import type { ProjectJoinRequestResultResponse as ProjectJoinRequestResult } from '../shared/api/contracts/project.contracts'
 import { useTransientVisibility } from '../shared/lib/useTransientVisibility'
 import { Toast } from '../shared/ui'
 import type { ToastType } from '../shared/ui'
@@ -262,8 +269,12 @@ export function ProjectMainboardPage({
     Record<string, OngoingMeeting | null>
   >({})
   /** 폴링 결과가 달라졌는지 판단하는 기준값. state를 읽으면 갱신 함수 밖에서 비교할 수 없다. */
-  const ongoingMeetingIdRef = useRef<Record<string, string | null>>({})
+  const ongoingMeetingStateRef = useRef<
+    Record<string, { meetingId: string; paused: boolean } | null>
+  >({})
   const [latestCreatedProjectName, setLatestCreatedProjectName] = useState<string>()
+  /** 아직 안 보여 준 참여 요청 결과. 여러 건이면 앞에서부터 하나씩 안내한다. */
+  const [pendingJoinResults, setPendingJoinResults] = useState<ProjectJoinRequestResult[]>([])
   const [meetingEntryVariant, setMeetingEntryVariant] = useState<MeetingEntryModalVariant | null>(
     null,
   )
@@ -469,17 +480,21 @@ export function ProjectMainboardPage({
         .then((meeting) => {
           if (!isSubscribed || requestSequence !== latestRequestSequence) return
 
-          const previousMeetingId = ongoingMeetingIdRef.current[activeProjectId] ?? null
-          const nextMeetingId = meeting?.meetingId ?? null
-          // 대부분의 주기는 결과가 같다. 그대로 담으면 15초마다 화면 전체가 다시 그려진다.
-          if (previousMeetingId === nextMeetingId) return
+          const previous = ongoingMeetingStateRef.current[activeProjectId] ?? null
+          const next = meeting ? { meetingId: meeting.meetingId, paused: meeting.paused } : null
+          /**
+           * 대부분의 주기는 결과가 같다. 그대로 담으면 15초마다 화면 전체가 다시 그려진다.
+           * 누적 시간은 비교에 넣지 않는다 — 매 주기 늘어나 항상 갱신하게 되고,
+           * 흐르는 시간은 버튼이 스스로 센다. 서버 값과 다시 맞추는 건 정지·재개 때다.
+           */
+          if (previous?.meetingId === next?.meetingId && previous?.paused === next?.paused) return
 
-          ongoingMeetingIdRef.current[activeProjectId] = nextMeetingId
+          ongoingMeetingStateRef.current[activeProjectId] = next
           setOngoingMeetingByProject((current) => ({ ...current, [activeProjectId]: meeting }))
 
-          // 진행 중이던 회의가 끝났다. 회의 기록은 최초 조회 결과를 캐시하므로,
+          // 진행 중이던 회의가 끝났거나 다른 회의로 바뀌었다. 회의 기록은 최초 조회 결과를 캐시하므로,
           // 비워 주지 않으면 방금 끝난 회의가 목록에 나타나지 않는다.
-          if (!previousMeetingId) return
+          if (!previous || previous.meetingId === next?.meetingId) return
           setCompletedMeetingsByProject((current) => {
             if (!(activeProjectId in current)) return current
 
@@ -740,17 +755,64 @@ export function ProjectMainboardPage({
   }
 
   /**
+   * 소유자가 참여 요청을 처리해도 요청자에게 알릴 통로가 없어, 프로젝트 화면에 들어올 때 확인한다.
+   * 서버는 읽음 상태를 관리하지 않으므로 이미 보여 준 것은 걸러 낸다.
+   */
+  const currentUserId = user?.userId
+  useEffect(() => {
+    if (currentUserId === undefined) return
+
+    let isSubscribed = true
+    void loadMyJoinRequestResults().then((results) => {
+      if (!isSubscribed) return
+
+      const seen = readSeenJoinRequestResults(currentUserId)
+      const unseen = results.filter((result) => !seen.has(result.requestId))
+      if (unseen.length === 0) return
+
+      // 서버가 최신순으로 주므로, 오래된 것부터 안내하도록 뒤집는다.
+      setPendingJoinResults([...unseen].reverse())
+    })
+
+    return () => {
+      isSubscribed = false
+    }
+  }, [currentUserId])
+
+  const confirmJoinRequestResult = () => {
+    const [result, ...rest] = pendingJoinResults
+    if (!result) return
+
+    if (currentUserId !== undefined) markJoinRequestResultSeen(currentUserId, result.requestId)
+    setPendingJoinResults(rest)
+
+    // 승인된 프로젝트로 옮긴다. 목록에 아직 없으면(조회 시점 차이) 그냥 닫는다.
+    // 화면 id가 아니라 서버 id로 맞춘다 — 화면 id의 생성 규칙에 기대지 않기 위해서다.
+    if (result.status !== 'APPROVED') return
+    const approvedProject = projects.find((project) => project.apiProjectId === result.projectId)
+    if (approvedProject) setActiveProjectId(approvedProject.id)
+  }
+
+  /**
    * 나간 프로젝트는 내 목록에서 사라진다. 보고 있던 프로젝트이므로 남은 것 중 하나로 옮기고,
    * 남은 것이 없으면 프로젝트가 없는 빈 상태가 된다. 나가기 요청 자체는 더보기 메뉴가 이미 보냈다.
    */
   const handleLeaveProject = () => {
     if (!activeProjectId) return
+    const leftProject = projects.find((project) => project.id === activeProjectId)
+    if (!leftProject) return
 
     const nextProjects = projects.filter((project) => project.id !== activeProjectId)
     setProjects(nextProjects)
     setActiveProjectId((currentId) =>
       currentId === activeProjectId ? nextProjects[0]?.id : currentId,
     )
+    // 더보기 메뉴가 아니라 여기서 알린다. 마지막 프로젝트를 나가면 그 메뉴가 화면에서 사라진다.
+    showProjectReferenceFeedback({
+      title: '프로젝트 나가기 완료',
+      description: `‘${leftProject.name}’ 프로젝트에서 나갔습니다.`,
+      type: 'success',
+    })
   }
 
   const handleDeleteProject = async () => {
@@ -968,6 +1030,14 @@ export function ProjectMainboardPage({
           title="요청 전송 성공"
           type="success"
           visible={joinRequestSentToast.isVisible}
+        />
+      ) : null}
+      {pendingJoinResults[0] ? (
+        <JoinRequestResultDialog
+          onConfirm={confirmJoinRequestResult}
+          open
+          projectTitle={pendingJoinResults[0].projectTitle}
+          status={pendingJoinResults[0].status}
         />
       ) : null}
     </main>

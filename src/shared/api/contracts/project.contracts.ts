@@ -88,6 +88,16 @@ export type ProjectLinkReferenceResponse = {
   createdAt: string
 }
 
+/** 내가 보낸 참여 요청 중 처리가 끝난 것. PENDING과 삭제된 프로젝트는 서버가 제외합니다. */
+export type ProjectJoinRequestResultResponse = {
+  requestId: number
+  projectId: number
+  projectTitle: string
+  status: 'APPROVED' | 'REJECTED'
+  /** UTC ISO-8601. 서버가 최신순으로 정렬해 줍니다. */
+  decidedAt: string
+}
+
 export type ProjectRolePerspectiveResponse = {
   useDefault: boolean
   /** useDefault가 true면 프로젝트 전용 값이 없어 null일 수 있습니다. */

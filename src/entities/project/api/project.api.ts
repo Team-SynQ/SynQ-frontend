@@ -9,6 +9,7 @@ import type {
   ProjectJoinRequestCreateResponse,
   ProjectJoinRequestListResponse,
   ProjectJoinRequestRejectResponse,
+  ProjectJoinRequestResultResponse,
   ProjectLinkReferenceResponse,
   ProjectListItemResponse,
   ProjectMemberListResponse,
@@ -56,6 +57,8 @@ export type ProjectApi = {
     request: ProjectJoinRequestCreateRequest,
   ): Promise<ProjectJoinRequestCreateResponse>
   getProjectJoinRequests(projectId: number): Promise<ProjectJoinRequestListResponse>
+  /** 내가 보낸 참여 요청의 승인·거절 결과. 서버가 읽음 상태를 관리하지 않아 매번 전체가 옵니다. */
+  getMyJoinRequestResults(): Promise<ProjectJoinRequestResultResponse[]>
   approveProjectJoinRequest(
     projectId: number,
     requestId: number,
@@ -161,6 +164,12 @@ export const projectApi: ProjectApi = {
   async getProjectJoinRequests(projectId) {
     const response = await axiosInstance.get<ApiResponse<ProjectJoinRequestListResponse>>(
       `/projects/${projectId}/join-requests`,
+    )
+    return response.data.result
+  },
+  async getMyJoinRequestResults() {
+    const response = await axiosInstance.get<ApiResponse<ProjectJoinRequestResultResponse[]>>(
+      '/projects/join-requests/me',
     )
     return response.data.result
   },

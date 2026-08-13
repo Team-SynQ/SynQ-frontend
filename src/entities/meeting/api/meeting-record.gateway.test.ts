@@ -12,6 +12,8 @@ const meetingListFixture = [
     durationSeconds: 720,
     host: { userId: 3, name: '홍길동', profileImageUrl: null },
     keyTopics: ['자기소개', '기술 피드백'],
+    paused: false,
+    activeSeconds: 720,
   },
   {
     meetingId: 12,
@@ -21,6 +23,8 @@ const meetingListFixture = [
     durationSeconds: null,
     host: { userId: 3, name: '홍길동', profileImageUrl: null },
     keyTopics: null,
+    paused: true,
+    activeSeconds: 163,
   },
 ]
 
@@ -47,7 +51,8 @@ describe('meetingRecordGateway', () => {
     })
   })
 
-  it('finds the in-progress meeting with its start time', async () => {
+  // 회의를 연 시각이 아니라 누적 활성 시간을 쓴다. 그래야 회의 화면 타이머와 값이 같다.
+  it('finds the in-progress meeting with its active time and pause state', async () => {
     vi.spyOn(meetingService, 'listMeetings').mockResolvedValue(meetingListFixture)
 
     const ongoing = await meetingRecordGateway.findOngoingMeeting('7')
@@ -55,7 +60,8 @@ describe('meetingRecordGateway', () => {
     expect(ongoing).toEqual({
       meetingId: '12',
       meetingTitle: '진행 중 회의',
-      startedAt: '2026-08-02T10:00:00Z',
+      activeSeconds: 163,
+      paused: true,
     })
   })
 
