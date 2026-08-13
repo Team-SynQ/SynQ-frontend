@@ -71,7 +71,13 @@ async function renderMeetingPage(
         path: '/meetings/:meetingId/live',
         element: (
           <MeetingPage
-            user={{ userId: 7, name: '윤금서', email: 'a@b.c', profileImageUrl: null }}
+            user={{
+              userId: 7,
+              name: '윤금서',
+              email: 'a@b.c',
+              provider: 'KAKAO',
+              profileImageUrl: null,
+            }}
           />
         ),
       },
