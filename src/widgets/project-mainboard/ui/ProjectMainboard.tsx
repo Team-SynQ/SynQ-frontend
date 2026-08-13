@@ -20,6 +20,8 @@ type ProjectMainboardProps = {
   onRenameMeeting?: (recordId: string, nextTitle: string) => Promise<void>
   onDeleteMeeting?: (recordId: string) => Promise<void>
   meetings?: CompletedMeeting[]
+  /** 회의 기록을 수정·삭제할 수 있는지 가리는 기준. 그 회의를 진행한 사람만 가능합니다. */
+  currentUserId?: number | null
   /** 프로젝트 목록을 아직 불러오는 중이면 빈 상태 대신 아무것도 그리지 않습니다. */
   projectsLoading?: boolean
   meetingHistoryLoading?: boolean
@@ -47,6 +49,7 @@ export function ProjectMainboard({
   onRenameMeeting,
   onDeleteMeeting,
   meetings = [],
+  currentUserId = null,
   projectsLoading = false,
   meetingHistoryLoading = false,
   meetingHistoryPresentation,
@@ -72,6 +75,7 @@ export function ProjectMainboard({
     >
       {project ? (
         <ProjectCreatedDashboard
+          currentUserId={currentUserId}
           perspectiveOptions={perspectiveOptions}
           meetingHistoryLoading={meetingHistoryLoading}
           onAddMaterials={onAddMaterials}

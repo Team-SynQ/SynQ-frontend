@@ -48,7 +48,8 @@ import { ProjectMainboard } from '../widgets/project-mainboard'
 import { ProjectSidebar, type ProjectSidebarUser } from '../widgets/project-sidebar'
 
 type ProjectMainboardPageProps = {
-  user?: ProjectSidebarUser
+  /** 회의 기록의 수정·삭제 권한을 가리려면 내 userId가 필요합니다. */
+  user?: ProjectSidebarUser & { userId?: number }
   onCreateProject?: () => void
   onAddProject?: () => void
   onToggleSidebar?: () => void
@@ -851,6 +852,7 @@ export function ProjectMainboardPage({
         user={user}
       />
       <ProjectMainboard
+        currentUserId={user?.userId ?? null}
         perspectiveOptions={perspectiveOptions?.map((option) => ({
           label: option.label,
           description: option.selectedDescription,

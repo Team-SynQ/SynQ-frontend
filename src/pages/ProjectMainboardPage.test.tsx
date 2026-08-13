@@ -28,6 +28,8 @@ function renderProjectMainboardPage(
   initialEntry: string | { pathname: string; state: unknown } = '/projects',
 ) {
   const resolvedProps = {
+    // 기본은 회의 진행자 본인이다. 권한이 없는 경우는 테스트가 user를 바꿔 확인한다.
+    user: { userId: 7, name: '윤금서', email: 'yoon@example.com' },
     loadProjects: () => Promise.resolve([]),
     // 실제 API 기본값이 붙은 prop 들은 테스트에서 명시적으로 막습니다.
     loadProjectReferences: () => Promise.resolve([]),
@@ -73,7 +75,8 @@ const completedMeeting: CompletedMeeting = {
   durationSeconds: 373,
   completedAt: new Date(2026, 6, 27, 12, 0).toISOString(),
   host: {
-    id: 'you',
+    // 회의 기록 수정·삭제 권한은 진행자 id와 내 userId를 맞춰 판정한다.
+    id: '7',
     name: '윤금서',
     avatarKey: 'you',
   },
@@ -314,6 +317,32 @@ describe('ProjectMainboardPage', () => {
 
     expect(await screen.findByText('회의 기록 삭제 실패')).toBeInTheDocument()
     expect(screen.getAllByText('온보딩 개선 회의')).toHaveLength(2)
+  })
+
+  // 서버는 회의를 진행한 사람에게만 수정·삭제를 허용한다. 눌러 보기 전에는 알 수 없으므로 미리 안내한다.
+  it.each([
+    ['제목 수정하기', '회의를 진행한 사람만 제목을 수정할 수 있어요.'],
+    ['기록 삭제하기', '회의를 진행한 사람만 기록을 삭제할 수 있어요.'],
+  ])('진행자가 아니면 %s에 권한 없음을 알린다', async (menuItem, message) => {
+    const user = userEvent.setup()
+    const deleteCompletedMeeting = vi.fn()
+    const updateCompletedMeetingTitle = vi.fn()
+
+    renderProjectMainboardPage({
+      user: { userId: 9, name: '이동희', email: 'lee@example.com' },
+      deleteCompletedMeeting,
+      updateCompletedMeetingTitle,
+      loadProjects: () => Promise.resolve([projectOne]),
+      loadCompletedMeetings: () => Promise.resolve([completedMeeting]),
+    })
+
+    await screen.findAllByText('온보딩 개선 회의')
+    await user.click(screen.getByRole('button', { name: '온보딩 개선 회의 더보기' }))
+    await user.click(screen.getByRole('menuitem', { name: menuItem }))
+
+    expect(await screen.findByText(message)).toBeInTheDocument()
+    expect(deleteCompletedMeeting).not.toHaveBeenCalled()
+    expect(updateCompletedMeetingTitle).not.toHaveBeenCalled()
   })
 
   it('prefers the project selected by return navigation state', async () => {
