@@ -13,6 +13,12 @@ import type {
   PersonalMeetingSummaryResult,
 } from '../contracts/meeting.contracts'
 
+export interface MeetingRecordingSegment {
+  segmentId: number
+  url: string
+  createdAt: string
+}
+
 export const meetingService = {
   createMeeting: (
     projectId: number,
@@ -86,5 +92,13 @@ export const meetingService = {
         `/meetings/${meetingId}/summary/me`,
       ),
       '내 개인 요약을 불러오지 못했습니다.',
+    ),
+
+  getRecordings: (meetingId: number): Promise<MeetingRecordingSegment[]> =>
+    requestApiResult(
+      axiosInstance.get<ApiResponse<MeetingRecordingSegment[]>>(
+        `/meetings/${meetingId}/recordings`,
+      ),
+      '회의 녹음 파일 목록을 불러오지 못했습니다.',
     ),
 }
