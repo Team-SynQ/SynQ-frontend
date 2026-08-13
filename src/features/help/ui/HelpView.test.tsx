@@ -32,10 +32,13 @@ describe('HelpView', () => {
     const imageScrollRegion = boardFrame?.parentElement
     const helpContent = imageScrollRegion?.parentElement
     expect(boardClip).toHaveClass('overflow-hidden', 'rounded-m')
-    expect(boardFrame).toHaveClass('h-[530px]', 'w-[760px]', 'rounded-m')
+    expect(boardFrame).toHaveClass('h-[530px]', 'w-[880px]', 'rounded-m')
     expect(boardFrame?.className).not.toContain('shadow')
     expect(imageScrollRegion).toHaveClass('flex-1', 'overflow-y-auto', 'pt-[44px]')
-    expect(helpContent).toHaveClass('ml-[168px]', 'w-[760px]', 'self-start')
+    // 설정 패널이 사라진 뒤에는 부모의 items-center로 콘텐츠 영역 가운데에 정렬됩니다.
+    expect(helpContent).toHaveClass('w-[880px]')
+    expect(helpContent?.className).not.toContain('ml-[168px]')
+    expect(helpContent?.className).not.toContain('self-start')
     expect(imageScrollRegion).not.toContainElement(introductionTitle.parentElement)
     expect(imageScrollRegion).not.toContainElement(screen.getByRole('status'))
     expect(imageScrollRegion).not.toContainElement(screen.getByRole('button', { name: '다음' }))
@@ -59,11 +62,7 @@ describe('HelpView', () => {
     )
     const meetingFrame = screen.getByRole('img', { name: '회의 사용법 1단계 프레임' })
     expect(meetingFrame).toBeInTheDocument()
-    expect(meetingFrame.parentElement?.parentElement).toHaveClass(
-      'ml-[168px]',
-      'w-[760px]',
-      'self-start',
-    )
+    expect(meetingFrame.parentElement?.parentElement).toHaveClass('w-[880px]')
     expect(
       screen.getByRole('heading', { name: '놓치지 않도록, 회의는 함께 기록돼요' }),
     ).toBeInTheDocument()

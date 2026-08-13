@@ -19,7 +19,7 @@ type HelpBoardImageProps = Pick<HelpIntroductionStep, 'imageDisplaySize' | 'imag
 
 function HelpBoardImage({ imageDisplaySize, imageSrc, title }: HelpBoardImageProps) {
   return (
-    <div className="h-[530px] w-[760px] shrink-0 rounded-m">
+    <div className="h-[530px] w-[880px] shrink-0 rounded-m">
       <div className="relative size-full overflow-hidden rounded-m">
         <img
           alt={`${title} 안내 화면`}
@@ -103,12 +103,7 @@ export function HelpView({ renderMeetingTutorial }: HelpViewProps) {
         </div>
       </header>
 
-      <div
-        className={cn(
-          'ml-[168px] flex min-h-0 flex-1 flex-col items-center gap-l self-start pb-s',
-          'w-[760px]',
-        )}
-      >
+      <div className="flex min-h-0 w-[880px] flex-1 flex-col items-center gap-l pb-s">
         <div className="flex min-h-0 w-full flex-1 items-start justify-center overflow-y-auto pt-[44px]">
           {activeTab === 'introduction' ? (
             <HelpBoardImage
@@ -120,7 +115,7 @@ export function HelpView({ renderMeetingTutorial }: HelpViewProps) {
             (renderMeetingTutorial?.(meetingStep) ?? (
               <div
                 aria-label={`회의 사용법 ${meetingStep}단계 프레임`}
-                className="h-[530px] w-[760px] shrink-0 rounded-m bg-surface-muted"
+                className="h-[530px] w-[880px] shrink-0 rounded-m bg-surface-muted"
                 role="img"
               />
             ))

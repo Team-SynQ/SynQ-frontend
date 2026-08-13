@@ -16,11 +16,11 @@ export function MeetingTutorialPreview({ step }: MeetingTutorialPreviewProps) {
   return (
     <img
       alt={`회의 사용법 ${step}단계 안내 화면`}
-      className="h-[530px] w-[760px] shrink-0 rounded-m object-cover shadow-tutorial-preview"
+      className="h-[530px] w-[880px] shrink-0 rounded-m object-cover shadow-tutorial-preview"
       data-figma-node-id={frame.figmaNodeId}
       height={530}
       src={frame.imageSrc}
-      width={760}
+      width={880}
     />
   )
 }

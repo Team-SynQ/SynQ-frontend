@@ -11,21 +11,20 @@ const user = {
 }
 
 describe('PolicyDocumentsPage', () => {
-  it('composes the settings shell with the active policy section', () => {
+  it('composes the settings shell with the policy content', () => {
     renderPolicyDocumentsPage()
 
-    expect(screen.getByRole('button', { name: '정책 문서' })).toHaveAttribute(
-      'aria-current',
-      'page',
-    )
+    expect(screen.getByRole('heading', { name: '정책 문서' })).toBeInTheDocument()
+    expect(screen.queryByRole('navigation', { name: '개인 설정' })).not.toBeInTheDocument()
     expect(screen.getByRole('tab', { name: '이용 약관' })).toHaveAttribute('aria-selected', 'true')
   })
 
-  it('moves to help settings', async () => {
+  it('moves to help settings from the sidebar profile menu', async () => {
     const browserUser = userEvent.setup()
     renderPolicyDocumentsPage()
 
-    await browserUser.click(screen.getByRole('button', { name: '도움말' }))
+    await browserUser.click(screen.getByRole('button', { name: new RegExp(user.name) }))
+    await browserUser.click(screen.getByRole('menuitem', { name: '도움말' }))
     expect(screen.getByRole('heading', { name: '도움말 목적지' })).toBeInTheDocument()
   })
 })

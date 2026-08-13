@@ -89,24 +89,46 @@ export function ProjectSidebar({
                   : 'w-[79px] translate-x-0 opacity-100',
               )}
             >
-              <Logo />
+              <button
+                aria-label="홈으로 이동"
+                className="cursor-pointer"
+                onClick={() => navigate('/projects')}
+                tabIndex={isCollapsed ? -1 : 0}
+                type="button"
+              >
+                <Logo />
+              </button>
             </div>
             <Button
               aria-expanded={!isCollapsed}
               aria-label={isCollapsed ? '사이드바 펼치기' : '사이드바 접기'}
-              className="aspect-square px-0"
+              className="group aspect-square cursor-pointer px-0"
               onClick={handleToggleSidebar}
               size="large"
               variant="basic"
             >
-              <img
-                alt=""
-                aria-hidden="true"
-                className="size-[28px]"
-                height="28"
-                src={sidebarIcon}
-                width="28"
-              />
+              {isCollapsed ? (
+                <>
+                  <Logo className="group-hover:hidden" variant="symbol" />
+                  <img
+                    alt=""
+                    aria-hidden="true"
+                    className="hidden size-[28px] group-hover:block"
+                    height="28"
+                    src={sidebarIcon}
+                    width="28"
+                  />
+                </>
+              ) : (
+                <img
+                  alt=""
+                  aria-hidden="true"
+                  className="size-[28px]"
+                  height="28"
+                  src={sidebarIcon}
+                  width="28"
+                />
+              )}
             </Button>
           </div>
         }
