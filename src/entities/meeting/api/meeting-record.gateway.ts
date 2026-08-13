@@ -71,7 +71,8 @@ export const meetingRecordGateway: MeetingRecordGateway = {
     return {
       meetingId: String(ongoing.meetingId),
       meetingTitle: ongoing.title,
-      startedAt: ongoing.createdAt,
+      activeSeconds: ongoing.activeSeconds,
+      paused: ongoing.paused,
     }
   },
 

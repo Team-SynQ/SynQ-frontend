@@ -134,8 +134,11 @@ export function ProjectCreatedDashboard({
           <h2 className="m-0 typo-title-02 text-fg-primary">프로젝트 허브</h2>
           {ongoingMeeting ? (
             <OngoingMeetingButton
+              activeSeconds={ongoingMeeting.activeSeconds}
+              // 서버 값이 바뀌면 다시 마운트해 기준 시각을 새로 잡는다.
+              key={`${ongoingMeeting.meetingId}:${ongoingMeeting.paused}:${ongoingMeeting.activeSeconds}`}
               onJoin={onJoinOngoingMeeting ?? (() => {})}
-              startedAt={ongoingMeeting.startedAt}
+              paused={ongoingMeeting.paused}
             />
           ) : (
             <Button

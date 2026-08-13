@@ -125,7 +125,8 @@ const previousMeeting: CompletedMeeting = {
 const ongoingMeeting: OngoingMeeting = {
   meetingId: '12',
   meetingTitle: '진행 중 회의',
-  startedAt: new Date().toISOString(),
+  activeSeconds: 0,
+  paused: false,
 }
 
 const sidebarUser = {
@@ -213,6 +214,39 @@ describe('ProjectMainboardPage', () => {
     expect(screen.getByRole('button', { name: '새 회의 시작' })).toBeInTheDocument()
     // 끝난 회의가 기록 목록에 나타나야 한다.
     expect(loadCompletedMeetings).toHaveBeenCalledTimes(2)
+  })
+
+  // 진행자가 회의를 멈추면 이 버튼도 멈춰야 회의 화면과 어긋나지 않는다.
+  it('진행자가 일시정지하면 회의 중 버튼의 시간도 서버 값으로 맞추고 멈춘다', async () => {
+    vi.useFakeTimers()
+    const loadOngoingMeeting = vi
+      .fn<() => Promise<OngoingMeeting | null>>()
+      .mockResolvedValueOnce({ ...ongoingMeeting, activeSeconds: 30, paused: false })
+      .mockResolvedValue({ ...ongoingMeeting, activeSeconds: 100, paused: true })
+
+    renderProjectMainboardPage({
+      loadProjects: () => Promise.resolve([projectOne]),
+      loadCompletedMeetings: () => Promise.resolve([]),
+      loadOngoingMeeting,
+    })
+
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    expect(screen.getByText('00:30')).toBeInTheDocument()
+
+    // 다음 주기에 일시정지가 반영되면 서버가 준 누적 시간으로 다시 맞춘다.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15_000)
+    })
+    expect(screen.getByText('01:40')).toBeInTheDocument()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_000)
+    })
+    expect(screen.getByText('01:40')).toBeInTheDocument()
   })
 
   it('늦게 도착한 이전 폴링 응답이 끝난 회의를 되살리지 않는다', async () => {
