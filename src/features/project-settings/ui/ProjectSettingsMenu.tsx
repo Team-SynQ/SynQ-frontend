@@ -3,15 +3,16 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import type { ProjectSummary } from '../../../entities/project'
 
 import {
+  approveProjectJoinRequest,
   createProjectInviteLink,
+  loadProjectJoinRequests,
   loadProjectMembers,
+  rejectProjectJoinRequest,
   removeProjectMember,
   type ProjectMemberList,
 } from '../api/projectMembers.api'
 import {
-  PROJECT_JOIN_REQUEST_MOCK_FAILURE_IDS,
   PROJECT_MEMBER_LIMIT,
-  projectJoinRequests,
   type ProjectJoinRequest,
   type ProjectMember,
 } from '../model/projectSettings.mock'
@@ -41,6 +42,9 @@ type ProjectSettingsMenuProps = {
   onUpdateProject?: (draft: ProjectInformationDraft) => Promise<void> | void
   onDeleteProject?: () => Promise<void> | void
   loadMembers?: (projectId: number) => Promise<ProjectMemberList>
+  loadJoinRequests?: (projectId: number) => Promise<ProjectJoinRequest[]>
+  approveJoinRequest?: (projectId: number, requestId: number) => Promise<void>
+  rejectJoinRequest?: (projectId: number, requestId: number) => Promise<void>
   createInviteLink?: (projectId: number) => Promise<string>
   exportMember?: (projectId: number, memberId: number) => Promise<void>
 }
@@ -52,6 +56,9 @@ export function ProjectSettingsMenu({
   onUpdateProject,
   onDeleteProject,
   loadMembers = loadProjectMembers,
+  loadJoinRequests = loadProjectJoinRequests,
+  approveJoinRequest = approveProjectJoinRequest,
+  rejectJoinRequest = rejectProjectJoinRequest,
   createInviteLink = createProjectInviteLink,
   exportMember = removeProjectMember,
 }: ProjectSettingsMenuProps) {
@@ -62,7 +69,8 @@ export function ProjectSettingsMenu({
   const [informationProject, setInformationProject] = useState<ProjectSummary>()
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [isManagementOpen, setIsManagementOpen] = useState(false)
-  const [joinRequests, setJoinRequests] = useState(projectJoinRequests)
+  const [joinRequests, setJoinRequests] = useState<ProjectJoinRequest[]>([])
+  const [pendingRequestId, setPendingRequestId] = useState<string>()
   const [memberList, setMemberList] = useState<ProjectMemberList>()
   const [exportCandidate, setExportCandidate] = useState<ProjectMember>()
   const [toastMessage, setToastMessage] = useState<SettingsToast>()
@@ -103,6 +111,26 @@ export function ProjectSettingsMenu({
       isSubscribed = false
     }
   }, [apiProjectId, isPopoverOpen, loadMembers, showToast])
+
+  // 참여 요청은 소유자만 조회할 수 있습니다. 실패해도 멤버 목록은 그대로 보여 줍니다.
+  useEffect(() => {
+    if (!isPopoverOpen) return
+
+    let isSubscribed = true
+    void loadJoinRequests(apiProjectId)
+      .then((requests) => {
+        if (!isSubscribed) return
+        setJoinRequests(requests)
+      })
+      .catch(() => {
+        if (!isSubscribed) return
+        setJoinRequests([])
+      })
+
+    return () => {
+      isSubscribed = false
+    }
+  }, [apiProjectId, isPopoverOpen, loadJoinRequests])
 
   const handleCopyInviteLink = async () => {
     try {
@@ -180,16 +208,10 @@ export function ProjectSettingsMenu({
     window.setTimeout(() => triggerRef.current?.focus(), 0)
   }
 
-  const handleApproveRequest = (request: ProjectJoinRequest) => {
-    if (request.id === PROJECT_JOIN_REQUEST_MOCK_FAILURE_IDS.approve) {
-      showToast({
-        title: '참여 요청 승인 실패',
-        description: '참여 요청을 승인하지 못했습니다. 다시 시도해 주세요.',
-        type: 'error',
-      })
-      return
-    }
+  const handleApproveRequest = async (request: ProjectJoinRequest) => {
+    if (pendingRequestId) return
 
+    // 정원이 찬 것은 서버도 막지만, 누르기 전에 알려 주는 편이 낫습니다.
     if (members.length >= maxMemberCount) {
       showToast({
         title: '프로젝트 최대 인원 도달',
@@ -199,42 +221,48 @@ export function ProjectSettingsMenu({
       return
     }
 
-    setJoinRequests((current) => current.filter((item) => item.id !== request.id))
-    setMemberList((current) => {
-      if (!current) return current
-
-      const approvedMember: ProjectMember = {
-        id: `member-${request.id}`,
-        name: request.name,
-        role: request.role,
-      }
-      return {
-        ...current,
-        members: [...current.members, approvedMember],
-        currentCount: current.currentCount + 1,
-      }
-    })
-    showToast({
-      title: '멤버 승인 완료',
-      description: '참여 요청을 승인했습니다.',
-    })
+    setPendingRequestId(request.id)
+    try {
+      await approveJoinRequest(apiProjectId, Number(request.id))
+      setJoinRequests((current) => current.filter((item) => item.id !== request.id))
+      // 승인된 사람이 멤버 목록에 반영되도록 서버 값을 다시 읽습니다.
+      const list = await loadMembers(apiProjectId).catch(() => undefined)
+      if (list) setMemberList(list)
+      showToast({
+        title: '멤버 승인 완료',
+        description: '참여 요청을 승인했습니다.',
+      })
+    } catch {
+      showToast({
+        title: '참여 요청 승인 실패',
+        description: '참여 요청을 승인하지 못했습니다. 다시 시도해 주세요.',
+        type: 'error',
+      })
+    } finally {
+      setPendingRequestId(undefined)
+    }
   }
 
-  const handleRejectRequest = (request: ProjectJoinRequest) => {
-    if (request.id === PROJECT_JOIN_REQUEST_MOCK_FAILURE_IDS.reject) {
+  const handleRejectRequest = async (request: ProjectJoinRequest) => {
+    if (pendingRequestId) return
+
+    setPendingRequestId(request.id)
+    try {
+      await rejectJoinRequest(apiProjectId, Number(request.id))
+      setJoinRequests((current) => current.filter((item) => item.id !== request.id))
+      showToast({
+        title: '멤버 거절 완료',
+        description: '참여 요청을 거절했습니다.',
+      })
+    } catch {
       showToast({
         title: '참여 요청 거절 실패',
         description: '참여 요청을 거절하지 못했습니다. 다시 시도해 주세요.',
         type: 'error',
       })
-      return
+    } finally {
+      setPendingRequestId(undefined)
     }
-
-    setJoinRequests((current) => current.filter((item) => item.id !== request.id))
-    showToast({
-      title: '멤버 거절 완료',
-      description: '참여 요청을 거절했습니다.',
-    })
   }
 
   const handleRequestMemberExport = (member: ProjectMember) => {
@@ -345,11 +373,12 @@ export function ProjectSettingsMenu({
         joinRequests={joinRequests}
         maxMemberCount={maxMemberCount}
         members={members}
-        onApproveRequest={handleApproveRequest}
+        onApproveRequest={(request) => void handleApproveRequest(request)}
         onClose={handleCloseManagement}
         onExportMember={handleRequestMemberExport}
         onInviteMembers={() => void handleCopyInviteLink()}
-        onRejectRequest={handleRejectRequest}
+        onRejectRequest={(request) => void handleRejectRequest(request)}
+        pendingRequestId={pendingRequestId}
         open={isManagementOpen}
         titleId={managementTitleId}
       />

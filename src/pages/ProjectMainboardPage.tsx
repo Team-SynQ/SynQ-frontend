@@ -272,6 +272,7 @@ export function ProjectMainboardPage({
   const creationSuccessToast = useTransientVisibility()
   const projectReferenceFeedbackToast = useTransientVisibility()
   const roleProfileSavedToast = useTransientVisibility()
+  const joinRequestSentToast = useTransientVisibility()
   const showProjectReferenceFeedbackToast = projectReferenceFeedbackToast.show
   const showProjectReferenceFeedback = useCallback(
     (feedback: ProjectReferenceFeedback) => {
@@ -288,6 +289,11 @@ export function ProjectMainboardPage({
   useEffect(() => {
     if (requestedRoleProfileSaved) showRoleProfileSavedToast()
   }, [requestedRoleProfileSaved, showRoleProfileSavedToast])
+  const requestedJoinRequestSent = navigationState?.joinRequestSent === true
+  const showJoinRequestSentToast = joinRequestSentToast.show
+  useEffect(() => {
+    if (requestedJoinRequestSent) showJoinRequestSentToast()
+  }, [requestedJoinRequestSent, showJoinRequestSentToast])
   const {
     dismissCompletion,
     phase: meetingProcessingPhase,
@@ -934,6 +940,16 @@ export function ProjectMainboardPage({
           title="역할·관점 저장 성공"
           type="success"
           visible={roleProfileSavedToast.isVisible}
+        />
+      ) : null}
+      {joinRequestSentToast.isMounted ? (
+        <Toast
+          className="top-[20px]!"
+          description="소유자가 승인하기 전까지 기다려 주세요."
+          position="topCenter"
+          title="요청 전송 성공"
+          type="success"
+          visible={joinRequestSentToast.isVisible}
         />
       ) : null}
     </main>
