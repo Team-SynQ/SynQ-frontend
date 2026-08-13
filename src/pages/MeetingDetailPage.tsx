@@ -342,6 +342,11 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
   const currentMeetingIdRef = useRef(apiMeetingId)
   useEffect(() => {
     currentMeetingIdRef.current = apiMeetingId
+    setHasError(false)
+    setIsEditModalOpen(false)
+    setOverallSummary(null)
+    setPersonalSummary(null)
+    setTranscripts([])
   }, [apiMeetingId])
 
   useEffect(() => {
