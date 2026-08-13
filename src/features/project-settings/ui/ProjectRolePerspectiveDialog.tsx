@@ -87,6 +87,7 @@ export function ProjectRolePerspectiveDialog({
           initialValue={loadState.value ?? undefined}
           onCancel={onClose}
           onSubmit={onSubmit}
+          showCancel={false}
           submitLabel="저장하기"
         />
       ) : null}
