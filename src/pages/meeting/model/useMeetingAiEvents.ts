@@ -76,6 +76,7 @@ export function useMeetingAiEvents({
       reconnectAttemptRef.current = 0
       return
     }
+    // 인증·권한 실패는 다시 시도해도 같은 결과다. 회의 내내 10초마다 요청을 던지게 두지 않는다.
     if (status !== 'closed' && status !== 'error') return
 
     const delayMs = Math.min(1000 * 2 ** reconnectAttemptRef.current, RECONNECT_MAX_DELAY_MS)

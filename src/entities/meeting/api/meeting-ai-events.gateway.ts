@@ -7,7 +7,13 @@ import { toTranscriptHint } from './hint.adapter'
 /** 서버가 보내는 이벤트 중 화면이 쓰는 것만 추린다. */
 export type MeetingAiEvent = { kind: 'autoHint'; hint: TranscriptHintResponse }
 
-export type AiEventChannelStatus = 'connecting' | 'connected' | 'closed' | 'error'
+export type AiEventChannelStatus =
+  | 'connecting'
+  | 'connected'
+  | 'closed'
+  | 'error'
+  /** 인증·권한 실패. 다시 시도해도 결과가 같으므로 재연결하지 않는다. */
+  | 'denied'
 
 export type AiEventChannel = {
   close(): void
@@ -103,6 +109,10 @@ export const meetingAiEventsGateway: MeetingAiEventsGateway = {
           signal: controller.signal,
         })
 
+        if (response.status === 401 || response.status === 403) {
+          onStatus('denied')
+          return
+        }
         if (!response.ok || !response.body) {
           onStatus('error')
           return

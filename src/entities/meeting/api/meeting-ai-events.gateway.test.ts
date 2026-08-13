@@ -59,6 +59,7 @@ describe('parseAiEventFrame', () => {
 
   it.each([
     ['이름 없는 프레임', 'data: {"type":"AUTO_HINT_CREATED"}'],
+    ['data 없는 프레임', 'event: hint.auto-created'],
     ['깨진 JSON', 'event: hint.auto-created\ndata: {'],
     ['segmentId 없는 payload', 'event: hint.auto-created\ndata: {"data":{"meaning":"..."}}'],
     ['빈 프레임', ''],
