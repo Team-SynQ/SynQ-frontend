@@ -15,6 +15,7 @@ import {
   type LiveMeetingParticipant,
   type LiveMeetingProjectContext,
   type LiveMeetingTranscriptHint,
+  type MeetingAiEvent,
   type TranscriptionChannelStatus,
 } from '../../../entities/meeting'
 import type {
@@ -30,6 +31,7 @@ import type {
 } from '../../../features/live-transcription'
 import { meetingService } from '../../../shared/api/services/meeting.service'
 import { transcriptService } from '../../../shared/api/services/transcript.service'
+import { useMeetingAiEvents } from './useMeetingAiEvents'
 import { useLiveTranscription } from './useLiveTranscription'
 import { useMeetingRuntime } from './useMeetingRuntime'
 
@@ -89,6 +91,8 @@ export function useLiveMeetingController(
   /** 서버가 생성 중이라고 답한 뒤 최종 답변을 아직 못 받은 상태. */
   const [isAnswerPending, setIsAnswerPending] = useState(false)
   const hintCacheRef = useRef(new Map<string, LiveMeetingTranscriptHint>())
+  /** 힌트가 있는 전사. 캐시는 ref라 화면을 다시 그리지 못해 표시용 상태를 따로 둔다. */
+  const [hintedTranscriptIds, setHintedTranscriptIds] = useState<ReadonlySet<string>>(new Set())
   const hintRequestSequenceRef = useRef(0)
   const composerInputRef = useRef<HTMLInputElement>(null)
   const lastExpandedAiChatModeRef = useRef<Exclude<AiChatDisplayMode, 'launcher'>>('docked')
@@ -119,6 +123,32 @@ export function useLiveMeetingController(
     if (role === 'host') return
     setEndedByServer(true)
   }, [role])
+
+  const rememberHint = useCallback((hint: LiveMeetingTranscriptHint) => {
+    hintCacheRef.current.set(hint.transcriptId, hint)
+    setHintedTranscriptIds((current) =>
+      current.has(hint.transcriptId) ? current : new Set(current).add(hint.transcriptId),
+    )
+  }, [])
+
+  const forgetHint = useCallback((transcriptId: string) => {
+    hintCacheRef.current.delete(transcriptId)
+    setHintedTranscriptIds((current) => {
+      if (!current.has(transcriptId)) return current
+
+      const next = new Set(current)
+      next.delete(transcriptId)
+      return next
+    })
+  }, [])
+
+  const handleAiEvent = useCallback(
+    (event: MeetingAiEvent) => {
+      if (event.kind !== 'autoHint') return
+      rememberHint(event.hint)
+    },
+    [rememberHint],
+  )
   const liveTranscription = useLiveTranscription({
     // 종료된 회의에는 다시 붙지 않는다. enabled가 false면 재연결 타이머도 서지 않는다.
     enabled: hasValidMeetingId && meeting?.meetingId === meetingId && !endedByServer,
@@ -130,6 +160,26 @@ export function useLiveMeetingController(
     onChannelStatusChange: setChannelStatus,
     onMeetingEnded: handleMeetingEnded,
     editingSegmentId: editState.status === 'editing' ? editState.transcriptId : null,
+  })
+
+  /**
+   * 끊긴 동안 생성된 자동 힌트를 메운다. 서버에 재전송 저장소가 없어 기록 조회가 유일한 방법이다.
+   * 최초 연결에서도 호출되어 입장 시 조회와 한 번 겹치지만, 조회 하나라 그대로 둔다.
+   */
+  const reloadHintRecords = useCallback(() => {
+    void meetingHintApi
+      .listHintRecords(apiMeetingId)
+      .then((records) => {
+        for (const record of records) rememberHint(record)
+      })
+      .catch(() => {})
+  }, [apiMeetingId, rememberHint])
+
+  useMeetingAiEvents({
+    enabled: hasValidMeetingId && meeting?.meetingId === meetingId && !endedByServer,
+    meetingId: apiMeetingId,
+    onEvent: handleAiEvent,
+    onConnected: reloadHintRecords,
   })
 
   const isCurrentMeetingSession = useCallback(
@@ -228,6 +278,8 @@ export function useLiveMeetingController(
         setWsUrl(joinResponse.wsUrl ?? null)
         setMeetingStartedAt(joinResponse.startedAt ?? null)
         setSelectedSegmentId(null)
+        // 캐시는 이 effect 시작에서 이미 비웠다. 표시용 상태는 setState라 여기서 함께 맞춘다.
+        setHintedTranscriptIds(new Set())
         setHintState({ status: 'idle' })
         setEditState({ status: 'idle' })
         setPinnedContext(null)
@@ -256,7 +308,7 @@ export function useLiveMeetingController(
       .then((records) => {
         if (!active || !isCurrentMeetingSession(meetingId, requestSessionSequence)) return
         for (const record of records) {
-          hintCacheRef.current.set(record.transcriptId, record)
+          rememberHint(record)
         }
       })
       .catch(() => {})
@@ -273,6 +325,7 @@ export function useLiveMeetingController(
     loadAiChat,
     loadParticipants,
     meetingId,
+    rememberHint,
   ])
 
   const loadHint = useCallback(
@@ -297,7 +350,7 @@ export function useLiveMeetingController(
           return
         }
 
-        hintCacheRef.current.set(transcriptId, hint)
+        rememberHint(hint)
         setHintState({ status: 'ready', transcriptId, hint })
       } catch (error) {
         if (
@@ -314,7 +367,7 @@ export function useLiveMeetingController(
         })
       }
     },
-    [apiMeetingId, isCurrentMeetingSession, meetingId],
+    [apiMeetingId, isCurrentMeetingSession, meetingId, rememberHint],
   )
 
   if (!hasValidMeetingId) {
@@ -351,7 +404,12 @@ export function useLiveMeetingController(
         },
       ]
     : []
-  const displaySegments: TranscriptSegment[] = [...liveTranscription.segments, ...interimSegment]
+  const displaySegments: TranscriptSegment[] = [
+    ...liveTranscription.segments.map((segment) =>
+      hintedTranscriptIds.has(segment.id) ? { ...segment, hasHint: true } : segment,
+    ),
+    ...interimSegment,
+  ]
   const isTranscriptWaiting = displaySegments.length === 0
   const isSpeaking = runtime.canProgress && interimSegment.length > 0
 
@@ -403,7 +461,7 @@ export function useLiveMeetingController(
         savingState.draftText,
       )
       if (!isCurrentMeetingSession(requestMeetingId, requestSessionSequence)) return
-      hintCacheRef.current.delete(savingState.transcriptId)
+      forgetHint(savingState.transcriptId)
       hintRequestSequenceRef.current += 1
       setHintState((current) =>
         current.status !== 'idle' && current.transcriptId === savingState.transcriptId

@@ -57,6 +57,9 @@ export function TranscriptItem({
               {formatTranscriptTime(segment.startedAtSeconds, meetingStartedAt)}
             </time>
             {segment.isEdited ? <span className="typo-caption text-gray-500">수정됨</span> : null}
+            {segment.hasHint ? (
+              <span className="typo-caption text-brand-primary">SynQ 힌트</span>
+            ) : null}
           </div>
           {isSelected && !isEditing && !segment.isInterim ? (
             <div className="flex items-center gap-s">

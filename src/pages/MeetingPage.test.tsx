@@ -5,12 +5,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   meetingAiChatApi,
+  meetingAiEventsGateway,
   meetingConnectionGateway,
   meetingHintApi,
   meetingLifecycleApi,
   meetingParticipantApi,
   meetingRecordGateway,
   meetingTranscriptionGateway,
+  type MeetingAiEvent,
   type TranscriptionChannelStatus,
   type TranscriptionMessage,
 } from '../entities/meeting'
@@ -113,6 +115,11 @@ describe('MeetingPage controls', () => {
       title,
       userModified: true,
     }))
+    // AI 이벤트 SSE는 열지 않는다. 필요한 테스트에서만 onEvent를 잡아 쓴다.
+    vi.spyOn(meetingAiEventsGateway, 'connect').mockImplementation((options) => {
+      void Promise.resolve().then(() => options.onStatus('connected'))
+      return { close: () => {} }
+    })
     vi.spyOn(meetingHintApi, 'listHintRecords').mockResolvedValue([])
     vi.spyOn(meetingParticipantApi, 'listParticipants').mockResolvedValue([
       { id: '7', name: '윤금서', profileImageUrl: null, isCurrentUser: true, isHost: true },
@@ -608,6 +615,38 @@ describe('MeetingPage controls', () => {
     })
 
     expect(await screen.findByText('연결 상태 불안정')).toBeInTheDocument()
+  })
+
+  it('자동 생성된 힌트를 전사에 표시하고 생성 요청 없이 보여 준다', async () => {
+    let emit: ((event: MeetingAiEvent) => void) | undefined
+    vi.spyOn(meetingAiEventsGateway, 'connect').mockImplementation((options) => {
+      emit = options.onEvent
+      void Promise.resolve().then(() => options.onStatus('connected'))
+      return { close: () => {} }
+    })
+    const createSegmentHint = vi.spyOn(meetingHintApi, 'createSegmentHint')
+    const user = userEvent.setup()
+    await renderMeetingPage()
+
+    await act(async () => {
+      emit?.({
+        kind: 'autoHint',
+        hint: {
+          transcriptId: '1',
+          meaning: '자동으로 만든 의미',
+          personalImpact: '자동으로 만든 영향',
+          teamQuestion: '자동으로 만든 질문',
+        },
+      })
+    })
+
+    // 사용자가 눌러보기 전에도 힌트가 생겼다는 것을 알 수 있어야 한다.
+    expect(await screen.findByText('SynQ 힌트')).toBeInTheDocument()
+
+    await user.click(await screen.findByText(/지난주 유저 인터뷰 결과/))
+
+    expect(await screen.findByText('자동으로 만든 의미')).toBeInTheDocument()
+    expect(createSegmentHint).not.toHaveBeenCalled()
   })
 
   it('freezes the host controls and timer while restoring a refreshed meeting', async () => {
