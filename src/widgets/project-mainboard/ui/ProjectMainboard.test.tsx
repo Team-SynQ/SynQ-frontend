@@ -265,7 +265,7 @@ describe('ProjectMainboard', () => {
       }),
     )
 
-    expect(screen.getByTestId('location-pathname')).toHaveTextContent('/meetings/demo/tutorial')
+    expect(screen.getByTestId('location-pathname')).toHaveTextContent('/meetings/demo/start')
     expect(screen.getByText('아직 회의 기록이 없습니다')).toBeInTheDocument()
   })
 

@@ -534,7 +534,8 @@ export function ProjectMainboardPage({
     try {
       const created = await createMeeting(projectId, { consentAgreed: true })
       setMeetingEntryVariant(null)
-      navigate(`/meetings/${created.meetingId}/tutorial`, {
+      // `/start`가 「다시 보지 않기」를 확인해 튜토리얼을 건너뛸지 정합니다. 여기서 곧장 튜토리얼로 가면 안 됩니다.
+      navigate(`/meetings/${created.meetingId}/start`, {
         state: {
           projectId: activeProject.id,
           projectTitle: activeProject.name,
