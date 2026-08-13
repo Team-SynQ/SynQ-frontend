@@ -77,6 +77,21 @@ describe('MeetingHeader', () => {
     expect(screen.getByRole('button', { name: '회의 일시정지' })).toBeDisabled()
   })
 
+  // 참여자는 회의를 멈출 수 없다.
+  it('참여자에게는 일시정지 버튼을 보여 주지 않는다', () => {
+    render(
+      <MeetingHeader
+        actions={actions}
+        model={{ ...baseModel, isHost: false }}
+        moreMenuOpen={false}
+        participantsOpen={false}
+      />,
+    )
+
+    expect(screen.queryByRole('button', { name: '회의 일시정지' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '회의 다시 시작' })).not.toBeInTheDocument()
+  })
+
   it.each([
     [true, '회의 종료'],
     [false, '나가기'],
