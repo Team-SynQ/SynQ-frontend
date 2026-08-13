@@ -13,7 +13,7 @@ import { readAccessToken } from '../shared/lib/authStorage'
 type InviteViewState =
   | { step: 'loading' }
   | { step: 'confirm'; info: ProjectInvitationInfoResponse }
-  | { step: 'approved'; projectTitle: string; justJoined: boolean }
+  | { step: 'approved'; projectId: number; projectTitle: string; justJoined: boolean }
   | { step: 'rejected'; projectTitle: string | null }
 
 export function ProjectInvitePage() {
@@ -30,7 +30,12 @@ export function ProjectInvitePage() {
         if (!isSubscribed) return
         setViewState(
           info.alreadyJoined
-            ? { step: 'approved', projectTitle: info.title, justJoined: false }
+            ? {
+                step: 'approved',
+                projectId: info.projectId,
+                projectTitle: info.title,
+                justJoined: false,
+              }
             : { step: 'confirm', info },
         )
       })
@@ -56,8 +61,13 @@ export function ProjectInvitePage() {
 
     setPending(true)
     try {
-      await joinProjectByInviteToken(inviteToken)
-      setViewState({ step: 'approved', projectTitle: viewState.info.title, justJoined: true })
+      const joined = await joinProjectByInviteToken(inviteToken)
+      setViewState({
+        step: 'approved',
+        projectId: joined.projectId,
+        projectTitle: viewState.info.title,
+        justJoined: true,
+      })
     } catch {
       setViewState({ step: 'rejected', projectTitle: viewState.info.title })
     } finally {
@@ -66,9 +76,12 @@ export function ProjectInvitePage() {
   }
 
   // 방금 참여했다면 이 프로젝트에서 쓸 역할·관점 설정으로 이어집니다.
+  // projectId는 설정 화면이 저장 API를 부를 때 필요하므로 함께 넘깁니다.
   const handleComplete = () => {
     if (viewState.step === 'approved' && viewState.justJoined) {
-      navigate('/invite/setup/role', { state: { projectName: viewState.projectTitle } })
+      navigate('/invite/setup/role', {
+        state: { projectId: viewState.projectId, projectName: viewState.projectTitle },
+      })
       return
     }
     navigate('/projects', { replace: true })

@@ -6,6 +6,10 @@ interface UserSetupPreviewPageProps {
   detailRole?: string
   selectedPerspectiveLabels?: string[]
   footnote?: string
+  /** 저장 중에는 화면을 잠가 중복 저장을 막습니다. */
+  pending?: boolean
+  /** 저장에 실패했을 때 고른 값을 잃지 않도록 화면을 유지한 채 보여 줍니다. */
+  errorMessage?: string | null
   onComplete?: () => void
   onPrev?: () => void
 }
@@ -16,6 +20,8 @@ const UserSetupPreviewPage: React.FC<UserSetupPreviewPageProps> = ({
   detailRole = '',
   selectedPerspectiveLabels = [],
   footnote = '모든 설정은 추후 수정 가능합니다.',
+  pending = false,
+  errorMessage = null,
   onComplete,
   onPrev,
 }) => {
@@ -73,18 +79,26 @@ const UserSetupPreviewPage: React.FC<UserSetupPreviewPageProps> = ({
       <div className="w-full max-w-[480px] flex flex-col items-center">
         <p className="text-xs text-gray-400 mb-4">{footnote}</p>
 
+        {errorMessage && (
+          <p className="text-xs text-status-negative mb-4" role="alert">
+            {errorMessage}
+          </p>
+        )}
+
         <div className="flex w-full gap-3">
           <button
             type="button"
+            disabled={pending}
             onClick={onPrev}
-            className="w-[120px] h-12 rounded-xl bg-gray-100 text-gray-500 text-sm font-semibold hover:bg-gray-200 transition-colors"
+            className="w-[120px] h-12 rounded-xl bg-gray-100 text-gray-500 text-sm font-semibold hover:bg-gray-200 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
           >
             이전
           </button>
           <button
             type="button"
+            disabled={pending}
             onClick={onComplete}
-            className="flex-1 h-12 rounded-xl bg-[#0089FF] text-white text-sm font-semibold hover:bg-blue-600 transition-colors"
+            className="flex-1 h-12 rounded-xl bg-[#0089FF] text-white text-sm font-semibold hover:bg-blue-600 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
           >
             설정 완료
           </button>
