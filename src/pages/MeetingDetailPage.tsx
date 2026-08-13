@@ -7,6 +7,7 @@ import { transcriptService } from '../shared/api/services/transcript.service'
 import { aiChatService } from '../shared/api/services/aiChat.service'
 import { participantService } from '../shared/api/services/participant.service'
 import { hintService } from '../shared/api/services/hint.service'
+import { userApi } from '../entities/user'
 import type { AiChatSendRequest } from '../shared/api/contracts/aiChat.contracts'
 import { listProjectSummaries } from '../entities/project'
 import { toTranscriptSegments } from '../entities/meeting/api/transcript.adapter'
@@ -49,36 +50,6 @@ export interface AiChatActions {
   onSend: () => void
   onSelectSuggestion: (id: string) => void
   onClearContext: () => void
-}
-
-export type AiChatLauncherProps = {
-  onOpen: () => void
-  buttonRef?: Ref<HTMLButtonElement>
-}
-
-export function AiChatLauncher({ onOpen, buttonRef }: AiChatLauncherProps) {
-  return (
-    <button
-      aria-label="AI Chat 열기"
-      className="flex size-[100px] items-center justify-center rounded-full bg-transparent p-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
-      onClick={onOpen}
-      ref={buttonRef}
-      type="button"
-    >
-      <span
-        className="pointer-events-none flex size-[80px] items-center justify-center rounded-full bg-gray-800 shadow-ai-chat-launcher"
-        data-testid="ai-chat-launcher-surface"
-      >
-        <img
-          alt="AI Chat"
-          aria-hidden="true"
-          className="h-[46px] w-[27px]"
-          data-testid="ai-chat-launcher-symbol"
-          src="/assets/images/synq-symbol-inverse.png"
-        />
-      </span>
-    </button>
-  )
 }
 
 export type AiChatMessageListProps = {
@@ -323,6 +294,11 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
   const [personalSummary, setPersonalSummary] = useState<PersonalMeetingSummaryResult | null>(null)
   const [isLoadingPersonalSummary, setIsLoadingPersonalSummary] = useState(false)
 
+  const [userRoleProfile, setUserRoleProfile] = useState<{
+    role: string
+    perspectives: string[]
+  } | null>(null)
+
   const [sidebarProjects, setSidebarProjects] = useState<{ id: string; name: string }[]>([])
   const [participants, setParticipants] = useState<MeetingMember[]>([])
 
@@ -367,6 +343,26 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
       .catch((err) => {
         console.error('사이드바 프로젝트 목록 조회 실패:', err)
       })
+
+    return () => {
+      active = false
+    }
+  }, [])
+
+  useEffect(() => {
+    let active = true
+
+    void userApi
+      .getMyRoleProfiles()
+      .then((profiles) => {
+        if (!active || !profiles || profiles.length === 0) return
+        const defaultProfile = profiles.find((p) => p.isDefault) || profiles[0]
+        setUserRoleProfile({
+          role: defaultProfile.detailRole || defaultProfile.role,
+          perspectives: defaultProfile.perspectives || [],
+        })
+      })
+      .catch(() => {})
 
     return () => {
       active = false
@@ -608,7 +604,9 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
   }
 
   const displayTitle = overallSummary?.title || locationState?.meetingTitle || '회의 기록'
-  const displayRoleTag = personalSummary?.role || ''
+  const displayRole = userRoleProfile?.role || personalSummary?.role || ''
+  const displayPerspectives = userRoleProfile?.perspectives || []
+
   const displayDateIso =
     overallSummary?.generatedAt || personalSummary?.generatedAt || new Date().toISOString()
   const displayDurationSeconds = fallbackDurationSeconds ?? 0
@@ -686,7 +684,7 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
       <main className="flex-1 h-full overflow-hidden flex flex-col bg-white text-gray-900 pb-20">
         <div className="px-12 pt-8">
           <div className="max-w-6xl mx-auto">
-            <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => navigate('/projects')}
@@ -695,11 +693,6 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
                   <img src="/assets/images/arrow-left.png" alt="뒤로가기" className="size-5" />
                 </button>
                 <h1 className="text-2xl font-bold">{displayTitle}</h1>
-                {displayRoleTag && (
-                  <span className="px-2 py-0.5 bg-brand-primary/10 text-brand-primary text-xs font-medium rounded">
-                    {displayRoleTag}
-                  </span>
-                )}
               </div>
 
               <div className="flex items-center gap-2">
@@ -713,6 +706,22 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
                 />
               </div>
             </div>
+
+            {(displayRole || displayPerspectives.length > 0) && (
+              <div className="flex items-center gap-2 ml-8 mb-2 text-sm text-gray-600">
+                <span className="font-medium text-gray-500">내 관점 :</span>
+                {displayRole && (
+                  <span className="px-3 py-1 bg-[#EBF5FF] text-[#0086FF] text-xs font-medium rounded-md">
+                    {displayRole}
+                  </span>
+                )}
+                {displayPerspectives.length > 0 && (
+                  <span className="px-3 py-1 bg-[#EBF5FF] text-[#0086FF] text-xs font-medium rounded-md">
+                    {displayPerspectives.join(', ')}
+                  </span>
+                )}
+              </div>
+            )}
 
             <div className="text-sm text-gray-400 mb-8 ml-8">
               {formatDate(displayDateIso)} &nbsp;|&nbsp; {formatDuration(displayDurationSeconds)}
@@ -760,7 +769,7 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
             <MeetingPersonalSummaryTab
               summary={personalSummary}
               isLoading={isLoadingPersonalSummary}
-              defaultRoleTag={displayRoleTag}
+              defaultRoleTag={displayRole}
             />
           )}
 
@@ -915,8 +924,8 @@ function MeetingAllRecordTab({
   chatModel,
   setChatModel,
 }: MeetingAllRecordTabProps) {
-  const [onlyTranscript, setOnlyTranscript] = useState(false)
-  const [includeMyAiRecord, setIncludeMyAiRecord] = useState(true)
+  const [showHints, setShowHints] = useState(true)
+  const [isAiChatOpen, setIsAiChatOpen] = useState(false)
   const [aiChatVariant, setAiChatVariant] = useState<'docked' | 'floating'>('docked')
   const [isHintOpen, setIsHintOpen] = useState(true)
   const [chatWidth, setChatWidth] = useState(420)
@@ -1040,39 +1049,32 @@ function MeetingAllRecordTab({
 
   return (
     <div className="flex flex-col h-full overflow-hidden text-gray-900 relative">
-      <div className="px-12 py-3 border-b border-gray-200 text-xs text-gray-700 shrink-0">
-        <div className="max-w-6xl mx-auto flex items-center gap-6">
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={onlyTranscript}
-              onChange={(e) => setOnlyTranscript(e.target.checked)}
-              className="size-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary"
-            />
-            <span>전사만 보기</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={includeMyAiRecord}
-              onChange={(e) => {
-                const checked = e.target.checked
-                setIncludeMyAiRecord(checked)
-                if (checked) {
-                  setAiChatVariant('docked')
-                }
-              }}
-              className="size-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary"
-            />
-            <span>내 AI 기록 포함</span>
-          </label>
-        </div>
-      </div>
-
       <div className="flex-1 min-h-0 flex overflow-hidden">
         <div className="flex-1 flex flex-col min-w-0 h-full border-r border-gray-200">
-          <div className="h-[52px] shrink-0 border-b border-gray-200 px-12 flex items-center">
-            <h2 className="text-base font-bold text-gray-900">전체 전사</h2>
+          <div className="h-[52px] shrink-0 border-b border-gray-200 px-12 flex items-center justify-between bg-white">
+            <div className="flex items-center gap-6">
+              <h2 className="text-base font-bold text-gray-900">전체 전사</h2>
+              <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={showHints}
+                  onChange={(e) => setShowHints(e.target.checked)}
+                  className="size-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary"
+                />
+                <span>힌트 기록 보기</span>
+              </label>
+            </div>
+
+            <button
+              onClick={() => {
+                setIsAiChatOpen((prev) => !prev)
+                setAiChatVariant('docked')
+              }}
+              className="flex items-center gap-1.5 px-4 py-2 bg-[#0086FF] text-white text-xs font-semibold rounded-lg hover:bg-blue-600 transition-colors"
+            >
+              <span>✦</span>
+              <span>AI Chat</span>
+            </button>
           </div>
 
           <div className="flex-1 overflow-y-auto px-12 py-6 space-y-6">
@@ -1146,7 +1148,7 @@ function MeetingAllRecordTab({
                       </button>
                     </div>
 
-                    {!onlyTranscript && item.hasHint && item.hintData && (
+                    {showHints && item.hasHint && item.hintData && (
                       <div className="mt-3 p-4 bg-[#F8F9FA] rounded-2xl border border-gray-100 space-y-3">
                         <div
                           className="flex items-center justify-between cursor-pointer select-none"
@@ -1205,7 +1207,7 @@ function MeetingAllRecordTab({
           </div>
         </div>
 
-        {includeMyAiRecord && aiChatVariant === 'docked' && (
+        {isAiChatOpen && aiChatVariant === 'docked' && (
           <div
             style={{ width: `${chatWidth}px` }}
             className="shrink-0 h-full relative group pl-2 bg-[#F8F9FA]"
@@ -1219,32 +1221,21 @@ function MeetingAllRecordTab({
               variant="docked"
               model={chatModel}
               actions={chatActions}
-              onCollapse={() => setIncludeMyAiRecord(false)}
+              onCollapse={() => setIsAiChatOpen(false)}
               onMinimize={() => setAiChatVariant('floating')}
             />
           </div>
         )}
       </div>
 
-      {includeMyAiRecord && aiChatVariant === 'floating' && (
+      {isAiChatOpen && aiChatVariant === 'floating' && (
         <div className="fixed bottom-20 right-8 z-50 w-[380px] h-[520px]">
           <AiChatPanel
             variant="floating"
             model={chatModel}
             actions={chatActions}
-            onCollapse={() => setIncludeMyAiRecord(false)}
+            onCollapse={() => setIsAiChatOpen(false)}
             onMaximize={() => setAiChatVariant('docked')}
-          />
-        </div>
-      )}
-
-      {!includeMyAiRecord && (
-        <div className="fixed bottom-20 right-8 z-50">
-          <AiChatLauncher
-            onOpen={() => {
-              setIncludeMyAiRecord(true)
-              setAiChatVariant('docked')
-            }}
           />
         </div>
       )}
