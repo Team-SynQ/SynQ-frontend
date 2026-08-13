@@ -1,6 +1,5 @@
 import { projectApi, type ProjectApi, type ProjectSummary } from '../../../entities/project'
 
-import { projectPerspectiveOptions } from '../model/projectPerspective.config'
 import type { ProjectCreateDraft, ProjectMaterialDraft } from '../model/projectCreate.types'
 
 /**
@@ -67,17 +66,14 @@ export async function createProjectWithMaterials(
       projectId: createdProject.projectId,
       referenceCount: references.length,
     })
-    const perspective = projectPerspectiveOptions.find(
-      (option) => option.id === draft.perspectiveId,
-    )
-
     return {
       apiProjectId: createdProject.projectId,
       id: String(createdProject.projectId),
       name: createdProject.title,
       overview: createdProject.description ?? '',
-      perspectiveLabel: perspective?.label ?? '직접 설정',
-      perspectiveDescription: perspective?.selectedDescription ?? '사용자 설정 관점',
+      // 관점 표시는 화면이 프로젝트별 역할·관점과 기본 프로필로 채운다. 여기서 임의 값을 만들지 않는다.
+      perspectiveLabel: '',
+      perspectiveDescription: '',
       materials: references.map((reference) => ({
         id: String(reference.referenceId),
         kind: reference.type === 'FILE' ? 'file' : 'link',
