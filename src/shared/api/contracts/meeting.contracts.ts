@@ -55,13 +55,21 @@ export type MeetingListItemResponse = {
   }
   /** 요약이 아직 생성되지 않았으면 null이다. */
   keyTopics: string[] | null
+  /** 진행 중 회의에만 의미가 있다. 종료된 회의는 참고용이다. */
+  paused: boolean
+  /** 일시정지 구간을 제외한 누적 활성 시간(초). 회의 화면 타이머와 같은 값이다. */
+  activeSeconds: number
 }
 
 export type OngoingMeetingSummary = {
   meetingId: string
   meetingTitle: string
-  /** 진행 중 회의는 durationSeconds가 없다. 목록의 생성 시각을 시작 시각으로 쓴다. */
-  startedAt: string
+  /**
+   * 일시정지를 제외한 누적 활성 시간(초). 회의 화면 타이머와 같은 값이다.
+   * 회의를 연 시각부터의 벽시계 경과를 쓰면 일시정지를 반영할 수 없어 두 화면이 어긋난다.
+   */
+  activeSeconds: number
+  paused: boolean
 }
 
 export type MeetingTitleUpdateResponse = {

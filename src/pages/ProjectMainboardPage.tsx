@@ -269,7 +269,9 @@ export function ProjectMainboardPage({
     Record<string, OngoingMeeting | null>
   >({})
   /** 폴링 결과가 달라졌는지 판단하는 기준값. state를 읽으면 갱신 함수 밖에서 비교할 수 없다. */
-  const ongoingMeetingIdRef = useRef<Record<string, string | null>>({})
+  const ongoingMeetingStateRef = useRef<
+    Record<string, { meetingId: string; paused: boolean } | null>
+  >({})
   const [latestCreatedProjectName, setLatestCreatedProjectName] = useState<string>()
   /** 아직 안 보여 준 참여 요청 결과. 여러 건이면 앞에서부터 하나씩 안내한다. */
   const [pendingJoinResults, setPendingJoinResults] = useState<ProjectJoinRequestResult[]>([])
@@ -478,17 +480,21 @@ export function ProjectMainboardPage({
         .then((meeting) => {
           if (!isSubscribed || requestSequence !== latestRequestSequence) return
 
-          const previousMeetingId = ongoingMeetingIdRef.current[activeProjectId] ?? null
-          const nextMeetingId = meeting?.meetingId ?? null
-          // 대부분의 주기는 결과가 같다. 그대로 담으면 15초마다 화면 전체가 다시 그려진다.
-          if (previousMeetingId === nextMeetingId) return
+          const previous = ongoingMeetingStateRef.current[activeProjectId] ?? null
+          const next = meeting ? { meetingId: meeting.meetingId, paused: meeting.paused } : null
+          /**
+           * 대부분의 주기는 결과가 같다. 그대로 담으면 15초마다 화면 전체가 다시 그려진다.
+           * 누적 시간은 비교에 넣지 않는다 — 매 주기 늘어나 항상 갱신하게 되고,
+           * 흐르는 시간은 버튼이 스스로 센다. 서버 값과 다시 맞추는 건 정지·재개 때다.
+           */
+          if (previous?.meetingId === next?.meetingId && previous?.paused === next?.paused) return
 
-          ongoingMeetingIdRef.current[activeProjectId] = nextMeetingId
+          ongoingMeetingStateRef.current[activeProjectId] = next
           setOngoingMeetingByProject((current) => ({ ...current, [activeProjectId]: meeting }))
 
-          // 진행 중이던 회의가 끝났다. 회의 기록은 최초 조회 결과를 캐시하므로,
+          // 진행 중이던 회의가 끝났거나 다른 회의로 바뀌었다. 회의 기록은 최초 조회 결과를 캐시하므로,
           // 비워 주지 않으면 방금 끝난 회의가 목록에 나타나지 않는다.
-          if (!previousMeetingId) return
+          if (!previous || previous.meetingId === next?.meetingId) return
           setCompletedMeetingsByProject((current) => {
             if (!(activeProjectId in current)) return current
 
