@@ -499,7 +499,8 @@ describe('ProjectMainboardPage', () => {
 
     expect(requestMicrophonePermission).toHaveBeenCalledOnce()
     expect(createMeeting).toHaveBeenCalledWith(1, { consentAgreed: true })
-    expect(await screen.findByText(/이동 완료 \/meetings\/41\/tutorial/)).toHaveTextContent(
+    // 「다시 보지 않기」를 확인하는 /start를 거쳐야 합니다. 튜토리얼로 직행하면 설정이 무시됩니다.
+    expect(await screen.findByText(/이동 완료 \/meetings\/41\/start/)).toHaveTextContent(
       '{"projectId":"project-1","projectTitle":"서비스 디자인"}',
     )
   })
@@ -534,7 +535,7 @@ describe('ProjectMainboardPage', () => {
 
     expect(requestMicrophonePermission).toHaveBeenCalledOnce()
     expect(createMeeting).toHaveBeenCalledTimes(2)
-    expect(await screen.findByText(/이동 완료 \/meetings\/42\/tutorial/)).toBeInTheDocument()
+    expect(await screen.findByText(/이동 완료 \/meetings\/42\/start/)).toBeInTheDocument()
   })
 
   it.each([

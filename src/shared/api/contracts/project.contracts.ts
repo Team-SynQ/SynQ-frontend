@@ -1,3 +1,5 @@
+import type { RoleProfilePerspective, RoleProfileRole } from './user.contracts'
+
 export type CreateProjectRequest = {
   title: string
   description?: string | null
@@ -86,6 +88,45 @@ export type ProjectLinkReferenceResponse = {
   createdAt: string
 }
 
+export type ProjectRolePerspectiveResponse = {
+  useDefault: boolean
+  /** useDefault가 true면 프로젝트 전용 값이 없어 null일 수 있습니다. */
+  roleCategory: RoleProfileRole | null
+  detailRole: string | null
+  perspectives: RoleProfilePerspective[]
+}
+
+export type ProjectRolePerspectiveUpdateRequest =
+  /** 계정 기본 프로필을 그대로 따릅니다. */
+  | { useDefault: true }
+  /** 프로젝트 전용 값을 지정합니다. roleCategory가 'ETC'면 detailRole이 필요합니다(서버 검증). */
+  | {
+      useDefault: false
+      roleCategory: RoleProfileRole
+      detailRole?: string
+      perspectives: RoleProfilePerspective[]
+    }
+
+export type ProjectRolePerspectiveUpdateResponse = {
+  projectId: number
+  useDefault: boolean
+  roleCategory: RoleProfileRole | null
+  detailRole: string | null
+  perspectives: RoleProfilePerspective[]
+  updatedAt: string
+}
+
+export type ReferenceNameUpdateRequest = {
+  name: string
+}
+
+export type ReferenceNameUpdateResponse = {
+  referenceId: number
+  name: string
+  type: ProjectReferenceType
+  updatedAt: string
+}
+
 export type ProjectMemberResponse = {
   memberId: number
   userId: number
@@ -122,6 +163,51 @@ export type ProjectInvitationInfoResponse = {
 
 export type ProjectJoinRequest = {
   inviteToken: string
+}
+
+/** 요청에 실은 역할·관점이 어디서 온 값인지 알립니다. 저장되는 값은 함께 보낸 값 그대로입니다. */
+export type ProjectJoinSettingSource = 'DEFAULT' | 'ONBOARDING' | 'PROJECT_CUSTOM'
+
+export type ProjectJoinRequestCreateRequest = {
+  inviteToken: string
+  settingSource: ProjectJoinSettingSource
+  roleCategory: RoleProfileRole
+  /** roleCategory가 'ETC'일 때만 서버가 요구합니다. */
+  detailRole?: string
+  /** 최대 3개입니다. */
+  perspectives: RoleProfilePerspective[]
+}
+
+export type ProjectJoinRequestCreateResponse = {
+  requestId: number
+  projectId: number
+  status: string
+  requestedAt: string
+}
+
+export type ProjectJoinRequestItemResponse = {
+  requestId: number
+  userId: number
+  name: string
+  requestedAt: string
+}
+
+export type ProjectJoinRequestListResponse = {
+  pendingCount: number
+  requests: ProjectJoinRequestItemResponse[]
+}
+
+export type ProjectJoinRequestApproveResponse = {
+  requestId: number
+  memberId: number
+  userId: number
+  status: string
+  joinedAt: string
+}
+
+export type ProjectJoinRequestRejectResponse = {
+  requestId: number
+  status: string
 }
 
 export type ProjectJoinResponse = {

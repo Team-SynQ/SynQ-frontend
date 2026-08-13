@@ -15,6 +15,13 @@ describe('parseTranscriptionMessage', () => {
     expect(message).toEqual({ kind: 'interim', text: '이번 스프린' })
   })
 
+  it('회의 종료 알림을 meetingEnded로 해석한다', () => {
+    // 서버는 전사 봉투를 그대로 쓰고 type만 다르게 보냅니다. 나머지 필드는 비어 있습니다.
+    const message = parseTranscriptionMessage(JSON.stringify({ type: 'MEETING_ENDED' }))
+
+    expect(message).toEqual({ kind: 'meetingEnded' })
+  })
+
   it('확정 발화를 화면 세그먼트로 변환한다', () => {
     const message = parseTranscriptionMessage(
       JSON.stringify({

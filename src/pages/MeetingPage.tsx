@@ -7,6 +7,7 @@ import type { AiChatDisplayMode } from '../features/meeting-ai-chat'
 import { MeetingConnectionToast } from '../features/meeting-connection'
 import type { ProjectNavigationState } from '../features/meeting-processing'
 import {
+  MeetingEndedNoticeDialog,
   MeetingExitDialog,
   MeetingMoreMenu,
   MeetingParticipantsPopover,
@@ -45,7 +46,10 @@ export function MeetingPage({ user }: MeetingPageProps = {}) {
   const navigate = useNavigate()
   const { meetingId = 'demo' } = useParams()
   const controller = useLiveMeetingController(meetingId, user?.userId ?? null)
-  const exitGuard = useMeetingExitGuard({ enabled: controller.status === 'ready' })
+  // 이미 끝난 회의를 떠나는 것은 막을 이유가 없다. 종료 안내 위에 이탈 확인 모달이 겹치지도 않는다.
+  const exitGuard = useMeetingExitGuard({
+    enabled: controller.status === 'ready' && !controller.endedByServer,
+  })
   const knownProjectContext = useMeetingProjectContext(
     meetingId,
     location.state as Partial<LiveMeetingProjectContext> | null,
@@ -211,7 +215,7 @@ export function MeetingPage({ user }: MeetingPageProps = {}) {
         }}
         transcript={controller.transcript}
       />
-      {currentUserIsHost && controller.connectionNotice ? (
+      {controller.connectionNotice ? (
         <MeetingConnectionToast className="top-[106px]!" status={controller.connectionNotice} />
       ) : null}
       <MeetingTitleEditDialog
@@ -239,6 +243,7 @@ export function MeetingPage({ user }: MeetingPageProps = {}) {
         }}
         open={activeControl === 'end-confirm' || exitGuard.isBlocked}
       />
+      <MeetingEndedNoticeDialog onConfirm={returnToProject} open={controller.endedByServer} />
       {activeControl === 'saving' ? <MeetingSaveDialog open state="saving" /> : null}
       {activeControl === 'save-success' && completedMeeting ? (
         <MeetingSaveDialog

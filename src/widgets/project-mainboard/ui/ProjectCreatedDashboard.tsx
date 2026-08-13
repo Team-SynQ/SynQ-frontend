@@ -145,7 +145,7 @@ export function ProjectCreatedDashboard({
                   />
                 </span>
               }
-              onClick={onStartMeeting ?? (() => navigate('/meetings/demo/tutorial'))}
+              onClick={onStartMeeting ?? (() => navigate('/meetings/demo/start'))}
               size="large"
             >
               새 회의 시작

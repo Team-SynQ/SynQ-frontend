@@ -6,9 +6,9 @@ import App from '../../App'
 import { meetingLifecycleApi, meetingTranscriptionGateway } from '../../entities/meeting'
 import { projectApi } from '../../entities/project'
 import { userApi } from '../../entities/user'
-import * as meetingMockService from '../../shared/api/mock/services/meeting.mock'
 import { projectMockActorFixture } from '../../shared/api/mock/fixtures/projects.fixture'
 import { authService } from '../../shared/api/services/auth.service'
+import { meetingService } from '../../shared/api/services/meeting.service'
 import { transcriptService } from '../../shared/api/services/transcript.service'
 import { userService } from '../../shared/api/services/user.service'
 
@@ -252,15 +252,19 @@ describe('AppRouter', () => {
     expect(window.location.pathname).toBe('/settings/account')
   })
 
-  it('opens help from the account settings panel', async () => {
+  it('opens help from the sidebar profile menu', async () => {
     const user = userEvent.setup()
     await renderAppAt('/settings/account')
 
-    await user.click(screen.getByRole('button', { name: '도움말' }))
+    await user.click(
+      screen.getByRole('button', {
+        name: new RegExp(projectMockActorFixture.name),
+      }),
+    )
+    await user.click(screen.getByRole('menuitem', { name: '도움말' }))
 
     expect(window.location.pathname).toBe('/settings/help')
     expect(screen.getByRole('heading', { name: '도움말' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '도움말' })).toHaveAttribute('aria-current', 'page')
   })
 
   it('opens policy documents directly', async () => {
@@ -304,102 +308,165 @@ describe('AppRouter', () => {
   })
 
   it('opens the implemented meeting detail using the route record id', async () => {
-    const fetchMeetingDetail = vi.spyOn(meetingMockService, 'fetchMeetingDetail')
+    vi.spyOn(meetingService, 'getOverallSummary').mockResolvedValue({
+      meetingId: 999,
+      version: 1,
+      title: '신규 온보딩 개선 및 출시 일정 논의',
+      generatedAt: '2026-08-05T00:00:00.000Z',
+      keyTopics: ['온보딩', '일정'],
+      oneLineSummary: '온보딩 개선 및 출시 일정 논의',
+      discussionSections: [],
+      decisions: [],
+      tentativeDirections: [],
+      confirmationItems: [],
+    })
+    vi.spyOn(meetingService, 'getPersonalSummary').mockResolvedValue({
+      meetingId: 999,
+      userId: 1,
+      version: 1,
+      role: 'HOST',
+      generatedAt: '2026-08-05T00:00:00.000Z',
+      personalSummary: '개인 요약 내용',
+      keyPoints: [],
+      myActionItems: [],
+      followUpQuestions: [],
+    })
 
-    await renderAppAt('/meetings/meeting-record-999/detail')
+    await renderAppAt('/meetings/999/detail')
 
     expect(
       await screen.findByRole('heading', {
         name: '신규 온보딩 개선 및 출시 일정 논의',
       }),
     ).toBeInTheDocument()
-    expect(fetchMeetingDetail).toHaveBeenCalledWith('meeting-record-999')
-    expect(window.location.pathname).toBe('/meetings/meeting-record-999/detail')
+    expect(window.location.pathname).toBe('/meetings/999/detail')
   })
 
   it('uses the route record id when editing a meeting detail title', async () => {
     const user = userEvent.setup()
-    const updateMeetingTitle = vi
-      .spyOn(meetingMockService, 'updateMeetingTitle')
-      .mockResolvedValue(true)
+    const updateTitleSpy = vi.spyOn(meetingService, 'updateMeetingTitle').mockResolvedValue({
+      meetingId: 999,
+      title: '변경된 상세 제목',
+      userModified: true,
+    })
+    vi.spyOn(meetingService, 'getOverallSummary').mockResolvedValue({
+      meetingId: 999,
+      version: 1,
+      title: '신규 온보딩 개선 및 출시 일정 논의',
+      generatedAt: '2026-08-05T00:00:00.000Z',
+      keyTopics: [],
+      oneLineSummary: '',
+      discussionSections: [],
+      decisions: [],
+      tentativeDirections: [],
+      confirmationItems: [],
+    })
 
-    await renderAppAt('/meetings/meeting-record-999/detail')
+    await renderAppAt('/meetings/999/detail')
 
     expect(
       await screen.findByRole('heading', {
         name: '신규 온보딩 개선 및 출시 일정 논의',
       }),
     ).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '더보기 메뉴' }))
-    await user.click(screen.getByRole('button', { name: '회의 제목 수정하기' }))
+
+    const menuBtn = screen.getByRole('button', { name: /회의 설정|더보기/ })
+    await user.click(menuBtn)
+
+    const editOption = await screen.findByText('회의 제목 수정하기')
+    await user.click(editOption)
+
     const titleInput = screen.getByPlaceholderText('회의 제목을 입력해 주세요')
     await user.clear(titleInput)
     await user.type(titleInput, '변경된 상세 제목')
     await user.click(screen.getByRole('button', { name: '제목 변경하기' }))
 
-    expect(await screen.findByRole('heading', { name: '변경된 상세 제목' })).toBeInTheDocument()
-    expect(updateMeetingTitle).toHaveBeenCalledWith('meeting-record-999', '변경된 상세 제목')
+    expect(updateTitleSpy).toHaveBeenCalledWith(999, '변경된 상세 제목')
   })
 
   it('keeps the active meeting state isolated from a stale title update', async () => {
     const user = userEvent.setup()
-    const firstMeeting = await meetingMockService.fetchMeetingDetail('meeting-record-first')
-    const secondMeeting = {
-      ...firstMeeting,
-      recordId: 'meeting-record-second',
-      meetingTitle: '두 번째 회의 상세',
-    }
-    let resolveTitleUpdate: ((updated: boolean) => void) | undefined
+    let resolveTitleUpdate:
+      ((value: { meetingId: number; title: string; userModified: boolean }) => void) | undefined
 
-    vi.spyOn(meetingMockService, 'fetchMeetingDetail').mockImplementation((recordId) =>
-      Promise.resolve(recordId === secondMeeting.recordId ? secondMeeting : firstMeeting),
+    vi.spyOn(meetingService, 'getOverallSummary').mockImplementation(async (meetingId) => {
+      if (meetingId === 456) {
+        return {
+          meetingId: 456,
+          version: 1,
+          title: '두 번째 회의 상세',
+          generatedAt: '2026-08-05T00:00:00.000Z',
+          keyTopics: [],
+          oneLineSummary: '',
+          discussionSections: [],
+          decisions: [],
+          tentativeDirections: [],
+          confirmationItems: [],
+        }
+      }
+      return {
+        meetingId: 123,
+        version: 1,
+        title: '첫 번째 회의 상세',
+        generatedAt: '2026-08-05T00:00:00.000Z',
+        keyTopics: [],
+        oneLineSummary: '',
+        discussionSections: [],
+        decisions: [],
+        tentativeDirections: [],
+        confirmationItems: [],
+      }
+    })
+
+    const updateTitleSpy = vi.spyOn(meetingService, 'updateMeetingTitle').mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveTitleUpdate = resolve
+        }),
     )
-    const updateMeetingTitle = vi
-      .spyOn(meetingMockService, 'updateMeetingTitle')
-      .mockImplementation(
-        () =>
-          new Promise<boolean>((resolve) => {
-            resolveTitleUpdate = resolve
-          }),
-      )
 
-    await renderAppAt('/meetings/meeting-record-first/detail')
+    await renderAppAt('/meetings/123/detail')
 
-    expect(
-      await screen.findByRole('heading', { name: firstMeeting.meetingTitle }),
-    ).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '더보기 메뉴' }))
-    await user.click(screen.getByRole('button', { name: '회의 제목 수정하기' }))
+    expect(await screen.findByRole('heading', { name: '첫 번째 회의 상세' })).toBeInTheDocument()
+
+    const menuBtn = screen.getByRole('button', { name: /회의 설정|더보기/ })
+    await user.click(menuBtn)
+
+    const editOption = await screen.findByText('회의 제목 수정하기')
+    await user.click(editOption)
+
     const titleInput = screen.getByPlaceholderText('회의 제목을 입력해 주세요')
     await user.clear(titleInput)
     await user.type(titleInput, '첫 번째 회의 변경 제목')
     await user.click(screen.getByRole('button', { name: '제목 변경하기' }))
-    expect(updateMeetingTitle).toHaveBeenCalledWith(
-      'meeting-record-first',
-      '첫 번째 회의 변경 제목',
-    )
+
+    expect(updateTitleSpy).toHaveBeenCalledWith(123, '첫 번째 회의 변경 제목')
+
     if (!resolveTitleUpdate) throw new Error('title update was not started')
     const finishTitleUpdate = resolveTitleUpdate
 
     act(() => {
-      window.history.pushState({}, '', '/meetings/meeting-record-second/detail')
+      window.history.pushState({}, '', '/meetings/456/detail')
       window.dispatchEvent(new PopStateEvent('popstate'))
     })
 
-    expect(
-      await screen.findByRole('heading', { name: secondMeeting.meetingTitle }),
-    ).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '더보기 메뉴' }))
-    await user.click(screen.getByRole('button', { name: '회의 제목 수정하기' }))
+    expect(await screen.findByRole('heading', { name: '두 번째 회의 상세' })).toBeInTheDocument()
+
+    const secondMenuBtn = screen.getByRole('button', { name: /회의 설정|더보기/ })
+    await user.click(secondMenuBtn)
+
+    const secondEditOption = await screen.findByText('회의 제목 수정하기')
+    await user.click(secondEditOption)
+
     const secondTitleInput = screen.getByPlaceholderText('회의 제목을 입력해 주세요')
     await user.clear(secondTitleInput)
     await user.type(secondTitleInput, '두 번째 회의 편집 중')
 
     await act(async () => {
-      finishTitleUpdate(true)
+      finishTitleUpdate({ meetingId: 123, title: '첫 번째 회의 변경 제목', userModified: true })
     })
 
-    expect(screen.getByRole('heading', { name: secondMeeting.meetingTitle })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '두 번째 회의 상세' })).toBeInTheDocument()
     expect(
       screen.queryByRole('heading', { name: '첫 번째 회의 변경 제목' }),
     ).not.toBeInTheDocument()
@@ -409,7 +476,7 @@ describe('AppRouter', () => {
   })
 
   it('shows a recoverable error when a meeting detail cannot be loaded', async () => {
-    vi.spyOn(meetingMockService, 'fetchMeetingDetail').mockRejectedValueOnce(
+    vi.spyOn(meetingService, 'getOverallSummary').mockRejectedValue(
       new Error('meeting record not found'),
     )
 

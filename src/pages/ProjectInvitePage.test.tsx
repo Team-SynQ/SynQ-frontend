@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
 import { projectApi } from '../entities/project'
 import { userApi } from '../entities/user'
+import { ApiError } from '../shared/api/apiError'
 import { projectMockActorFixture } from '../shared/api/mock/fixtures/projects.fixture'
 import { userService } from '../shared/api/services/user.service'
 
@@ -72,68 +73,89 @@ describe('ProjectInvitePage', () => {
     expect(screen.getByRole('button', { name: '참여 요청하기' })).toBeInTheDocument()
   })
 
-  it('joins the project and finishes the project role setup with the saved toast', async () => {
-    vi.spyOn(projectApi, 'getProjectInvitationInfo').mockResolvedValue(invitationInfoFixture)
-    const joinProject = vi.spyOn(projectApi, 'joinProject').mockResolvedValue({
-      projectId: 42,
-      title: '회의 보조 AI, 씽큐',
-      description: null,
-      memberRole: 'MEMBER',
-      joinedAt: '2026-08-11T00:00:00.000Z',
-    })
-    const user = userEvent.setup()
-
-    await renderInviteAt('/invite/valid-token')
-
-    await user.click(await screen.findByRole('button', { name: '참여 요청하기' }))
-
-    expect(joinProject).toHaveBeenCalledWith({ inviteToken: 'valid-token' })
-    expect(
-      await screen.findByRole('heading', { name: '‘회의 보조 AI, 씽큐’ 참여가 승인되었어요.' }),
-    ).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: '프로젝트 보기' }))
-
-    const roleHeading = await screen.findByRole('heading', { name: /어떤 역할로 참여하시나요/ })
-    expect(roleHeading).toHaveTextContent('회의 보조 AI, 씽큐')
-    expect(window.location.pathname).toBe('/invite/setup/role')
-
+  async function completeRoleAndPerspectiveSetup(user: ReturnType<typeof userEvent.setup>) {
     const roleButton = screen.getByAltText('개발/기술').closest('button')
     expect(roleButton).not.toBeNull()
     await user.click(roleButton!)
     await user.click(screen.getByRole('button', { name: '다음' }))
 
-    const perspectiveHeading = await screen.findByRole('heading', {
-      name: /어떤 내용을 중요하게 보고 싶나요/,
-    })
-    expect(perspectiveHeading).toHaveTextContent('회의 보조 AI, 씽큐')
+    await screen.findByRole('heading', { name: /어떤 내용을 중요하게 보고 싶나요/ })
     await user.click(screen.getByRole('button', { name: '일정' }))
     await user.click(screen.getByRole('button', { name: '다음' }))
 
-    expect(await screen.findByRole('heading', { name: '선택 결과 미리보기' })).toBeInTheDocument()
-    expect(screen.getByText('개발/기술')).toBeInTheDocument()
-    expect(screen.getByText('일정')).toBeInTheDocument()
+    await screen.findByRole('heading', { name: '선택 결과 미리보기' })
+  }
 
-    await user.click(screen.getByRole('button', { name: '설정 완료' }))
-
-    await waitFor(() => expect(window.location.pathname).toBe('/projects'))
-    expect(await screen.findByText('역할·관점 저장 성공')).toBeInTheDocument()
-  })
-
-  it('keeps the project title in the rejected dialog when joining fails', async () => {
+  it('역할·관점을 고른 뒤 참여 요청을 보내고 승인 대기 안내와 함께 돌아간다', async () => {
     vi.spyOn(projectApi, 'getProjectInvitationInfo').mockResolvedValue(invitationInfoFixture)
-    vi.spyOn(projectApi, 'joinProject').mockRejectedValue(new Error('member limit exceeded'))
+    const createJoinRequest = vi.spyOn(projectApi, 'createProjectJoinRequest').mockResolvedValue({
+      requestId: 7,
+      projectId: 42,
+      status: 'PENDING',
+      requestedAt: '2026-08-13T00:00:00.000Z',
+    })
     const user = userEvent.setup()
 
     await renderInviteAt('/invite/valid-token')
     await user.click(await screen.findByRole('button', { name: '참여 요청하기' }))
 
-    expect(
-      await screen.findByRole('heading', {
-        name: '‘회의 보조 AI, 씽큐’ 참여가 승인되지 않았어요.',
+    // 요청에 역할·관점이 함께 실려야 하므로 설정을 먼저 거칩니다.
+    const roleHeading = await screen.findByRole('heading', { name: /어떤 역할로 참여하시나요/ })
+    expect(roleHeading).toHaveTextContent('회의 보조 AI, 씽큐')
+    expect(window.location.pathname).toBe('/invite/setup/role')
+    expect(createJoinRequest).not.toHaveBeenCalled()
+
+    await completeRoleAndPerspectiveSetup(user)
+    await user.click(screen.getByRole('button', { name: '설정 완료' }))
+
+    await waitFor(() =>
+      expect(createJoinRequest).toHaveBeenCalledWith(42, {
+        inviteToken: 'valid-token',
+        settingSource: 'PROJECT_CUSTOM',
+        roleCategory: 'DEV_TECH',
+        perspectives: ['SCHEDULE'],
       }),
-    ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '확인' })).toBeInTheDocument()
+    )
+    await waitFor(() => expect(window.location.pathname).toBe('/projects'))
+    expect(await screen.findByText('요청 전송 성공')).toBeInTheDocument()
+  })
+
+  it('세션이 만료돼 요청이 401이면 초대 토큰을 보관하고 로그인으로 보낸다', async () => {
+    vi.spyOn(projectApi, 'getProjectInvitationInfo').mockResolvedValue(invitationInfoFixture)
+    vi.spyOn(projectApi, 'createProjectJoinRequest').mockRejectedValue(
+      new ApiError(401, 'UNAUTHORIZED', '인증이 필요합니다.'),
+    )
+    const user = userEvent.setup()
+
+    await renderInviteAt('/invite/valid-token')
+    await user.click(await screen.findByRole('button', { name: '참여 요청하기' }))
+    await screen.findByRole('heading', { name: /어떤 역할로 참여하시나요/ })
+
+    await completeRoleAndPerspectiveSetup(user)
+    await user.click(screen.getByRole('button', { name: '설정 완료' }))
+
+    await waitFor(() => expect(window.location.pathname).toBe('/login'))
+    expect(window.sessionStorage.getItem('pendingInviteToken')).toBe('valid-token')
+  })
+
+  it('참여 요청 전송에 실패하면 이동하지 않고 고른 값을 지킨다', async () => {
+    vi.spyOn(projectApi, 'getProjectInvitationInfo').mockResolvedValue(invitationInfoFixture)
+    vi.spyOn(projectApi, 'createProjectJoinRequest').mockRejectedValue(
+      new Error('참여 요청을 보내지 못했습니다.'),
+    )
+    const user = userEvent.setup()
+
+    await renderInviteAt('/invite/valid-token')
+    await user.click(await screen.findByRole('button', { name: '참여 요청하기' }))
+    await screen.findByRole('heading', { name: /어떤 역할로 참여하시나요/ })
+
+    await completeRoleAndPerspectiveSetup(user)
+    await user.click(screen.getByRole('button', { name: '설정 완료' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('참여 요청을 보내지 못했습니다.')
+    expect(window.location.pathname).toBe('/invite/setup/preview')
+    expect(screen.getByText('개발/기술')).toBeInTheDocument()
+    expect(screen.getByText('일정')).toBeInTheDocument()
   })
 
   it('shows the generic rejected dialog for an invalid invitation link', async () => {

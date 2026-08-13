@@ -5,6 +5,11 @@ import type {
   ProjectInvitationInfoResponse,
   ProjectInvitationResponse,
   ProjectJoinRequest,
+  ProjectJoinRequestApproveResponse,
+  ProjectJoinRequestCreateRequest,
+  ProjectJoinRequestCreateResponse,
+  ProjectJoinRequestListResponse,
+  ProjectJoinRequestRejectResponse,
   ProjectJoinResponse,
   ProjectLinkReferenceResponse,
   ProjectListItemResponse,
@@ -12,8 +17,13 @@ import type {
   ProjectReferenceListResponse,
   ProjectReferenceType,
   ProjectResponse,
+  ProjectRolePerspectiveResponse,
+  ProjectRolePerspectiveUpdateRequest,
+  ProjectRolePerspectiveUpdateResponse,
   ProjectUpdateRequest,
   ProjectUpdateResponse,
+  ReferenceNameUpdateRequest,
+  ReferenceNameUpdateResponse,
   RegisterProjectFilesResponse,
   RegisterProjectLinkRequest,
 } from '../../../shared/api/contracts/project.contracts'
@@ -32,11 +42,34 @@ export type ProjectApi = {
     request: RegisterProjectLinkRequest,
   ): Promise<ProjectLinkReferenceResponse>
   deleteProjectReference(projectId: number, referenceId: number): Promise<void>
+  updateProjectReferenceName(
+    projectId: number,
+    referenceId: number,
+    request: ReferenceNameUpdateRequest,
+  ): Promise<ReferenceNameUpdateResponse>
   getProjectMembers(projectId: number): Promise<ProjectMemberListResponse>
   createProjectInvitation(projectId: number): Promise<ProjectInvitationResponse>
   deleteProjectMember(projectId: number, memberId: number): Promise<void>
   getProjectInvitationInfo(inviteToken: string): Promise<ProjectInvitationInfoResponse>
   joinProject(request: ProjectJoinRequest): Promise<ProjectJoinResponse>
+  createProjectJoinRequest(
+    projectId: number,
+    request: ProjectJoinRequestCreateRequest,
+  ): Promise<ProjectJoinRequestCreateResponse>
+  getProjectJoinRequests(projectId: number): Promise<ProjectJoinRequestListResponse>
+  approveProjectJoinRequest(
+    projectId: number,
+    requestId: number,
+  ): Promise<ProjectJoinRequestApproveResponse>
+  rejectProjectJoinRequest(
+    projectId: number,
+    requestId: number,
+  ): Promise<ProjectJoinRequestRejectResponse>
+  getProjectRolePerspective(projectId: number): Promise<ProjectRolePerspectiveResponse>
+  updateProjectRolePerspective(
+    projectId: number,
+    request: ProjectRolePerspectiveUpdateRequest,
+  ): Promise<ProjectRolePerspectiveUpdateResponse>
 }
 
 export const projectApi: ProjectApi = {
@@ -88,6 +121,13 @@ export const projectApi: ProjectApi = {
   async deleteProjectReference(projectId, referenceId) {
     await axiosInstance.delete(`/projects/${projectId}/references/${referenceId}`)
   },
+  async updateProjectReferenceName(projectId, referenceId, request) {
+    const response = await axiosInstance.patch<ApiResponse<ReferenceNameUpdateResponse>>(
+      `/projects/${projectId}/references/${referenceId}`,
+      request,
+    )
+    return response.data.result
+  },
   async getProjectMembers(projectId) {
     const response = await axiosInstance.get<ApiResponse<ProjectMemberListResponse>>(
       `/projects/${projectId}/members`,
@@ -112,6 +152,44 @@ export const projectApi: ProjectApi = {
   async joinProject(request) {
     const response = await axiosInstance.post<ApiResponse<ProjectJoinResponse>>(
       '/projects/join',
+      request,
+    )
+    return response.data.result
+  },
+  async createProjectJoinRequest(projectId, request) {
+    const response = await axiosInstance.post<ApiResponse<ProjectJoinRequestCreateResponse>>(
+      `/projects/${projectId}/join-requests`,
+      request,
+    )
+    return response.data.result
+  },
+  async getProjectJoinRequests(projectId) {
+    const response = await axiosInstance.get<ApiResponse<ProjectJoinRequestListResponse>>(
+      `/projects/${projectId}/join-requests`,
+    )
+    return response.data.result
+  },
+  async approveProjectJoinRequest(projectId, requestId) {
+    const response = await axiosInstance.patch<ApiResponse<ProjectJoinRequestApproveResponse>>(
+      `/projects/${projectId}/join-requests/${requestId}/approve`,
+    )
+    return response.data.result
+  },
+  async rejectProjectJoinRequest(projectId, requestId) {
+    const response = await axiosInstance.patch<ApiResponse<ProjectJoinRequestRejectResponse>>(
+      `/projects/${projectId}/join-requests/${requestId}/reject`,
+    )
+    return response.data.result
+  },
+  async getProjectRolePerspective(projectId) {
+    const response = await axiosInstance.get<ApiResponse<ProjectRolePerspectiveResponse>>(
+      `/projects/${projectId}/role-perspective`,
+    )
+    return response.data.result
+  },
+  async updateProjectRolePerspective(projectId, request) {
+    const response = await axiosInstance.put<ApiResponse<ProjectRolePerspectiveUpdateResponse>>(
+      `/projects/${projectId}/role-perspective`,
       request,
     )
     return response.data.result

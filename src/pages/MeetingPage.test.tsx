@@ -5,12 +5,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   meetingAiChatApi,
+  meetingAiEventsGateway,
   meetingConnectionGateway,
   meetingHintApi,
   meetingLifecycleApi,
   meetingParticipantApi,
   meetingRecordGateway,
   meetingTranscriptionGateway,
+  type MeetingAiEvent,
+  type TranscriptionChannelStatus,
+  type TranscriptionMessage,
 } from '../entities/meeting'
 import type { ProjectNavigationState } from '../features/meeting-processing'
 import { resetLiveMeetingMockDb } from '../shared/api/mock/db/liveMeeting.mockDb'
@@ -111,6 +115,11 @@ describe('MeetingPage controls', () => {
       title,
       userModified: true,
     }))
+    // AI 이벤트 SSE는 열지 않는다. 필요한 테스트에서만 onEvent를 잡아 쓴다.
+    vi.spyOn(meetingAiEventsGateway, 'connect').mockImplementation((options) => {
+      void Promise.resolve().then(() => options.onStatus('connected'))
+      return { close: () => {} }
+    })
     vi.spyOn(meetingHintApi, 'listHintRecords').mockResolvedValue([])
     vi.spyOn(meetingParticipantApi, 'listParticipants').mockResolvedValue([
       { id: '7', name: '윤금서', profileImageUrl: null, isCurrentUser: true, isHost: true },
@@ -527,6 +536,117 @@ describe('MeetingPage controls', () => {
 
     expect(await screen.findByText('팀 질문')).toBeInTheDocument()
     expect(screen.getByText('온보딩 개선의 완료 기준은 무엇인가요?')).toBeInTheDocument()
+  })
+
+  it('참여자는 서버가 알린 회의 종료를 안내받고 프로젝트로 나간다', async () => {
+    vi.spyOn(meetingLifecycleApi, 'joinMeeting').mockResolvedValue({
+      meetingId: 1,
+      title: '2차 대면회의',
+      status: 'IN_PROGRESS',
+      role: 'MEMBER',
+      joinedAt: '2026-08-05T00:00:00.000Z',
+      startedAt: '2026-08-05T00:00:00.000Z',
+      wsUrl: 'wss://api.example.com/ws/meetings/1/stt',
+    })
+    let notify: ((message: TranscriptionMessage) => void) | undefined
+    vi.spyOn(meetingTranscriptionGateway, 'connect').mockImplementation((options) => {
+      notify = options.onMessage
+      void Promise.resolve().then(() => options.onStatus('connected'))
+      return { close: () => {}, sendAudio: () => {} }
+    })
+    const user = userEvent.setup()
+    await renderMeetingPage('/meetings/1/live', {
+      projectId: 'project-1',
+      projectTitle: '서비스 디자인',
+    })
+
+    await act(async () => {
+      notify?.({ kind: 'meetingEnded' })
+    })
+
+    expect(
+      await screen.findByRole('dialog', { name: '진행자가 회의를 종료했습니다.' }),
+    ).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '확인' }))
+
+    expect(await screen.findByText('프로젝트 메인 project-1')).toBeInTheDocument()
+  })
+
+  // 정상 종료 때도 같은 메시지가 브로드캐스트된다. 진행자는 자기 저장 흐름을 타야 한다.
+  it('진행자 화면에는 종료 안내가 뜨지 않는다', async () => {
+    let notify: ((message: TranscriptionMessage) => void) | undefined
+    vi.spyOn(meetingTranscriptionGateway, 'connect').mockImplementation((options) => {
+      notify = options.onMessage
+      void Promise.resolve().then(() => options.onStatus('connected'))
+      return { close: () => {}, sendAudio: () => {} }
+    })
+    await renderMeetingPage()
+
+    await act(async () => {
+      notify?.({ kind: 'meetingEnded' })
+    })
+
+    expect(
+      screen.queryByRole('dialog', { name: '진행자가 회의를 종료했습니다.' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('참여자에게도 연결 상태 불안정을 알린다', async () => {
+    vi.spyOn(meetingLifecycleApi, 'joinMeeting').mockResolvedValue({
+      meetingId: 1,
+      title: '2차 대면회의',
+      status: 'IN_PROGRESS',
+      role: 'MEMBER',
+      joinedAt: '2026-08-05T00:00:00.000Z',
+      startedAt: '2026-08-05T00:00:00.000Z',
+      wsUrl: 'wss://api.example.com/ws/meetings/1/stt',
+    })
+    let changeStatus: ((status: TranscriptionChannelStatus) => void) | undefined
+    vi.spyOn(meetingTranscriptionGateway, 'connect').mockImplementation((options) => {
+      changeStatus = options.onStatus
+      void Promise.resolve().then(() => options.onStatus('connected'))
+      return { close: () => {}, sendAudio: () => {} }
+    })
+    await renderMeetingPage()
+
+    await act(async () => {
+      changeStatus?.('closed')
+    })
+
+    expect(await screen.findByText('연결 상태 불안정')).toBeInTheDocument()
+  })
+
+  it('자동 생성된 힌트를 전사에 표시하고 생성 요청 없이 보여 준다', async () => {
+    let emit: ((event: MeetingAiEvent) => void) | undefined
+    vi.spyOn(meetingAiEventsGateway, 'connect').mockImplementation((options) => {
+      emit = options.onEvent
+      void Promise.resolve().then(() => options.onStatus('connected'))
+      return { close: () => {} }
+    })
+    const createSegmentHint = vi.spyOn(meetingHintApi, 'createSegmentHint')
+    const user = userEvent.setup()
+    await renderMeetingPage()
+
+    await act(async () => {
+      emit?.({
+        kind: 'autoHint',
+        hint: {
+          transcriptId: '1',
+          meaning: '자동으로 만든 의미',
+          personalImpact: '자동으로 만든 영향',
+          teamQuestion: '자동으로 만든 질문',
+        },
+      })
+    })
+
+    // 사용자가 눌러보기 전에도 힌트가 생겼다는 것을 알 수 있어야 한다.
+    expect(await screen.findByText('SynQ 힌트')).toBeInTheDocument()
+
+    await user.click(await screen.findByText(/지난주 유저 인터뷰 결과/))
+
+    expect(await screen.findByText('자동으로 만든 의미')).toBeInTheDocument()
+    expect(createSegmentHint).not.toHaveBeenCalled()
   })
 
   it('freezes the host controls and timer while restoring a refreshed meeting', async () => {

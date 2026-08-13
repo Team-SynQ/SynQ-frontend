@@ -30,6 +30,8 @@ type UseLiveTranscriptionOptions = {
    */
   channelStatus: TranscriptionChannelStatus
   onChannelStatusChange: (status: TranscriptionChannelStatus) => void
+  /** 서버가 회의 종료를 알렸을 때. 정상 종료와 강제 종료를 구분하지 않는다. */
+  onMeetingEnded?: () => void
   editingSegmentId?: string | null
 }
 
@@ -70,6 +72,7 @@ export function useLiveTranscription({
   isRecording,
   channelStatus,
   onChannelStatusChange,
+  onMeetingEnded,
   editingSegmentId = null,
 }: UseLiveTranscriptionOptions): UseLiveTranscriptionResult {
   const isHost = role === 'host'
@@ -84,6 +87,7 @@ export function useLiveTranscription({
   const [error, setError] = useState<string | null>(null)
   const channelRef = useRef<TranscriptionChannel | null>(null)
   const onChannelStatusChangeRef = useRef(onChannelStatusChange)
+  const onMeetingEndedRef = useRef(onMeetingEnded)
   const editingSegmentIdRef = useRef(editingSegmentId)
   /** 서버에서 마지막으로 받은 sequenceIndex. 재연결 후 보충 조회의 기준점이다. */
   const lastSequenceRef = useRef<number | null>(null)
@@ -95,6 +99,10 @@ export function useLiveTranscription({
   useEffect(() => {
     onChannelStatusChangeRef.current = onChannelStatusChange
   }, [onChannelStatusChange])
+
+  useEffect(() => {
+    onMeetingEndedRef.current = onMeetingEnded
+  }, [onMeetingEnded])
 
   useEffect(() => {
     editingSegmentIdRef.current = editingSegmentId
@@ -161,6 +169,10 @@ export function useLiveTranscription({
         void Promise.resolve().then(() => onChannelStatusChangeRef.current(status))
       },
       onMessage: (message) => {
+        if (message.kind === 'meetingEnded') {
+          onMeetingEndedRef.current?.()
+          return
+        }
         if (message.kind === 'interim') {
           // 표시 시각은 렌더가 아니라 수신 시점에 확정한다. 렌더 중 현재 시각을 읽으면 순수하지 않다.
           setInterim({ text: message.text, receivedAt: Date.now() })

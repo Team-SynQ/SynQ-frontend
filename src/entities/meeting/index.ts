@@ -20,6 +20,13 @@ export { meetingParticipantApi, toMeetingParticipant } from './api/meeting-parti
 export type { MeetingParticipantApi } from './api/meeting-participant.api'
 export { meetingHintApi } from './api/meeting-hint.api'
 export type { MeetingHintApi } from './api/meeting-hint.api'
+export { meetingAiEventsGateway, parseAiEventFrame } from './api/meeting-ai-events.gateway'
+export type {
+  AiEventChannel,
+  AiEventChannelStatus,
+  MeetingAiEvent,
+  MeetingAiEventsGateway,
+} from './api/meeting-ai-events.gateway'
 export { toTranscriptHint, toTranscriptHintRecord } from './api/hint.adapter'
 export { toTranscriptSegment, toTranscriptSegments } from './api/transcript.adapter'
 export {

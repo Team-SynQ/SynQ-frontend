@@ -134,6 +134,26 @@ const deleteProjectReferenceMaterial = async (projectId: string, materialId: str
   }
 }
 
+const renameProjectReferenceMaterial = async (
+  projectId: string,
+  materialId: string,
+  nextName: string,
+) => {
+  const referenceId = Number(materialId)
+
+  // 서버에 등록되지 않은 화면 전용 항목은 서버에 수정 요청할 대상이 없습니다.
+  if (!Number.isInteger(referenceId)) return
+
+  console.log('[projectReference] 참고자료 제목 수정 시작', { projectId, referenceId })
+  try {
+    await projectApi.updateProjectReferenceName(Number(projectId), referenceId, { name: nextName })
+    console.log('[projectReference] 참고자료 제목 수정 성공', { projectId, referenceId })
+  } catch (error) {
+    console.error('[projectReference] 참고자료 제목 수정 실패', { projectId, referenceId, error })
+    throw error
+  }
+}
+
 const updateProjectInformation = async (projectId: string, draft: ProjectInformationDraft) => {
   console.log('[project] 프로젝트 정보 수정 시작', { projectId })
 
@@ -210,7 +230,7 @@ export function ProjectMainboardPage({
   onSubmitProject,
   addProjectReferences = addProjectReferenceMaterials,
   deleteProjectReference = deleteProjectReferenceMaterial,
-  renameProjectReference,
+  renameProjectReference = renameProjectReferenceMaterial,
   loadCompletedMeetings = loadCompletedMeetingHistory,
   loadOngoingMeeting = loadOngoingProjectMeeting,
   updateCompletedMeetingTitle = updateCompletedMeetingHistoryTitle,
@@ -252,6 +272,7 @@ export function ProjectMainboardPage({
   const creationSuccessToast = useTransientVisibility()
   const projectReferenceFeedbackToast = useTransientVisibility()
   const roleProfileSavedToast = useTransientVisibility()
+  const joinRequestSentToast = useTransientVisibility()
   const showProjectReferenceFeedbackToast = projectReferenceFeedbackToast.show
   const showProjectReferenceFeedback = useCallback(
     (feedback: ProjectReferenceFeedback) => {
@@ -268,6 +289,11 @@ export function ProjectMainboardPage({
   useEffect(() => {
     if (requestedRoleProfileSaved) showRoleProfileSavedToast()
   }, [requestedRoleProfileSaved, showRoleProfileSavedToast])
+  const requestedJoinRequestSent = navigationState?.joinRequestSent === true
+  const showJoinRequestSentToast = joinRequestSentToast.show
+  useEffect(() => {
+    if (requestedJoinRequestSent) showJoinRequestSentToast()
+  }, [requestedJoinRequestSent, showJoinRequestSentToast])
   const {
     dismissCompletion,
     phase: meetingProcessingPhase,
@@ -508,7 +534,8 @@ export function ProjectMainboardPage({
     try {
       const created = await createMeeting(projectId, { consentAgreed: true })
       setMeetingEntryVariant(null)
-      navigate(`/meetings/${created.meetingId}/tutorial`, {
+      // `/start`가 「다시 보지 않기」를 확인해 튜토리얼을 건너뛸지 정합니다. 여기서 곧장 튜토리얼로 가면 안 됩니다.
+      navigate(`/meetings/${created.meetingId}/start`, {
         state: {
           projectId: activeProject.id,
           projectTitle: activeProject.name,
@@ -914,6 +941,16 @@ export function ProjectMainboardPage({
           title="역할·관점 저장 성공"
           type="success"
           visible={roleProfileSavedToast.isVisible}
+        />
+      ) : null}
+      {joinRequestSentToast.isMounted ? (
+        <Toast
+          className="top-[20px]!"
+          description="소유자가 승인하기 전까지 기다려 주세요."
+          position="topCenter"
+          title="요청 전송 성공"
+          type="success"
+          visible={joinRequestSentToast.isVisible}
         />
       ) : null}
     </main>

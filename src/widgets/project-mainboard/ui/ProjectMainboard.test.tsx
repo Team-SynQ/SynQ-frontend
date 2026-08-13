@@ -42,6 +42,9 @@ const memberResponses = [
   { memberId: 9, userId: 28, nickname: '애쉬', role: '딜러', isMe: false },
 ].map((member) => ({ ...member, joinedAt: '2026-05-01T00:00:00.000Z' }))
 
+const SOMBRA_REQUEST_ID = 11
+const WINSTON_REQUEST_ID = 12
+
 beforeEach(() => {
   vi.spyOn(projectApi, 'getProjectMembers').mockResolvedValue({
     projectId: 1,
@@ -57,6 +60,28 @@ beforeEach(() => {
   })
   vi.spyOn(projectApi, 'deleteProjectMember').mockImplementation(async (_projectId, memberId) => {
     if (memberId === EXPORT_FAILURE_MEMBER_ID) throw new Error('export failed')
+  })
+  vi.spyOn(projectApi, 'getProjectJoinRequests').mockResolvedValue({
+    pendingCount: 2,
+    requests: [
+      { requestId: SOMBRA_REQUEST_ID, userId: 31, name: '솜브라', requestedAt: '26.07.20 12:24' },
+      { requestId: WINSTON_REQUEST_ID, userId: 32, name: '윈스턴', requestedAt: '26.07.20 18:24' },
+    ],
+  })
+  // 솜브라 요청은 승인·거절이 모두 실패하는 요청입니다.
+  vi.spyOn(projectApi, 'approveProjectJoinRequest').mockImplementation(async (_p, requestId) => {
+    if (requestId === SOMBRA_REQUEST_ID) throw new Error('approve failed')
+    return {
+      requestId,
+      memberId: 99,
+      userId: 32,
+      status: 'APPROVED',
+      joinedAt: '2026-08-13T00:00:00.000Z',
+    }
+  })
+  vi.spyOn(projectApi, 'rejectProjectJoinRequest').mockImplementation(async (_p, requestId) => {
+    if (requestId === SOMBRA_REQUEST_ID) throw new Error('reject failed')
+    return { requestId, status: 'REJECTED' }
   })
 })
 
@@ -240,7 +265,7 @@ describe('ProjectMainboard', () => {
       }),
     )
 
-    expect(screen.getByTestId('location-pathname')).toHaveTextContent('/meetings/demo/tutorial')
+    expect(screen.getByTestId('location-pathname')).toHaveTextContent('/meetings/demo/start')
     expect(screen.getByText('아직 회의 기록이 없습니다')).toBeInTheDocument()
   })
 
@@ -522,63 +547,34 @@ describe('ProjectMainboard', () => {
     const managementDialog = screen.getByRole('dialog', { name: '멤버 관리' })
     const management = within(managementDialog)
     expect(managementDialog).toHaveClass('h-[680px]', 'max-w-[460px]!', 'gap-m', 'py-l')
-    expect(management.getAllByText('솜브라/딜러')).toHaveLength(3)
-    expect(management.getByText('윈스턴/탱커')).toBeInTheDocument()
-    expect(management.getAllByText('26.07.20 12:24')).toHaveLength(3)
+    // 서버 목록 응답에는 요청자의 역할이 없어 이름과 요청 시각만 보여 줍니다.
+    expect(management.getByText('솜브라')).toBeInTheDocument()
+    expect(management.getByText('윈스턴')).toBeInTheDocument()
+    expect(management.getByText('26.07.20 12:24')).toBeInTheDocument()
     expect(management.getByText('26.07.20 18:24')).toBeInTheDocument()
-    expect(management.getByText('4')).toBeInTheDocument()
-    expect(management.getByText('9')).toBeInTheDocument()
-    expect(
-      management.getByTestId('project-join-request-join-request-sombra-approve-failure')
-        .parentElement,
-    ).toHaveClass('max-h-[172px]', 'overflow-y-auto')
-
-    const failingApproval = within(
-      management.getByTestId('project-join-request-join-request-sombra-approve-failure'),
-    )
-    await user.click(failingApproval.getByRole('button', { name: '승인' }))
-
-    expect(await screen.findByRole('status', { name: '참여 요청 승인 실패' })).toHaveTextContent(
-      '참여 요청을 승인하지 못했습니다. 다시 시도해 주세요.',
-    )
-    expect(
-      management.getByTestId('project-join-request-join-request-sombra-approve-failure'),
-    ).toBeInTheDocument()
     expect(management.getByText('9')).toBeInTheDocument()
 
-    const successfulApproval = within(
-      management.getByTestId('project-join-request-join-request-winston'),
-    )
-    await user.click(successfulApproval.getByRole('button', { name: '승인' }))
+    const approval = within(management.getByTestId(`project-join-request-${WINSTON_REQUEST_ID}`))
+    await user.click(approval.getByRole('button', { name: '승인' }))
 
+    await waitFor(() =>
+      expect(projectApi.approveProjectJoinRequest).toHaveBeenCalledWith(1, WINSTON_REQUEST_ID),
+    )
     expect(
-      management.queryByTestId('project-join-request-join-request-winston'),
+      management.queryByTestId(`project-join-request-${WINSTON_REQUEST_ID}`),
     ).not.toBeInTheDocument()
-    expect(management.getByText('윈스턴/탱커')).toBeInTheDocument()
-    expect(management.getAllByText('10')).toHaveLength(2)
     expect(await screen.findByRole('status', { name: '멤버 승인 완료' })).toHaveTextContent(
       '참여 요청을 승인했습니다.',
     )
-
-    const capacityApproval = within(
-      management.getByTestId('project-join-request-join-request-sombra-capacity'),
-    )
-    await user.click(capacityApproval.getByRole('button', { name: '승인' }))
-
-    expect(
-      await screen.findByRole('status', { name: '프로젝트 최대 인원 도달' }),
-    ).toHaveTextContent('프로젝트 최대 인원에 도달해 요청을 승인할 수 없습니다.')
-    expect(
-      management.getByTestId('project-join-request-join-request-sombra-capacity'),
-    ).toBeInTheDocument()
-    expect(management.getAllByText('10')).toHaveLength(2)
+    // 승인된 사람이 반영되도록 멤버 목록을 다시 읽습니다.
+    await waitFor(() => expect(projectApi.getProjectMembers).toHaveBeenCalledTimes(2))
 
     await user.click(management.getByRole('button', { name: '멤버 관리 닫기' }))
     expect(screen.queryByRole('dialog', { name: '멤버 관리' })).not.toBeInTheDocument()
     await waitFor(() => expect(projectMoreButton).toHaveFocus())
   })
 
-  it('keeps failed rejection requests and removes successfully rejected requests', async () => {
+  it('승인·거절에 실패하면 요청이 목록에 남는다', async () => {
     const user = userEvent.setup()
 
     render(
@@ -596,31 +592,65 @@ describe('ProjectMainboard', () => {
     )
 
     const management = within(screen.getByRole('dialog', { name: '멤버 관리' }))
-    const successfulRejection = within(
-      management.getByTestId('project-join-request-join-request-sombra-capacity'),
-    )
-    await user.click(successfulRejection.getByRole('button', { name: '거절' }))
+    const failing = within(management.getByTestId(`project-join-request-${SOMBRA_REQUEST_ID}`))
 
-    expect(management.getByText('9')).toBeInTheDocument()
-    expect(
-      management.queryByTestId('project-join-request-join-request-sombra-capacity'),
-    ).not.toBeInTheDocument()
-    expect(await screen.findByRole('status', { name: '멤버 거절 완료' })).toHaveTextContent(
-      '참여 요청을 거절했습니다.',
+    await user.click(failing.getByRole('button', { name: '승인' }))
+    expect(await screen.findByRole('status', { name: '참여 요청 승인 실패' })).toHaveTextContent(
+      '참여 요청을 승인하지 못했습니다. 다시 시도해 주세요.',
     )
+    expect(management.getByTestId(`project-join-request-${SOMBRA_REQUEST_ID}`)).toBeInTheDocument()
 
-    const failingRejection = within(
-      management.getByTestId('project-join-request-join-request-sombra-reject-failure'),
-    )
-    await user.click(failingRejection.getByRole('button', { name: '거절' }))
-
+    await user.click(failing.getByRole('button', { name: '거절' }))
     expect(await screen.findByRole('status', { name: '참여 요청 거절 실패' })).toHaveTextContent(
       '참여 요청을 거절하지 못했습니다. 다시 시도해 주세요.',
     )
+    expect(management.getByTestId(`project-join-request-${SOMBRA_REQUEST_ID}`)).toBeInTheDocument()
+  })
+
+  it('정원이 찼으면 승인 요청을 보내지 않고 안내한다', async () => {
+    vi.spyOn(projectApi, 'getProjectMembers').mockResolvedValue({
+      projectId: 1,
+      ownerId: OWNER_USER_ID,
+      title: '서비스 디자인',
+      currentMemberCount: 10,
+      maxMemberCount: 10,
+      members: [
+        ...memberResponses,
+        {
+          memberId: 10,
+          userId: 29,
+          nickname: '트레이서',
+          role: '딜러',
+          isMe: false,
+          joinedAt: '2026-05-01T00:00:00.000Z',
+        },
+      ],
+    })
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter>
+        <ProjectMainboard project={project} />
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole('button', { name: '프로젝트 더보기' }))
+    await user.click(
+      within(screen.getByRole('dialog', { name: '프로젝트 설정 및 멤버 관리' })).getByRole(
+        'button',
+        { name: '멤버 관리' },
+      ),
+    )
+
+    const management = within(screen.getByRole('dialog', { name: '멤버 관리' }))
+    const approval = within(management.getByTestId(`project-join-request-${WINSTON_REQUEST_ID}`))
+    await user.click(approval.getByRole('button', { name: '승인' }))
+
     expect(
-      management.getByTestId('project-join-request-join-request-sombra-reject-failure'),
-    ).toBeInTheDocument()
-    expect(management.getByText('9')).toBeInTheDocument()
+      await screen.findByRole('status', { name: '프로젝트 최대 인원 도달' }),
+    ).toHaveTextContent('프로젝트 최대 인원에 도달해 요청을 승인할 수 없습니다.')
+    expect(projectApi.approveProjectJoinRequest).not.toHaveBeenCalled()
+    expect(management.getByTestId(`project-join-request-${WINSTON_REQUEST_ID}`)).toBeInTheDocument()
   })
 
   it('opens the reusable member menu and confirms exporting a member', async () => {
