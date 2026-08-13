@@ -40,7 +40,14 @@ import {
   type MeetingHistoryPresentation,
   type ProjectNavigationState,
 } from '../features/meeting-processing'
+import {
+  JoinRequestResultDialog,
+  loadMyJoinRequestResults,
+  markJoinRequestResultSeen,
+  readSeenJoinRequestResults,
+} from '../features/project-invite'
 import type { ProjectInformationDraft } from '../features/project-settings'
+import type { ProjectJoinRequestResultResponse as ProjectJoinRequestResult } from '../shared/api/contracts/project.contracts'
 import { useTransientVisibility } from '../shared/lib/useTransientVisibility'
 import { Toast } from '../shared/ui'
 import type { ToastType } from '../shared/ui'
@@ -264,6 +271,8 @@ export function ProjectMainboardPage({
   /** 폴링 결과가 달라졌는지 판단하는 기준값. state를 읽으면 갱신 함수 밖에서 비교할 수 없다. */
   const ongoingMeetingIdRef = useRef<Record<string, string | null>>({})
   const [latestCreatedProjectName, setLatestCreatedProjectName] = useState<string>()
+  /** 아직 안 보여 준 참여 요청 결과. 여러 건이면 앞에서부터 하나씩 안내한다. */
+  const [pendingJoinResults, setPendingJoinResults] = useState<ProjectJoinRequestResult[]>([])
   const [meetingEntryVariant, setMeetingEntryVariant] = useState<MeetingEntryModalVariant | null>(
     null,
   )
@@ -740,6 +749,46 @@ export function ProjectMainboardPage({
   }
 
   /**
+   * 소유자가 참여 요청을 처리해도 요청자에게 알릴 통로가 없어, 프로젝트 화면에 들어올 때 확인한다.
+   * 서버는 읽음 상태를 관리하지 않으므로 이미 보여 준 것은 걸러 낸다.
+   */
+  const currentUserId = user?.userId
+  useEffect(() => {
+    if (currentUserId === undefined) return
+
+    let isSubscribed = true
+    void loadMyJoinRequestResults().then((results) => {
+      if (!isSubscribed) return
+
+      const seen = readSeenJoinRequestResults(currentUserId)
+      const unseen = results.filter((result) => !seen.has(result.requestId))
+      if (unseen.length === 0) return
+
+      // 서버가 최신순으로 주므로, 오래된 것부터 안내하도록 뒤집는다.
+      setPendingJoinResults([...unseen].reverse())
+    })
+
+    return () => {
+      isSubscribed = false
+    }
+  }, [currentUserId])
+
+  const confirmJoinRequestResult = () => {
+    const [result, ...rest] = pendingJoinResults
+    if (!result) return
+
+    if (currentUserId !== undefined) markJoinRequestResultSeen(currentUserId, result.requestId)
+    setPendingJoinResults(rest)
+
+    // 승인된 프로젝트로 옮긴다. 목록에 아직 없으면(조회 시점 차이) 그냥 닫는다.
+    if (result.status !== 'APPROVED') return
+    const approvedProjectId = String(result.projectId)
+    if (projects.some((project) => project.id === approvedProjectId)) {
+      setActiveProjectId(approvedProjectId)
+    }
+  }
+
+  /**
    * 나간 프로젝트는 내 목록에서 사라진다. 보고 있던 프로젝트이므로 남은 것 중 하나로 옮기고,
    * 남은 것이 없으면 프로젝트가 없는 빈 상태가 된다. 나가기 요청 자체는 더보기 메뉴가 이미 보냈다.
    */
@@ -976,6 +1025,14 @@ export function ProjectMainboardPage({
           title="요청 전송 성공"
           type="success"
           visible={joinRequestSentToast.isVisible}
+        />
+      ) : null}
+      {pendingJoinResults[0] ? (
+        <JoinRequestResultDialog
+          onConfirm={confirmJoinRequestResult}
+          open
+          projectTitle={pendingJoinResults[0].projectTitle}
+          status={pendingJoinResults[0].status}
         />
       ) : null}
     </main>
