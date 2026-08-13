@@ -10,6 +10,7 @@ import {
 } from 'react-router-dom'
 
 import { AccountSettingsPage } from '../../pages/AccountSettingsPage'
+import { GoogleCallbackPage } from '../../pages/GoogleCallbackPage'
 import { HelpPage } from '../../pages/HelpPage'
 import { KakaoCallbackPage } from '../../pages/KakaoCallbackPage'
 import LoginPage from '../../pages/LoginPage'
@@ -143,6 +144,7 @@ const appRoutes = createRoutesFromElements(
     <Route element={<LoginPage />} path="/login" />
     <Route element={<KakaoCallbackPage />} path="/login/callback" />
     <Route element={<NaverCallbackPage />} path="/login/callback/naver" />
+    <Route element={<GoogleCallbackPage />} path="/login/callback/google" />
     <Route element={<TermsPage />} path="/terms" />
     <Route element={<PrivacyPage />} path="/privacy" />
     <Route element={<ProjectJoinSetupFlow />} path="/invite/setup">
