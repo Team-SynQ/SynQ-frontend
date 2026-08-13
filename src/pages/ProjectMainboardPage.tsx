@@ -739,6 +739,20 @@ export function ProjectMainboardPage({
     )
   }
 
+  /**
+   * 나간 프로젝트는 내 목록에서 사라진다. 보고 있던 프로젝트이므로 남은 것 중 하나로 옮기고,
+   * 남은 것이 없으면 프로젝트가 없는 빈 상태가 된다. 나가기 요청 자체는 더보기 메뉴가 이미 보냈다.
+   */
+  const handleLeaveProject = () => {
+    if (!activeProjectId) return
+
+    const nextProjects = projects.filter((project) => project.id !== activeProjectId)
+    setProjects(nextProjects)
+    setActiveProjectId((currentId) =>
+      currentId === activeProjectId ? nextProjects[0]?.id : currentId,
+    )
+  }
+
   const handleDeleteProject = async () => {
     if (!activeProjectId) return
     const deletedProject = projects.find((project) => project.id === activeProjectId)
@@ -870,6 +884,7 @@ export function ProjectMainboardPage({
         onAddMaterials={handleAddMaterials}
         onCreateProject={handleCreateProject}
         onDeleteProject={handleDeleteProject}
+        onLeaveProject={handleLeaveProject}
         onDeleteMeeting={handleDeleteMeeting}
         onLoadProject={handleLoadProjectInformation}
         onDeleteMaterial={handleDeleteMaterial}

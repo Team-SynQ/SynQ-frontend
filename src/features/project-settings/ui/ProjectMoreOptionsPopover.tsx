@@ -10,12 +10,15 @@ import projectMembersBodyAsset from '../assets/project-members-body.svg'
 import projectMembersHeadAsset from '../assets/project-members-head.svg'
 import closeIcon from '../../../shared/assets/icons/close.svg'
 import editIcon from '../../../shared/assets/icons/edit.svg'
+import logOutIcon from '../../../shared/assets/icons/log-out.svg'
 import trashIcon from '../../../shared/assets/icons/trash.svg'
 import { useDismissableLayer } from '../../../shared/lib/useDismissableLayer'
 import { Badge, Button } from '../../../shared/ui'
 
 type ProjectMoreOptionsPopoverProps = {
   id?: string
+  /** 소유자와 일반 멤버는 쓸 수 있는 메뉴가 다릅니다. 초대와 관리는 소유자만 할 수 있습니다. */
+  isOwner: boolean
   joinRequestCount: number
   members: ProjectMember[]
   memberCount?: number
@@ -24,13 +27,16 @@ type ProjectMoreOptionsPopoverProps = {
   onClose: () => void
   onDeleteProject?: () => void
   onEditProject?: () => void
+  onEditRolePerspective?: () => void
   onInviteMembers: () => void
+  onLeaveProject?: () => void
   onManageMembers: () => void
   triggerRef?: RefObject<HTMLElement | null>
 }
 
 export function ProjectMoreOptionsPopover({
   id = 'project-more-options-popover',
+  isOwner,
   joinRequestCount,
   members,
   memberCount,
@@ -39,7 +45,9 @@ export function ProjectMoreOptionsPopover({
   onClose,
   onDeleteProject,
   onEditProject,
+  onEditRolePerspective,
   onInviteMembers,
+  onLeaveProject,
   onManageMembers,
   triggerRef,
 }: ProjectMoreOptionsPopoverProps) {
@@ -88,15 +96,18 @@ export function ProjectMoreOptionsPopover({
             <span className="typo-caption text-gray-500">/</span>
             <span className="typo-caption text-gray-500">{maxMemberCount}</span>
           </div>
-          <Button
-            className="h-[32px] px-xs text-brand-primary! hover:bg-primary-100 hover:text-brand-primary!"
-            leftIcon={<ProjectInviteIcon />}
-            onClick={onInviteMembers}
-            size="small"
-            variant="basic"
-          >
-            초대
-          </Button>
+          {/* 초대 링크는 소유자만 발급할 수 있다. */}
+          {isOwner ? (
+            <Button
+              className="h-[32px] px-xs text-brand-primary! hover:bg-primary-100 hover:text-brand-primary!"
+              leftIcon={<ProjectInviteIcon />}
+              onClick={onInviteMembers}
+              size="small"
+              variant="basic"
+            >
+              초대
+            </Button>
+          ) : null}
           <Button
             aria-label="프로젝트 설정 및 멤버 관리 닫기"
             className="size-[32px] px-0"
@@ -135,44 +146,79 @@ export function ProjectMoreOptionsPopover({
         aria-label="프로젝트 관리 메뉴"
       >
         <div className="flex flex-col gap-xs">
-          <ProjectOptionAction
-            icon={<ProjectMemberOutlineIcon />}
-            label="멤버 관리"
-            onClick={() => runAction(onManageMembers)}
-            trailing={
-              joinRequestCount > 0 ? <Badge size="small">{joinRequestCount}</Badge> : undefined
-            }
-          />
-          <ProjectOptionAction
-            icon={
-              <img
-                alt=""
-                aria-hidden="true"
-                className="size-[24px]"
-                height="24"
-                src={editIcon}
-                width="24"
+          {isOwner ? (
+            <>
+              <ProjectOptionAction
+                icon={<ProjectMemberOutlineIcon />}
+                label="멤버 관리"
+                onClick={() => runAction(onManageMembers)}
+                trailing={
+                  joinRequestCount > 0 ? <Badge size="small">{joinRequestCount}</Badge> : undefined
+                }
               />
-            }
-            label="프로젝트 정보 수정하기"
-            onClick={() => runAction(onEditProject)}
-          />
-          <ProjectOptionAction
-            icon={
-              <span className="flex size-[24px] items-center justify-center">
-                <img
-                  alt=""
-                  aria-hidden="true"
-                  className="h-[16px] w-[14px]"
-                  height="16"
-                  src={trashIcon}
-                  width="14"
-                />
-              </span>
-            }
-            label="프로젝트 삭제하기"
-            onClick={() => runAction(onDeleteProject)}
-          />
+              <ProjectOptionAction
+                icon={
+                  <img
+                    alt=""
+                    aria-hidden="true"
+                    className="size-[24px]"
+                    height="24"
+                    src={editIcon}
+                    width="24"
+                  />
+                }
+                label="프로젝트 정보 수정하기"
+                onClick={() => runAction(onEditProject)}
+              />
+              <ProjectOptionAction
+                icon={
+                  <span className="flex size-[24px] items-center justify-center">
+                    <img
+                      alt=""
+                      aria-hidden="true"
+                      className="h-[16px] w-[14px]"
+                      height="16"
+                      src={trashIcon}
+                      width="14"
+                    />
+                  </span>
+                }
+                label="프로젝트 삭제하기"
+                onClick={() => runAction(onDeleteProject)}
+              />
+            </>
+          ) : (
+            <>
+              <ProjectOptionAction
+                icon={
+                  <img
+                    alt=""
+                    aria-hidden="true"
+                    className="size-[24px]"
+                    height="24"
+                    src={editIcon}
+                    width="24"
+                  />
+                }
+                label="역할/관점 수정하기"
+                onClick={() => runAction(onEditRolePerspective)}
+              />
+              <ProjectOptionAction
+                icon={
+                  <img
+                    alt=""
+                    aria-hidden="true"
+                    className="size-[24px]"
+                    height="24"
+                    src={logOutIcon}
+                    width="24"
+                  />
+                }
+                label="프로젝트 나가기"
+                onClick={() => runAction(onLeaveProject)}
+              />
+            </>
+          )}
         </div>
       </section>
     </div>

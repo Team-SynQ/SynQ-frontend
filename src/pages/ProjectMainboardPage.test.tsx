@@ -11,7 +11,29 @@ import {
   MEETING_SUMMARY_PROCESSING_MS,
 } from '../features/meeting-processing'
 import type { ProjectCreateDraft } from '../features/project-create'
+import * as projectMembersApi from '../features/project-settings/api/projectMembers.api'
 import { ProjectMainboardPage } from './ProjectMainboardPage'
+
+/**
+ * 더보기 메뉴는 멤버 목록으로 소유자 여부를 가린다. 목록을 못 받으면 소유자 메뉴가 아예 뜨지 않으므로,
+ * 기본값은 본인이 소유자인 목록으로 둔다. 일반 멤버 화면은 테스트가 이 스텁을 덮어써서 확인한다.
+ */
+function stubProjectMembers(currentUserIsOwner: boolean) {
+  return vi.spyOn(projectMembersApi, 'loadProjectMembers').mockResolvedValue({
+    members: [
+      {
+        id: '7',
+        name: '윤금서',
+        role: currentUserIsOwner ? '소유자' : '멤버',
+        isCurrentUser: true,
+        isOwner: currentUserIsOwner,
+      },
+      { id: '9', name: '이동희', role: '소유자', isOwner: !currentUserIsOwner },
+    ],
+    currentCount: 2,
+    maxCount: 10,
+  })
+}
 
 function NavigationDestination() {
   const location = useLocation()
@@ -27,6 +49,9 @@ function renderProjectMainboardPage(
   props: ComponentProps<typeof ProjectMainboardPage> = {},
   initialEntry: string | { pathname: string; state: unknown } = '/projects',
 ) {
+  // 테스트가 먼저 일반 멤버로 지정했으면 그것을 존중한다.
+  if (!vi.isMockFunction(projectMembersApi.loadProjectMembers)) stubProjectMembers(true)
+
   const resolvedProps = {
     // 기본은 회의 진행자 본인이다. 권한이 없는 경우는 테스트가 user를 바꿔 확인한다.
     user: { userId: 7, name: '윤금서', email: 'yoon@example.com' },
@@ -343,6 +368,41 @@ describe('ProjectMainboardPage', () => {
     expect(await screen.findByText(message)).toBeInTheDocument()
     expect(deleteCompletedMeeting).not.toHaveBeenCalled()
     expect(updateCompletedMeetingTitle).not.toHaveBeenCalled()
+  })
+
+  // 소유자와 일반 멤버는 쓸 수 있는 메뉴가 다르다.
+  it('일반 멤버에게는 역할/관점 수정과 프로젝트 나가기만 보여 준다', async () => {
+    stubProjectMembers(false)
+    const user = userEvent.setup()
+    renderProjectMainboardPage({ loadProjects: () => Promise.resolve([projectOne]) })
+
+    await user.click(await screen.findByRole('button', { name: '프로젝트 더보기' }))
+
+    expect(await screen.findByRole('button', { name: '역할/관점 수정하기' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '프로젝트 나가기' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '멤버 관리' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '프로젝트 삭제하기' })).not.toBeInTheDocument()
+    // 초대 링크는 소유자만 발급할 수 있다.
+    expect(screen.queryByRole('button', { name: '초대' })).not.toBeInTheDocument()
+  })
+
+  it('프로젝트를 나가면 목록에서 사라지고 남은 프로젝트로 옮긴다', async () => {
+    stubProjectMembers(false)
+    const leaveProject = vi.spyOn(projectMembersApi, 'leaveProject').mockResolvedValue(undefined)
+    const secondProject = { ...projectOne, id: 'project-2', name: '두 번째 프로젝트' }
+    const user = userEvent.setup()
+    renderProjectMainboardPage({
+      loadProjects: () => Promise.resolve([projectOne, secondProject]),
+      loadCompletedMeetings: () => Promise.resolve([]),
+    })
+
+    await user.click(await screen.findByRole('button', { name: '프로젝트 더보기' }))
+    await user.click(await screen.findByRole('button', { name: '프로젝트 나가기' }))
+    await user.click(screen.getByRole('button', { name: '나가기' }))
+
+    await waitFor(() => expect(leaveProject).toHaveBeenCalledWith(1))
+    expect(await screen.findByRole('heading', { name: '두 번째 프로젝트' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '서비스 디자인' })).not.toBeInTheDocument()
   })
 
   it('prefers the project selected by return navigation state', async () => {

@@ -119,6 +119,18 @@ export async function rejectProjectJoinRequest(
   }
 }
 
+export async function leaveProject(projectId: number): Promise<void> {
+  console.log('[projectMember] 프로젝트 나가기 시작', { projectId })
+
+  try {
+    await projectApi.leaveProject(projectId)
+    console.log('[projectMember] 프로젝트 나가기 성공', { projectId })
+  } catch (error) {
+    console.error('[projectMember] 프로젝트 나가기 실패', { projectId, error })
+    throw error
+  }
+}
+
 export async function removeProjectMember(projectId: number, memberId: number): Promise<void> {
   console.log('[projectMember] 멤버 내보내기 시작', { projectId, memberId })
 
