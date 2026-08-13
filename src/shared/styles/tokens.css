@@ -112,6 +112,26 @@
   --typography-transcription-body-02-letter-spacing: -0.025em;
 }
 
+/**
+ * `rounded-s`·`rounded-l`은 Tailwind 기본 유틸과 이름이 겹칩니다.
+ * `rounded-s`는 논리 start 쪽, `rounded-l`은 왼쪽 두 모서리만 4px로 만드는 유틸이고,
+ * 그 규칙이 토큰에서 생성된 규칙보다 뒤에 와서 이깁니다. 그래서 한쪽 모서리만 둥글어집니다.
+ *
+ * `@utility`로 다시 정의해도 같은 레이어에 병합돼 지지 않습니다.
+ * 레이어 밖 규칙은 레이어 안 규칙을 항상 이기므로 여기서 평범한 CSS로 덮습니다.
+ * 겹치지 않는 xs·m·full은 손대지 않습니다.
+ *
+ * 대신 이 두 클래스는 변형과 함께 쓸 수 없습니다. 레이어 밖이라 `md:rounded-s` 같은
+ * 변형이 여기에 집니다. 조건부로 반경을 바꿔야 하면 `rounded-[var(--radius-s)]`를 쓰세요.
+ */
+.rounded-s {
+  border-radius: var(--radius-s);
+}
+
+.rounded-l {
+  border-radius: var(--radius-l);
+}
+
 @utility border-stroke-md {
   border-width: var(--stroke-md);
 }
