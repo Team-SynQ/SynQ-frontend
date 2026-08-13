@@ -2,7 +2,10 @@ import React, { useEffect, useRef, useState, type Ref } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Button, Modal, ChatInput } from '../shared/ui'
 import { ProjectSidebar, type ProjectSidebarUser } from '../widgets/project-sidebar'
-import { meetingService } from '../shared/api/services/meeting.service'
+import {
+  meetingService,
+  type MeetingRecordingSegment,
+} from '../shared/api/services/meeting.service'
 import { transcriptService } from '../shared/api/services/transcript.service'
 import { aiChatService } from '../shared/api/services/aiChat.service'
 import { participantService } from '../shared/api/services/participant.service'
@@ -19,7 +22,65 @@ import type {
 import { MeetingSettingsMenu, type MeetingMember } from '../features/meeting-settings'
 import { cn } from '../shared/lib/cn'
 
+// 역할 프로필 응답 타입 정의 (ESLint any 타입 사용 방지)
+interface RoleProfileItem {
+  isDefault?: boolean
+  role?: string
+  detailRole?: string
+  perspectives?: string[]
+}
+
+interface RoleProfileResponse {
+  result?: RoleProfileItem[]
+}
+
+// 영문 Enum 코드를 한글 레이블로 변환하는 맵퍼
+const ROLE_LABEL_MAP: Record<string, string> = {
+  PLANNING_OPERATION: '기획/운영',
+  DESIGN_CONTENT: '디자인/콘텐츠',
+  DEV_TECH: '개발/기술',
+  MARKETING_BRANDING: '마케팅/브랜딩',
+  SALES_CUSTOMER: '영업/고객',
+  DATA_RESEARCH: '데이터/리서치',
+  STRATEGY_MANAGEMENT: '경영/전략',
+  ETC: '기타',
+}
+
+const PERSPECTIVE_LABEL_MAP: Record<string, string> = {
+  SCHEDULE: '일정',
+  SCOPE: '기능 범위',
+  DECISION: '의사 결정',
+  UX: '사용자 경험',
+  TECH_RISK: '기술 리스크',
+  COST_PERFORMANCE: '비용/성과',
+  CUSTOMER_REACTION: '고객 반응',
+  OPERATION_ISSUE: '운영 이슈',
+  ACTION_ITEM: '액션 아이템',
+  TEAM_QUESTION: '팀 질문',
+}
+
+function translateRole(role: unknown): string {
+  if (!role) return ''
+  const str = String(role).trim()
+  return ROLE_LABEL_MAP[str] || str
+}
+
+function translatePerspectives(perspectives: unknown): string[] {
+  if (!perspectives) return []
+  const rawList = Array.isArray(perspectives) ? perspectives.flat() : [String(perspectives)]
+  return rawList
+    .flatMap((item) => (typeof item === 'string' && item.includes(',') ? item.split(',') : item))
+    .map((p) => {
+      const trimmed = String(p).trim()
+      return PERSPECTIVE_LABEL_MAP[trimmed] || trimmed
+    })
+    .filter(Boolean)
+}
+
 function formatSecondsToTime(seconds: number): string {
+  if (!Number.isFinite(seconds) || isNaN(seconds) || seconds <= 0) {
+    return '00:00'
+  }
   const mins = Math.floor(seconds / 60)
   const secs = Math.floor(seconds % 60)
   return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
@@ -211,7 +272,7 @@ export function AiChatPanel(props: AiChatPanelProps) {
     <aside
       aria-labelledby="meeting-ai-chat-title"
       className={cn(
-        'flex flex-col h-full bg-surface-elevated border-l border-gray-200',
+        'flex flex-col h-full bg-surface-elevated',
         floating ? 'border border-gray-200 rounded-m shadow-2xl overflow-hidden' : '',
       )}
     >
@@ -220,19 +281,17 @@ export function AiChatPanel(props: AiChatPanelProps) {
           AI Chat
         </h2>
         <div className="flex items-center gap-1">
+          {/* 접기 (-) 버튼 */}
           <button
-            aria-label="AI Chat 런처로 축소"
+            aria-label="AI Chat 접기"
             onClick={onCollapse}
             ref={collapseButtonRef}
-            className="p-1 hover:bg-gray-100 rounded transition-colors text-gray-500"
+            className="p-1 hover:bg-gray-100 rounded transition-colors text-gray-500 font-bold text-sm leading-none"
           >
-            <img
-              alt="접기"
-              aria-hidden="true"
-              className="size-4"
-              src="/assets/images/collapse.png"
-            />
+            ─
           </button>
+
+          {/* 크기 조절 버튼 */}
           <button
             aria-label={resizeLabel}
             onClick={onResize}
@@ -288,6 +347,8 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
   const [isLoadingTranscripts, setIsLoadingTranscripts] = useState(false)
   const [fallbackDurationSeconds, setFallbackDurationSeconds] = useState<number | null>(null)
 
+  const [recordings, setRecordings] = useState<MeetingRecordingSegment[]>([])
+
   const [overallSummary, setOverallSummary] = useState<OverallMeetingSummaryResult | null>(null)
   const [isLoadingOverallSummary, setIsLoadingOverallSummary] = useState(false)
 
@@ -326,6 +387,7 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
       setOverallSummary(null)
       setPersonalSummary(null)
       setTranscripts([])
+      setRecordings([])
     })
     return () => {
       active = false
@@ -354,11 +416,14 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
 
     void userApi
       .getMyRoleProfiles()
-      .then((profiles) => {
-        if (!active || !profiles || profiles.length === 0) return
-        const defaultProfile = profiles.find((p) => p.isDefault) || profiles[0]
+      .then((res: RoleProfileItem[] | RoleProfileResponse) => {
+        if (!active) return
+        const profiles = Array.isArray(res) ? res : res?.result || []
+        if (profiles.length === 0) return
+
+        const defaultProfile = profiles.find((p: RoleProfileItem) => p.isDefault) || profiles[0]
         setUserRoleProfile({
-          role: defaultProfile.detailRole || defaultProfile.role,
+          role: defaultProfile.detailRole || defaultProfile.role || '',
           perspectives: defaultProfile.perspectives || [],
         })
       })
@@ -395,6 +460,7 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
     }
   }, [apiMeetingId, hasValidMeetingId])
 
+  // 전사 및 힌트 데이터 조회
   useEffect(() => {
     if (!hasValidMeetingId) return
 
@@ -454,6 +520,27 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
         if (active) setIsLoadingTranscripts(false)
       }
     })()
+
+    return () => {
+      active = false
+    }
+  }, [apiMeetingId, hasValidMeetingId])
+
+  // 회의 녹음 파일 목록 조회
+  useEffect(() => {
+    if (!hasValidMeetingId) return
+
+    let active = true
+
+    void meetingService
+      .getRecordings(apiMeetingId)
+      .then((res) => {
+        if (!active) return
+        setRecordings(res)
+      })
+      .catch((err) => {
+        console.error('회의 녹음 파일 목록 조회 실패:', err)
+      })
 
     return () => {
       active = false
@@ -604,8 +691,11 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
   }
 
   const displayTitle = overallSummary?.title || locationState?.meetingTitle || '회의 기록'
-  const displayRole = userRoleProfile?.role || personalSummary?.role || ''
-  const displayPerspectives = userRoleProfile?.perspectives || []
+  const rawRole = userRoleProfile?.role ?? personalSummary?.role ?? ''
+  const rawPerspectives = userRoleProfile?.perspectives ?? []
+
+  const displayRole = translateRole(rawRole)
+  const displayPerspectives = translatePerspectives(rawPerspectives)
 
   const displayDateIso =
     overallSummary?.generatedAt || personalSummary?.generatedAt || new Date().toISOString()
@@ -681,7 +771,7 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
         }}
       />
 
-      <main className="flex-1 h-full overflow-hidden flex flex-col bg-white text-gray-900 pb-20">
+      <main className="flex-1 h-full overflow-hidden flex flex-col bg-white text-gray-900 relative">
         <div className="px-12 pt-8">
           <div className="max-w-6xl mx-auto">
             <div className="flex items-center justify-between mb-2">
@@ -708,18 +798,21 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
             </div>
 
             {(displayRole || displayPerspectives.length > 0) && (
-              <div className="flex items-center gap-2 ml-8 mb-2 text-sm text-gray-600">
+              <div className="flex items-center gap-2 ml-8 mb-2 text-sm text-gray-600 flex-wrap">
                 <span className="font-medium text-gray-500">내 관점 :</span>
                 {displayRole && (
                   <span className="px-3 py-1 bg-[#EBF5FF] text-[#0086FF] text-xs font-medium rounded-md">
                     {displayRole}
                   </span>
                 )}
-                {displayPerspectives.length > 0 && (
-                  <span className="px-3 py-1 bg-[#EBF5FF] text-[#0086FF] text-xs font-medium rounded-md">
-                    {displayPerspectives.join(', ')}
+                {displayPerspectives.map((perspective, idx) => (
+                  <span
+                    key={idx}
+                    className="px-3 py-1 bg-[#EBF5FF] text-[#0086FF] text-xs font-medium rounded-md"
+                  >
+                    {perspective}
                   </span>
-                )}
+                ))}
               </div>
             )}
 
@@ -790,9 +883,10 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
             />
           )}
         </div>
-      </main>
 
-      {activeTab === 'allRecord' && <AudioPlayerControls />}
+        {/* 오디오 플레이어: 사이드바 우측 메인 영역 하단에 밀착 배치 */}
+        {activeTab === 'allRecord' && <AudioPlayerControls recordings={recordings} />}
+      </main>
 
       {isEditModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -850,13 +944,15 @@ function MeetingPersonalSummaryTab({
     )
   }
 
+  const roleText = summary.role ? translateRole(summary.role) : defaultRoleTag
+
   return (
     <div className="max-w-6xl mx-auto px-12 py-8 space-y-10 pb-16">
       <section>
         <div className="flex items-center gap-2 mb-3">
-          {summary.role || defaultRoleTag ? (
+          {roleText ? (
             <span className="px-2.5 py-0.5 bg-brand-primary text-fg-inverse text-xs font-bold rounded">
-              {summary.role || defaultRoleTag}
+              {roleText}
             </span>
           ) : null}
           <h2 className="text-lg font-bold text-gray-900">내 관점 요약</h2>
@@ -1050,7 +1146,8 @@ function MeetingAllRecordTab({
   return (
     <div className="flex flex-col h-full overflow-hidden text-gray-900 relative">
       <div className="flex-1 min-h-0 flex overflow-hidden">
-        <div className="flex-1 flex flex-col min-w-0 h-full border-r border-gray-200">
+        {/* 좌측 전사 영역 */}
+        <div className="flex-1 flex flex-col min-w-0 h-full">
           <div className="h-[52px] shrink-0 border-b border-gray-200 px-12 flex items-center justify-between bg-white">
             <div className="flex items-center gap-6">
               <h2 className="text-base font-bold text-gray-900">전체 전사</h2>
@@ -1065,16 +1162,19 @@ function MeetingAllRecordTab({
               </label>
             </div>
 
-            <button
-              onClick={() => {
-                setIsAiChatOpen((prev) => !prev)
-                setAiChatVariant('docked')
-              }}
-              className="flex items-center gap-1.5 px-4 py-2 bg-[#0086FF] text-white text-xs font-semibold rounded-lg hover:bg-blue-600 transition-colors"
-            >
-              <span>✦</span>
-              <span>AI Chat</span>
-            </button>
+            {/* AI Chat 열려 있지 않을 때만 헤더 버튼 노출 */}
+            {!isAiChatOpen && (
+              <button
+                onClick={() => {
+                  setIsAiChatOpen(true)
+                  setAiChatVariant('docked')
+                }}
+                className="flex items-center gap-1.5 px-4 py-2 bg-[#0086FF] text-white text-xs font-semibold rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                <span>✦</span>
+                <span>AI Chat</span>
+              </button>
+            )}
           </div>
 
           <div className="flex-1 overflow-y-auto px-12 py-6 space-y-6">
@@ -1207,14 +1307,15 @@ function MeetingAllRecordTab({
           </div>
         </div>
 
+        {/* 우측 AI Chat 패널 영역: border-l border-gray-200으로 단절 없는 경계선 연결 */}
         {isAiChatOpen && aiChatVariant === 'docked' && (
           <div
             style={{ width: `${chatWidth}px` }}
-            className="shrink-0 h-full relative group pl-2 bg-[#F8F9FA]"
+            className="shrink-0 h-full relative group border-l border-gray-200 bg-white"
           >
             <div
               onMouseDown={handleResizeMouseDown}
-              className="absolute top-0 left-0 bottom-0 w-2 cursor-col-resize hover:bg-brand-primary/40 z-10 transition-colors"
+              className="absolute top-0 -left-1 bottom-0 w-2 cursor-col-resize hover:bg-brand-primary/40 z-10 transition-colors"
               title="드래그하여 너비 조절"
             />
             <AiChatPanel
@@ -1243,30 +1344,137 @@ function MeetingAllRecordTab({
   )
 }
 
-function AudioPlayerControls() {
+interface AudioPlayerControlsProps {
+  recordings: MeetingRecordingSegment[]
+}
+
+function AudioPlayerControls({ recordings }: AudioPlayerControlsProps) {
+  const audioRef = useRef<HTMLAudioElement | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const [currentSegmentIndex, setCurrentSegmentIndex] = useState(0)
+
+  useEffect(() => {
+    if (recordings.length === 0) return
+
+    const currentSegment = recordings[currentSegmentIndex]
+    if (!currentSegment?.url) return
+
+    if (!audioRef.current) {
+      audioRef.current = new Audio(currentSegment.url)
+    } else {
+      audioRef.current.src = currentSegment.url
+    }
+
+    const audio = audioRef.current
+
+    const updateDuration = () => {
+      if (Number.isFinite(audio.duration) && !isNaN(audio.duration)) {
+        setDuration(audio.duration)
+      }
+    }
+
+    const handleTimeUpdate = () => {
+      setCurrentTime(audio.currentTime || 0)
+    }
+
+    const handleEnded = () => {
+      if (currentSegmentIndex < recordings.length - 1) {
+        setCurrentSegmentIndex((prev) => prev + 1)
+      } else {
+        setIsPlaying(false)
+        setCurrentTime(0)
+      }
+    }
+
+    audio.addEventListener('loadedmetadata', updateDuration)
+    audio.addEventListener('durationchange', updateDuration)
+    audio.addEventListener('timeupdate', handleTimeUpdate)
+    audio.addEventListener('ended', handleEnded)
+
+    if (isPlaying) {
+      audio.play().catch(() => setIsPlaying(false))
+    }
+
+    return () => {
+      audio.removeEventListener('loadedmetadata', updateDuration)
+      audio.removeEventListener('durationchange', updateDuration)
+      audio.removeEventListener('timeupdate', handleTimeUpdate)
+      audio.removeEventListener('ended', handleEnded)
+    }
+  }, [recordings, currentSegmentIndex, isPlaying])
+
+  const togglePlay = () => {
+    if (!audioRef.current || recordings.length === 0) return
+
+    if (isPlaying) {
+      audioRef.current.pause()
+      setIsPlaying(false)
+    } else {
+      audioRef.current
+        .play()
+        .then(() => setIsPlaying(true))
+        .catch((err) => {
+          console.error('오디오 재생 실패:', err)
+          setIsPlaying(false)
+        })
+    }
+  }
+
+  const handleSkipBackward = () => {
+    if (!audioRef.current) return
+    audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - 5)
+  }
+
+  const handleSkipForward = () => {
+    if (!audioRef.current || !Number.isFinite(duration)) return
+    audioRef.current.currentTime = Math.min(duration, audioRef.current.currentTime + 5)
+  }
+
+  const handleProgressBarClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!audioRef.current || !Number.isFinite(duration) || duration === 0) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    const clickX = e.clientX - rect.left
+    const newRatio = Math.max(0, Math.min(1, clickX / rect.width))
+    const newTime = newRatio * duration
+    audioRef.current.currentTime = newTime
+    setCurrentTime(newTime)
+  }
+
+  const progressPercent =
+    Number.isFinite(duration) && duration > 0 ? (currentTime / duration) * 100 : 0
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 shadow-lg px-8 py-3 flex flex-col gap-2">
-      <div className="w-full bg-gray-100 h-1 rounded-full overflow-hidden relative cursor-pointer">
-        <div className="bg-brand-primary h-full w-[25%]" />
+    <div className="shrink-0 bg-white border-t border-gray-200 shadow-sm px-8 py-2.5 flex flex-col gap-1.5 z-30">
+      <div
+        onClick={handleProgressBarClick}
+        className="w-full bg-gray-200 h-1.5 rounded-full overflow-visible relative cursor-pointer group"
+      >
+        <div
+          className="bg-[#0086FF] h-full rounded-full relative transition-all duration-75"
+          style={{ width: `${progressPercent}%` }}
+        >
+          <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 size-3 bg-[#0086FF] rounded-full shadow border-2 border-white opacity-0 group-hover:opacity-100 transition-opacity" />
+        </div>
       </div>
 
       <div className="flex items-center justify-between text-xs text-gray-500 font-mono">
-        <span>13:06</span>
+        <span>{formatSecondsToTime(currentTime)}</span>
 
         <div className="flex items-center gap-6">
           <button
+            onClick={handleSkipBackward}
             aria-label="5초 뒤로"
-            className="flex size-9 items-center justify-center rounded-full transition-transform active:scale-95"
+            className="flex size-9 items-center justify-center rounded-full hover:bg-gray-100 transition-transform active:scale-95"
           >
             <img src="/assets/images/rotate-left-5.png" alt="5초 뒤로" className="size-9" />
           </button>
 
           <button
-            onClick={() => setIsPlaying(!isPlaying)}
+            onClick={togglePlay}
             aria-label={isPlaying ? '일시정지' : '재생'}
-            className="flex size-10 items-center justify-center rounded-full transition-transform active:scale-95"
+            className="flex size-10 items-center justify-center rounded-full hover:bg-gray-100 transition-transform active:scale-95"
           >
             <img
               src={isPlaying ? '/assets/images/pause.png' : '/assets/images/play.png'}
@@ -1276,14 +1484,15 @@ function AudioPlayerControls() {
           </button>
 
           <button
+            onClick={handleSkipForward}
             aria-label="5초 앞으로"
-            className="flex size-9 items-center justify-center rounded-full transition-transform active:scale-95"
+            className="flex size-9 items-center justify-center rounded-full hover:bg-gray-100 transition-transform active:scale-95"
           >
             <img src="/assets/images/rotate-right-5.png" alt="5초 앞으로" className="size-9" />
           </button>
         </div>
 
-        <span>53:11</span>
+        <span>{formatSecondsToTime(duration)}</span>
       </div>
     </div>
   )
