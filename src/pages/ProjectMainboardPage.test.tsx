@@ -449,14 +449,19 @@ describe('ProjectMainboardPage', () => {
         decidedAt: '2026-08-13T05:00:00Z',
       },
     ])
+    const otherProject = { ...projectOne, apiProjectId: 9, id: 'project-9', name: '다른 프로젝트' }
     const user = userEvent.setup()
     const { unmount } = renderProjectMainboardPage({
-      loadProjects: () => Promise.resolve([projectOne]),
+      // 승인된 프로젝트가 처음 선택된 것이 아니어야 전환을 확인할 수 있다.
+      loadProjects: () => Promise.resolve([otherProject, projectOne]),
       loadCompletedMeetings: () => Promise.resolve([]),
     })
 
+    await screen.findByRole('heading', { name: '다른 프로젝트' })
     // 오래된 승인 건이 먼저다.
     await user.click(await screen.findByRole('button', { name: '프로젝트 보기' }))
+    // 승인된 프로젝트로 옮겨간다.
+    expect(await screen.findByRole('heading', { name: '서비스 디자인' })).toBeInTheDocument()
     // 그다음 거절 건은 문구와 버튼이 다르다.
     expect(
       await screen.findByText(/‘두 번째 프로젝트’ 참여가 승인되지 않았어요/),

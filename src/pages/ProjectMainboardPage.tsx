@@ -781,11 +781,10 @@ export function ProjectMainboardPage({
     setPendingJoinResults(rest)
 
     // 승인된 프로젝트로 옮긴다. 목록에 아직 없으면(조회 시점 차이) 그냥 닫는다.
+    // 화면 id가 아니라 서버 id로 맞춘다 — 화면 id의 생성 규칙에 기대지 않기 위해서다.
     if (result.status !== 'APPROVED') return
-    const approvedProjectId = String(result.projectId)
-    if (projects.some((project) => project.id === approvedProjectId)) {
-      setActiveProjectId(approvedProjectId)
-    }
+    const approvedProject = projects.find((project) => project.apiProjectId === result.projectId)
+    if (approvedProject) setActiveProjectId(approvedProject.id)
   }
 
   /**
