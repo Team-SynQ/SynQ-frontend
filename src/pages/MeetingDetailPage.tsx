@@ -342,11 +342,18 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
   const currentMeetingIdRef = useRef(apiMeetingId)
   useEffect(() => {
     currentMeetingIdRef.current = apiMeetingId
-    setHasError(false)
-    setIsEditModalOpen(false)
-    setOverallSummary(null)
-    setPersonalSummary(null)
-    setTranscripts([])
+    let active = true
+    queueMicrotask(() => {
+      if (!active) return
+      setHasError(false)
+      setIsEditModalOpen(false)
+      setOverallSummary(null)
+      setPersonalSummary(null)
+      setTranscripts([])
+    })
+    return () => {
+      active = false
+    }
   }, [apiMeetingId])
 
   useEffect(() => {
