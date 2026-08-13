@@ -151,6 +151,13 @@ export type ProjectInvitationResponse = {
   expiresAt: string
 }
 
+export type ProjectInvitationOwnerResponse = {
+  userId: number
+  name: string
+  profileImageUrl: string | null
+  roleCategory: RoleProfileRole | null
+}
+
 export type ProjectInvitationInfoResponse = {
   projectId: number
   title: string
@@ -159,6 +166,8 @@ export type ProjectInvitationInfoResponse = {
   maxMemberCount: number
   alreadyJoined: boolean
   expiresAt: string
+  /** 소유자 정보가 없는 예전 응답과의 호환을 위해 선택 필드로 둡니다. */
+  owner?: ProjectInvitationOwnerResponse | null
 }
 
 export type ProjectJoinRequest = {
