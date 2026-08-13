@@ -14,6 +14,11 @@ export type TranscriptionMessage =
    * 전사 봉투를 그대로 쓰고 type만 다르며 나머지 필드는 비어 있다.
    */
   | { kind: 'meetingEnded' }
+  /**
+   * 진행자가 회의를 멈추거나 다시 시작했다. 참여자에게만 브로드캐스트된다.
+   * `activeSeconds`는 일시정지 구간을 제외한 누적 활성 시간으로, 진행자 화면 타이머와 같은 값이다.
+   */
+  | { kind: 'meetingPauseState'; paused: boolean; activeSeconds: number }
 
 export type TranscriptionChannel = {
   sendAudio(chunk: ArrayBuffer): void
@@ -98,6 +103,14 @@ export function parseTranscriptionMessage(raw: unknown): TranscriptionMessage | 
   }
 
   if (data.type === 'MEETING_ENDED') return { kind: 'meetingEnded' }
+  if (data.type === 'MEETING_PAUSED' || data.type === 'MEETING_RESUMED') {
+    const activeSeconds = Number(data.activeSeconds)
+    return {
+      kind: 'meetingPauseState',
+      paused: data.type === 'MEETING_PAUSED',
+      activeSeconds: Number.isFinite(activeSeconds) ? activeSeconds : 0,
+    }
+  }
   if (data.type !== 'TRANSCRIPT') return null
 
   const text = String(data.text ?? data.content ?? '')

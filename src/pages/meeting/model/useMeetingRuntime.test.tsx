@@ -14,7 +14,8 @@ describe('useMeetingRuntime', () => {
     vi.useRealTimers()
   })
 
-  it('starts a new meeting at zero and advances only while recording', () => {
+  // 서버가 보내 준 누적 시간으로 맞춘다. 진행자는 요청 응답에서, 참여자는 WebSocket 알림에서 받는다.
+  it('syncs the paused state and elapsed time from the server', () => {
     const { result } = renderHook(() =>
       useMeetingRuntime({
         enabled: true,
@@ -33,7 +34,7 @@ describe('useMeetingRuntime', () => {
     act(() => vi.advanceTimersByTime(3000))
     expect(result.current.activeSeconds).toBe(3)
 
-    act(() => result.current.toggleRecording())
+    act(() => result.current.syncPauseState(true, 3))
     act(() => vi.advanceTimersByTime(2000))
     expect(result.current).toMatchObject({
       activeSeconds: 3,
@@ -41,9 +42,31 @@ describe('useMeetingRuntime', () => {
       recordingState: 'paused',
     })
 
-    act(() => result.current.toggleRecording())
+    act(() => result.current.syncPauseState(false, 3))
     act(() => vi.advanceTimersByTime(2000))
     expect(result.current.activeSeconds).toBe(5)
+  })
+
+  // 진행자와 참여자가 같은 값을 봐야 하므로 저장된 값보다 서버 값이 우선이다.
+  it('prefers the server runtime over the persisted one', async () => {
+    writeMeetingRuntime('1', { activeSeconds: 8, recordingState: 'recording' })
+
+    const { result } = renderHook(() =>
+      useMeetingRuntime({
+        enabled: true,
+        meetingId: '1',
+        restoreConnection: vi.fn().mockResolvedValue(undefined),
+        serverActiveSeconds: 42,
+        serverPaused: true,
+      }),
+    )
+
+    await act(async () => Promise.resolve())
+    expect(result.current).toMatchObject({
+      activeSeconds: 42,
+      canProgress: false,
+      recordingState: 'paused',
+    })
   })
 
   it('restores recording intent while excluding reconnection downtime', async () => {

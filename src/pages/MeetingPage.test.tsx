@@ -104,6 +104,8 @@ describe('MeetingPage controls', () => {
       joinedAt: '2026-08-05T00:00:00.000Z',
       startedAt: '2026-08-05T00:00:00.000Z',
       wsUrl: 'wss://api.example.com/ws/meetings/1/stt',
+      paused: false,
+      activeSeconds: 0,
     }))
     vi.spyOn(meetingLifecycleApi, 'endMeeting').mockImplementation(async (meetingId) => ({
       meetingId,
@@ -316,6 +318,8 @@ describe('MeetingPage controls', () => {
       joinedAt: '2026-08-05T00:00:00.000Z',
       startedAt: '2026-08-05T00:00:00.000Z',
       wsUrl: 'wss://mock.synq/meetings/1',
+      paused: false,
+      activeSeconds: 0,
     })
     const user = userEvent.setup()
 
@@ -547,6 +551,8 @@ describe('MeetingPage controls', () => {
       joinedAt: '2026-08-05T00:00:00.000Z',
       startedAt: '2026-08-05T00:00:00.000Z',
       wsUrl: 'wss://api.example.com/ws/meetings/1/stt',
+      paused: false,
+      activeSeconds: 0,
     })
     let notify: ((message: TranscriptionMessage) => void) | undefined
     vi.spyOn(meetingTranscriptionGateway, 'connect').mockImplementation((options) => {
@@ -601,6 +607,8 @@ describe('MeetingPage controls', () => {
       joinedAt: '2026-08-05T00:00:00.000Z',
       startedAt: '2026-08-05T00:00:00.000Z',
       wsUrl: 'wss://api.example.com/ws/meetings/1/stt',
+      paused: false,
+      activeSeconds: 0,
     })
     let changeStatus: ((status: TranscriptionChannelStatus) => void) | undefined
     vi.spyOn(meetingTranscriptionGateway, 'connect').mockImplementation((options) => {
@@ -650,7 +658,19 @@ describe('MeetingPage controls', () => {
   })
 
   it('freezes the host controls and timer while restoring a refreshed meeting', async () => {
-    writeMeetingRuntime('1', { activeSeconds: 8, recordingState: 'recording' })
+    // 저장된 값은 새로고침으로 돌아왔다는 신호로만 쓰인다. 표시할 시간은 서버가 준 값이다.
+    writeMeetingRuntime('1', { activeSeconds: 3, recordingState: 'recording' })
+    vi.spyOn(meetingLifecycleApi, 'joinMeeting').mockImplementation(async (meetingId) => ({
+      meetingId,
+      title: '2차 대면회의',
+      status: 'IN_PROGRESS',
+      role: 'HOST',
+      joinedAt: '2026-08-05T00:00:00.000Z',
+      startedAt: '2026-08-05T00:00:00.000Z',
+      wsUrl: 'wss://api.example.com/ws/meetings/1/stt',
+      paused: false,
+      activeSeconds: 8,
+    }))
     vi.spyOn(meetingConnectionGateway, 'restoreConnection').mockReturnValue(
       new Promise(() => undefined),
     )

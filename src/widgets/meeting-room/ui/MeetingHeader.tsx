@@ -59,7 +59,14 @@ export function MeetingHeader({
           </Button>
           {participantsPopover}
         </div>
-        <LiveStatus className="h-[32px] border-0 bg-semantic-error-surface px-m font-normal" />
+        {/* 배경색을 조건부로 덮지 않고 분기한다. cn은 tailwind-merge가 아니라 override 승자가 보장되지 않는다. */}
+        {isPaused ? (
+          <LiveStatus className="h-[32px] border-0 px-m font-normal" status="offline">
+            일시정지
+          </LiveStatus>
+        ) : (
+          <LiveStatus className="h-[32px] border-0 bg-semantic-error-surface px-m font-normal" />
+        )}
       </div>
 
       <div className="flex shrink-0 items-center gap-s whitespace-nowrap">

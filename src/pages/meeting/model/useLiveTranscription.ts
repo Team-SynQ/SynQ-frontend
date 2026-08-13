@@ -32,6 +32,8 @@ type UseLiveTranscriptionOptions = {
   onChannelStatusChange: (status: TranscriptionChannelStatus) => void
   /** 서버가 회의 종료를 알렸을 때. 정상 종료와 강제 종료를 구분하지 않는다. */
   onMeetingEnded?: () => void
+  /** 진행자가 회의를 멈추거나 다시 시작했을 때. 참여자에게만 온다. */
+  onPauseStateChange?: (paused: boolean, activeSeconds: number) => void
   editingSegmentId?: string | null
 }
 
@@ -73,6 +75,7 @@ export function useLiveTranscription({
   channelStatus,
   onChannelStatusChange,
   onMeetingEnded,
+  onPauseStateChange,
   editingSegmentId = null,
 }: UseLiveTranscriptionOptions): UseLiveTranscriptionResult {
   const isHost = role === 'host'
@@ -88,6 +91,7 @@ export function useLiveTranscription({
   const channelRef = useRef<TranscriptionChannel | null>(null)
   const onChannelStatusChangeRef = useRef(onChannelStatusChange)
   const onMeetingEndedRef = useRef(onMeetingEnded)
+  const onPauseStateChangeRef = useRef(onPauseStateChange)
   const editingSegmentIdRef = useRef(editingSegmentId)
   /** 서버에서 마지막으로 받은 sequenceIndex. 재연결 후 보충 조회의 기준점이다. */
   const lastSequenceRef = useRef<number | null>(null)
@@ -103,6 +107,10 @@ export function useLiveTranscription({
   useEffect(() => {
     onMeetingEndedRef.current = onMeetingEnded
   }, [onMeetingEnded])
+
+  useEffect(() => {
+    onPauseStateChangeRef.current = onPauseStateChange
+  }, [onPauseStateChange])
 
   useEffect(() => {
     editingSegmentIdRef.current = editingSegmentId
@@ -171,6 +179,10 @@ export function useLiveTranscription({
       onMessage: (message) => {
         if (message.kind === 'meetingEnded') {
           onMeetingEndedRef.current?.()
+          return
+        }
+        if (message.kind === 'meetingPauseState') {
+          onPauseStateChangeRef.current?.(message.paused, message.activeSeconds)
           return
         }
         if (message.kind === 'interim') {

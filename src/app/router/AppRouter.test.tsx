@@ -45,6 +45,8 @@ beforeEach(() => {
     joinedAt: '2026-08-05T00:00:00.000Z',
     startedAt: '2026-08-05T00:00:00.000Z',
     wsUrl: 'wss://api.example.com/ws/meetings/1/stt',
+    paused: false,
+    activeSeconds: 0,
   }))
   vi.spyOn(transcriptService, 'listSegments').mockImplementation(async (meetingId) => ({
     meetingId,

@@ -15,6 +15,8 @@ import {
   MeetingTitleEditDialog,
   type MeetingParticipant,
 } from '../features/meeting-controls'
+import { useTransientVisibility } from '../shared/lib/useTransientVisibility'
+import { Toast } from '../shared/ui'
 import { MeetingRoom } from '../widgets/meeting-room'
 import { clearMeetingProjectContext } from './meeting/model/meetingProjectContext.storage'
 import { useLiveMeetingController } from './meeting/model/useLiveMeetingController'
@@ -61,6 +63,9 @@ export function MeetingPage({ user }: MeetingPageProps = {}) {
     pending: false,
     errorMessage: null,
   })
+  const [isRecordingControlPending, setIsRecordingControlPending] = useState(false)
+  const [recordingControlError, setRecordingControlError] = useState<string | null>(null)
+  const recordingControlToast = useTransientVisibility()
   const participantsTriggerRef = useRef<HTMLButtonElement>(null)
   const moreMenuTriggerRef = useRef<HTMLButtonElement>(null)
 
@@ -148,6 +153,23 @@ export function MeetingPage({ user }: MeetingPageProps = {}) {
     }
   }
 
+  /** 서버 응답이 와야 시간이 맞춰지므로, 오가는 동안에는 버튼을 눌러도 아무 일이 없게 막는다. */
+  const toggleRecording = async () => {
+    if (isRecordingControlPending) return
+
+    setIsRecordingControlPending(true)
+    try {
+      await controller.toggleRecording()
+    } catch (error) {
+      setRecordingControlError(
+        error instanceof Error && error.message ? error.message : '회의 상태를 바꾸지 못했습니다.',
+      )
+      recordingControlToast.show()
+    } finally {
+      setIsRecordingControlPending(false)
+    }
+  }
+
   const saveMeeting = async () => {
     setActiveControl('saving')
     try {
@@ -176,18 +198,18 @@ export function MeetingPage({ user }: MeetingPageProps = {}) {
               setActiveControl((current) => (current === 'more' ? 'idle' : 'more')),
             onOpenParticipants: () =>
               setActiveControl((current) => (current === 'participants' ? 'idle' : 'participants')),
-            onToggleRecording: controller.toggleRecording,
+            onToggleRecording: () => void toggleRecording(),
           },
           model: {
             elapsedSeconds: controller.elapsedSeconds,
             isHost: currentUserIsHost,
-            liveStatus: 'live',
             meetingId,
             meetingTitle: controller.meetingTitle,
             participantCount: participants.length,
             projectTitle: projectContext.projectTitle,
             recordingState: controller.recordingState,
-            recordingControlDisabled: controller.connectionState !== 'connected',
+            recordingControlDisabled:
+              controller.connectionState !== 'connected' || isRecordingControlPending,
           },
           moreMenuOpen: activeControl === 'more',
           moreMenuPopover: (
@@ -243,6 +265,14 @@ export function MeetingPage({ user }: MeetingPageProps = {}) {
         }}
         open={activeControl === 'end-confirm' || exitGuard.isBlocked}
       />
+      {recordingControlToast.isMounted && recordingControlError ? (
+        <Toast
+          position="topCenter"
+          title={recordingControlError}
+          type="error"
+          visible={recordingControlToast.isVisible}
+        />
+      ) : null}
       <MeetingEndedNoticeDialog onConfirm={returnToProject} open={controller.endedByServer} />
       {activeControl === 'saving' ? <MeetingSaveDialog open state="saving" /> : null}
       {activeControl === 'save-success' && completedMeeting ? (
