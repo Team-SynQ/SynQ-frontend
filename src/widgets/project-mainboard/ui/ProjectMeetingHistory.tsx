@@ -19,6 +19,8 @@ import { useTransientVisibility } from '../../../shared/lib/useTransientVisibili
 import { Button } from '../../../shared/ui'
 type ProjectMeetingHistoryProps = {
   meetings: CompletedMeeting[]
+  /** 회의 기록의 수정·삭제는 그 회의를 진행한 사람만 할 수 있습니다. */
+  currentUserId?: number | null
   isLoading?: boolean
   presentation?: MeetingHistoryPresentation
   onOpenMeetingDetail?: (recordId: string) => void
@@ -33,8 +35,18 @@ const historyRowGrid = 'grid grid-cols-[minmax(0,1fr)_24px] items-stretch gap-x-
 const historyContentGrid =
   'grid grid-cols-[minmax(0,1fr)_66px_66px_172px] items-center gap-x-[60px]'
 
+/**
+ * 서버는 회의 제목 수정·삭제를 그 회의의 진행자에게만 허용한다.
+ * 진행자를 알 수 없으면(목록 응답에 없으면) 허용하지 않는다 — 잘못 열어 주는 쪽이 더 나쁘다.
+ */
+function isMeetingHost(meeting: CompletedMeeting, currentUserId: number | null) {
+  if (currentUserId === null || !meeting.host.id) return false
+  return meeting.host.id === String(currentUserId)
+}
+
 export function ProjectMeetingHistory({
   meetings,
+  currentUserId = null,
   isLoading,
   presentation,
   onOpenMeetingDetail,
@@ -154,6 +166,7 @@ export function ProjectMeetingHistory({
                       </Button>
                     ) : onDeleteMeeting && onRenameMeeting ? (
                       <MeetingRecordActions
+                        canManage={isMeetingHost(meeting, currentUserId)}
                         disabled={status === 'processing'}
                         meeting={meeting}
                         onDelete={() => handleDeleteMeeting(meeting)}

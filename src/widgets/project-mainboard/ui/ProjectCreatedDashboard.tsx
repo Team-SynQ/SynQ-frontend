@@ -45,6 +45,8 @@ type ProjectCreatedDashboardProps = {
   onRenameMeeting?: (recordId: string, nextTitle: string) => Promise<void>
   onDeleteMeeting?: (recordId: string) => Promise<void>
   meetings?: CompletedMeeting[]
+  /** 회의 기록을 수정·삭제할 수 있는지 가리는 기준. 그 회의를 진행한 사람만 가능합니다. */
+  currentUserId?: number | null
   meetingHistoryLoading?: boolean
   meetingHistoryPresentation?: MeetingHistoryPresentation
   meetingProcessingOverlayOpen?: boolean
@@ -76,6 +78,7 @@ export function ProjectCreatedDashboard({
   onRenameMeeting,
   onDeleteMeeting,
   meetings = [],
+  currentUserId = null,
   meetingHistoryLoading = false,
   meetingHistoryPresentation,
   meetingProcessingOverlayOpen = false,
@@ -182,6 +185,7 @@ export function ProjectCreatedDashboard({
         </section>
       ) : (
         <ProjectMeetingHistory
+          currentUserId={currentUserId}
           isLoading={meetingHistoryLoading}
           onRetryMeetingSummary={onRetryMeetingSummary}
           meetings={meetings}
