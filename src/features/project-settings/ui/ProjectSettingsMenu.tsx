@@ -33,6 +33,7 @@ import { ProjectMoreOptionsPopover } from './ProjectMoreOptionsPopover'
 import { ProjectRolePerspectiveDialog } from './ProjectRolePerspectiveDialog'
 import { saveProjectRolePerspective } from '../api/projectRolePerspective.api'
 import type { AccountPerspectiveDraft } from '../../account-settings'
+import type { ProjectRolePerspectiveDraft } from '../../project-create'
 
 type SettingsToast = {
   title: string
@@ -56,6 +57,8 @@ type ProjectSettingsMenuProps = {
   exportMember?: (projectId: number, memberId: number) => Promise<void>
   leaveProjectAsMember?: (projectId: number) => Promise<void>
   saveRolePerspective?: (projectId: number, draft: AccountPerspectiveDraft) => Promise<void>
+  /** 프로젝트 정보 수정에서 새 역할·관점을 추가할 때 서버 프로필로 저장합니다. */
+  onAddPerspective?: (draft: ProjectRolePerspectiveDraft) => Promise<ProjectInformationPerspective>
 }
 
 export function ProjectSettingsMenu({
@@ -73,6 +76,7 @@ export function ProjectSettingsMenu({
   exportMember = removeProjectMember,
   leaveProjectAsMember = leaveProject,
   saveRolePerspective = saveProjectRolePerspective,
+  onAddPerspective,
 }: ProjectSettingsMenuProps) {
   const managementTitleId = useId()
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -420,6 +424,7 @@ export function ProjectSettingsMenu({
       </div>
 
       <ProjectInformationEditDialog
+        onAddPerspective={onAddPerspective}
         onClose={handleCloseInformation}
         onSave={handleUpdateProject}
         open={isInformationOpen}

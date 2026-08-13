@@ -1,12 +1,16 @@
-export type PrivacyPolicySection = {
-  description?: string
-  items?: readonly string[]
-  title: string
-}
-
 export type PrivacyPolicyTable = {
   columns: readonly string[]
   rows: readonly (readonly string[])[]
+}
+
+export type PrivacyPolicySection = {
+  description?: string
+  items?: readonly string[]
+  /** 항목 아래에 붙는 표. 5조(처리 위탁)처럼 표가 본문인 조항에 씁니다. */
+  table?: PrivacyPolicyTable
+  /** ※ 로 시작하는 부가 설명입니다. */
+  note?: string
+  title: string
 }
 
 export const privacyPolicyDocument = {
@@ -52,6 +56,60 @@ export const privacyPolicyDocument = {
         '다만, 프로젝트 자료 및 회의 기록 중 다른 프로젝트 멤버와 공유된 정보(전사, 전체 정리)는 프로젝트가 삭제되거나 해당 회의 기록이 삭제될 때까지 보관될 수 있으며, 탈퇴한 회원의 개인별 정리·AI Chat 기록은 즉시 삭제됩니다.',
         '관계 법령에 따라 보존이 필요한 정보는 해당 법령이 정한 기간 동안 보관합니다.',
       ],
+    },
+    {
+      title: '4. 개인정보의 제3자 제공',
+      description:
+        '회사는 이용자의 개인정보를 원칙적으로 외부에 제공하지 않습니다. 다만 다음의 경우는 예외로 합니다.',
+      items: [
+        '이용자가 사전에 동의한 경우',
+        '법령의 규정에 의거하거나, 수사 목적으로 법령에 정해진 절차와 방법에 따라 수사기관의 요구가 있는 경우',
+      ],
+    },
+    {
+      title: '5. 개인정보 처리 위탁',
+      description: '서비스 제공을 위해 다음과 같이 개인정보 처리를 위탁하고 있습니다.',
+      table: {
+        columns: ['수탁업체', '위탁업무 내용'],
+        rows: [
+          ['AWS (Amazon Web Services)', '서버 호스팅, 데이터 저장'],
+          ['AI 서비스 제공사', '회의 음성의 텍스트 전사, AI 정리·힌트·Chat 응답 생성'],
+          ['카카오, 네이버, 구글', '소셜 로그인 인증'],
+        ],
+      } satisfies PrivacyPolicyTable,
+      note: '※ 회사는 회의 음성, 전사, 프로젝트 자료를 AI 처리 목적 외의 별도 AI 모델 학습 데이터로 사용하지 않으며, 위탁업체에도 이를 요구하지 않습니다.',
+    },
+    {
+      title: '6. 이용자의 권리와 행사 방법',
+      description: '이용자는 언제든지 다음의 권리를 행사할 수 있습니다.',
+      items: ['개인정보 열람 요구', '오류 등이 있을 경우 정정 요구', '삭제 요구', '처리 정지 요구'],
+      note: '권리 행사는 서비스 내 설정 화면 또는 문의처를 통해 요청할 수 있으며, 회사는 지체 없이 조치합니다.',
+    },
+    {
+      title: '7. 개인정보의 파기 절차 및 방법',
+      items: [
+        '이용 목적이 달성되거나 보유 기간이 경과한 개인정보는 지체 없이 파기합니다.',
+        '전자적 파일 형태의 정보는 복구할 수 없는 기술적 방법을 사용하여 삭제합니다.',
+      ],
+    },
+    {
+      title: '8. 쿠키(Cookie)의 운영',
+      description:
+        '회사는 이용자에게 맞춤화된 서비스를 제공하기 위해 쿠키를 사용할 수 있습니다. 이용자는 브라우저 설정을 통해 쿠키 저장을 거부할 수 있으며, 이 경우 서비스 이용에 일부 제한이 있을 수 있습니다.',
+    },
+    {
+      title: '9. 개인정보의 안전성 확보 조치',
+      description: '회사는 개인정보 보호를 위해 다음 조치를 취하고 있습니다.',
+      items: [
+        '통신 구간 암호화(HTTPS 등) 적용',
+        '개인정보에 대한 접근 권한 최소화 및 관리',
+        '개인별 정리, AI Chat 기록 등 개인 전용 데이터에 대한 접근 통제 (본인만 조회 가능)',
+      ],
+    },
+    {
+      title: '10. 고지의 의무',
+      description:
+        '이 개인정보처리방침의 내용 추가, 삭제 및 수정이 있을 경우 개정 최소 7일 전부터 서비스 내 공지사항을 통해 고지합니다.',
     },
   ] satisfies readonly PrivacyPolicySection[],
 } as const

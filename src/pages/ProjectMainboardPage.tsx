@@ -23,7 +23,12 @@ import {
   type ProjectReferenceMaterial,
   type ProjectSummary,
 } from '../entities/project'
-import { changeDefaultRoleProfile, loadMyRoleProfiles, type RoleProfile } from '../entities/user'
+import { loadMyRoleProfiles, type RoleProfile } from '../entities/user'
+import {
+  toAccountPerspective,
+  type AccountPerspective,
+  type AccountPerspectiveDraft,
+} from '../features/account-settings'
 import {
   createProjectWithMaterials,
   createRoleProfileOption,
@@ -46,7 +51,12 @@ import {
   markJoinRequestResultSeen,
   readSeenJoinRequestResults,
 } from '../features/project-invite'
-import type { ProjectInformationDraft } from '../features/project-settings'
+import {
+  loadProjectRolePerspective,
+  saveProjectRolePerspective,
+  type ProjectInformationDraft,
+  type ProjectInformationPerspective,
+} from '../features/project-settings'
 import type { ProjectJoinRequestResultResponse as ProjectJoinRequestResult } from '../shared/api/contracts/project.contracts'
 import { useTransientVisibility } from '../shared/lib/useTransientVisibility'
 import { Toast } from '../shared/ui'
@@ -85,6 +95,8 @@ type ProjectMainboardPageProps = {
   loadProjectInformation?: (
     projectId: string,
   ) => Promise<ProjectSummary | void> | ProjectSummary | void
+  loadProjectPerspective?: (apiProjectId: number) => Promise<AccountPerspective | null>
+  saveProjectPerspective?: (apiProjectId: number, draft: AccountPerspectiveDraft) => Promise<void>
   updateProject?: (
     projectId: string,
     draft: ProjectInformationDraft,
@@ -244,6 +256,8 @@ export function ProjectMainboardPage({
   updateCompletedMeetingTitle = updateCompletedMeetingHistoryTitle,
   deleteCompletedMeeting = deleteCompletedMeetingHistory,
   loadProjectInformation,
+  loadProjectPerspective = loadProjectRolePerspective,
+  saveProjectPerspective = saveProjectRolePerspective,
   updateProject = updateProjectInformation,
   deleteProject = deleteProjectById,
   createMeeting = meetingLifecycleApi.createMeeting,
@@ -259,6 +273,10 @@ export function ProjectMainboardPage({
   const [isProjectsLoading, setIsProjectsLoading] = useState(true)
   const [roleProfiles, setRoleProfiles] = useState<RoleProfile[]>([])
   const [activeProjectId, setActiveProjectId] = useState<string>()
+  /** 프로젝트별로 적용된 역할·관점. null은 프로젝트 전용 값이 없어 기본 프로필을 따른다는 뜻이다. */
+  const [projectPerspectiveByProject, setProjectPerspectiveByProject] = useState<
+    Record<string, ProjectInformationPerspective | null>
+  >({})
   const requestedReferenceProjectIdsRef = useRef<Set<string>>(new Set())
   const [completedMeetingsByProject, setCompletedMeetingsByProject] = useState<
     Record<string, CompletedMeeting[]>
@@ -336,6 +354,32 @@ export function ProjectMainboardPage({
     requestedOpenCreateProject,
     requestedProcessingRecordId,
   ])
+
+  // 역할·관점은 프로젝트마다 다르므로, 선택한 프로젝트의 값을 서버에서 읽어 표시에 쓴다.
+  useEffect(() => {
+    if (!activeProjectId || activeProjectId in projectPerspectiveByProject) return
+    const apiProjectId = projects.find((project) => project.id === activeProjectId)?.apiProjectId
+    if (apiProjectId === undefined) return
+
+    let isSubscribed = true
+    void loadProjectPerspective(apiProjectId)
+      .then((perspective) => {
+        if (!isSubscribed) return
+        setProjectPerspectiveByProject((current) => ({
+          ...current,
+          [activeProjectId]: perspective
+            ? { label: perspective.roleLabel, description: perspective.focusDescription }
+            : null,
+        }))
+      })
+      .catch(() => {
+        // 조회에 실패하면 계정 기본 프로필 표시로 폴백한다.
+      })
+
+    return () => {
+      isSubscribed = false
+    }
+  }, [activeProjectId, loadProjectPerspective, projectPerspectiveByProject, projects])
 
   useEffect(() => {
     let isSubscribed = true
@@ -731,21 +775,27 @@ export function ProjectMainboardPage({
   const handleUpdateProject = async (draft: ProjectInformationDraft) => {
     if (!activeProjectId) return
 
+    const apiProjectId = projects.find((project) => project.id === activeProjectId)?.apiProjectId
     const submittedProject = await updateProject?.(activeProjectId, draft)
 
-    // 관점은 프로젝트가 아니라 내 역할·관점 프로필에 저장됩니다.
+    // 관점은 계정 기본 프로필이 아니라 이 프로젝트 전용 역할·관점으로 저장한다.
     const nextProfile = roleProfiles.find((profile) => {
       const option = toProjectPerspectiveOption(profile)
+      if (draft.perspectiveId) return option.id === draft.perspectiveId
       return (
         option.label === draft.perspectiveLabel &&
         option.selectedDescription === draft.perspectiveDescription
       )
     })
-    if (nextProfile && !nextProfile.isDefault) {
-      await changeDefaultRoleProfile(nextProfile.id)
-      setRoleProfiles((current) =>
-        current.map((profile) => ({ ...profile, isDefault: profile.id === nextProfile.id })),
-      )
+    if (nextProfile && apiProjectId !== undefined) {
+      await saveProjectPerspective(apiProjectId, toAccountPerspective(nextProfile))
+      setProjectPerspectiveByProject((current) => ({
+        ...current,
+        [activeProjectId]: {
+          label: draft.perspectiveLabel,
+          description: draft.perspectiveDescription,
+        },
+      }))
     }
     setProjects((currentProjects) =>
       currentProjects.map((project) =>
@@ -867,17 +917,22 @@ export function ProjectMainboardPage({
   }
 
   const roleProfileOptions = roleProfiles.map(toProjectPerspectiveOption)
-  // 프로필이 아직 없거나 조회에 실패하면 화면 기본 관점 목록으로 되돌립니다.
   const perspectiveOptions = roleProfileOptions.length > 0 ? roleProfileOptions : undefined
   const defaultProfile = roleProfiles.find((profile) => profile.isDefault)
   const defaultPerspective = defaultProfile ? toProjectPerspectiveOption(defaultProfile) : undefined
   const selectedProject = projects.find((project) => project.id === activeProjectId)
+  // 프로젝트 전용 역할·관점을 우선 쓰고, 없으면 계정 기본 프로필을 보여 준다.
+  const appliedPerspective =
+    (activeProjectId ? projectPerspectiveByProject[activeProjectId] : undefined) ??
+    (defaultPerspective
+      ? { label: defaultPerspective.label, description: defaultPerspective.selectedDescription }
+      : undefined)
   const activeProject =
-    selectedProject && defaultPerspective
+    selectedProject && appliedPerspective
       ? {
           ...selectedProject,
-          perspectiveLabel: defaultPerspective.label,
-          perspectiveDescription: defaultPerspective.selectedDescription,
+          perspectiveLabel: appliedPerspective.label,
+          perspectiveDescription: appliedPerspective.description,
         }
       : selectedProject
   const activeProjectMeetings = activeProjectId
@@ -929,7 +984,12 @@ export function ProjectMainboardPage({
       />
       <ProjectMainboard
         currentUserId={user?.userId ?? null}
+        onAddPerspective={async (roleDraft) => {
+          const created = await handleAddRoleProfile(roleDraft)
+          return { id: created.id, label: created.label, description: created.selectedDescription }
+        }}
         perspectiveOptions={perspectiveOptions?.map((option) => ({
+          id: option.id,
           label: option.label,
           description: option.selectedDescription,
         }))}

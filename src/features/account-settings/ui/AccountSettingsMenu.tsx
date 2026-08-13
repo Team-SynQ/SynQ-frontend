@@ -21,6 +21,7 @@ export type AccountSettingsActions = {
 type AccountSettingsMenuProps = AccountSettingsActions & {
   email: string
   name: string
+  profileImageUrl?: string | null
 }
 
 type FailureFeedback = {
@@ -50,6 +51,7 @@ const termsFailure: FailureFeedback = {
 export function AccountSettingsMenu({
   email,
   name,
+  profileImageUrl,
   onOpenAccountInfo,
   onOpenHelp,
   onOpenTerms,
@@ -119,6 +121,11 @@ export function AccountSettingsMenu({
         aria-controls="account-settings-menu"
         aria-expanded={open}
         aria-haspopup="menu"
+        avatar={
+          profileImageUrl ? (
+            <img alt="" className="size-full object-cover" src={profileImageUrl} />
+          ) : undefined
+        }
         email={email}
         name={name}
         onClick={() => setOpen((current) => !current)}

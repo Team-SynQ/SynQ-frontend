@@ -163,7 +163,7 @@ export const PrivacyPage: React.FC = () => {
                   </tr>
                   <tr>
                     <td className="py-2.5 px-2 border-r border-gray-100 font-medium text-center bg-gray-50/50">
-                      OpenAI, Gemini
+                      AI 서비스 제공사
                     </td>
                     <td className="py-2.5 px-2">
                       회의 음성의 텍스트 전사, AI 정리·힌트·Chat 응답 생성
@@ -173,10 +173,7 @@ export const PrivacyPage: React.FC = () => {
                     <td className="py-2.5 px-2 border-r border-gray-100 font-medium text-center bg-gray-50/50">
                       카카오, 네이버, 구글
                     </td>
-                    <td className="py-2.5 px-2">
-                      회의 음성 녹음·소셜 로그인 인증, 실시간 전사 텍스트, 프로젝트 업로드 자료, AI
-                      Chat 질문 및 답변
-                    </td>
+                    <td className="py-2.5 px-2">소셜 로그인 인증</td>
                   </tr>
                 </tbody>
               </table>
