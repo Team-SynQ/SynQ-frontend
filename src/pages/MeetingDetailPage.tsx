@@ -1,4 +1,4 @@
-import React, { useEffect, useState, type Ref } from 'react'
+import React, { useEffect, useRef, useState, type Ref } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Button, Modal, ChatInput } from '../shared/ui'
 import { ProjectSidebar, type ProjectSidebarUser } from '../widgets/project-sidebar'
@@ -306,6 +306,8 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
   const location = useLocation()
   const locationState = location.state as { meetingTitle?: string } | null
 
+  const [hasError, setHasError] = useState(false)
+
   const [activeTab, setActiveTab] = useState<'personal' | 'allSummary' | 'allRecord'>('allRecord')
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
@@ -336,6 +338,11 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
 
   const apiMeetingId = Number(meetingRecordId)
   const hasValidMeetingId = Number.isSafeInteger(apiMeetingId) && apiMeetingId > 0
+
+  const currentMeetingIdRef = useRef(apiMeetingId)
+  useEffect(() => {
+    currentMeetingIdRef.current = apiMeetingId
+  }, [apiMeetingId])
 
   useEffect(() => {
     let active = true
@@ -461,6 +468,7 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
       })
       .catch((err) => {
         console.error('전체 요약 데이터 조회 실패:', err)
+        if (active) setHasError(true)
       })
       .finally(() => {
         if (active) setIsLoadingOverallSummary(false)
@@ -555,6 +563,38 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
     }
   }, [apiMeetingId, hasValidMeetingId])
 
+  if (!hasValidMeetingId || hasError) {
+    return (
+      <div className="flex h-screen w-full bg-white overflow-hidden relative">
+        <ProjectSidebar
+          accountSettingsActions={{
+            onOpenAccountInfo: () => navigate('/settings/account'),
+            onOpenHelp: () => navigate('/settings/help'),
+            onOpenTerms: () => navigate('/settings/policy'),
+          }}
+          user={user}
+          projects={sidebarProjects}
+          activeProjectId={sidebarProjects[0]?.id}
+          onSelectProject={(id) => {
+            navigate('/projects', { state: { activeProjectId: id } })
+          }}
+          onAddProject={() => {
+            navigate('/projects', { state: { openCreateProject: true } })
+          }}
+        />
+
+        <main className="flex-1 h-full flex flex-col items-center justify-center bg-white p-8">
+          <div role="alert" className="flex flex-col items-center gap-4 text-center">
+            <p className="text-base font-medium text-gray-800">회의 기록을 불러오지 못했습니다.</p>
+            <Button variant="primaryLine" onClick={() => navigate('/projects')}>
+              메인보드로 이동
+            </Button>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
   const displayTitle = overallSummary?.title || locationState?.meetingTitle || '회의 기록'
   const displayRoleTag = personalSummary?.role || ''
   const displayDateIso =
@@ -581,13 +621,16 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
   const handleConfirmEditTitle = async () => {
     if (!editTitleInput.trim() || !hasValidMeetingId) return
     const nextTitle = editTitleInput.trim()
+    const targetMeetingId = apiMeetingId
 
     try {
       await meetingService.updateMeetingTitle(apiMeetingId, nextTitle)
-      if (overallSummary) {
-        setOverallSummary((prev) => (prev ? { ...prev, title: nextTitle } : prev))
+      if (currentMeetingIdRef.current === targetMeetingId) {
+        setOverallSummary((prev) =>
+          prev && prev.meetingId === targetMeetingId ? { ...prev, title: nextTitle } : prev,
+        )
+        setIsEditModalOpen(false)
       }
-      setIsEditModalOpen(false)
     } catch (error) {
       console.error('회의 제목 수정 실패:', error)
       alert('회의 제목을 수정하지 못했습니다.')
