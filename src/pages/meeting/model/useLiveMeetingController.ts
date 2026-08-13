@@ -36,6 +36,8 @@ import { useLiveTranscription } from './useLiveTranscription'
 import { useMeetingRuntime } from './useMeetingRuntime'
 
 const INTERIM_SEGMENT_ID = 'interim'
+/** 프로젝트 화면의 진행 중 회의 폴링과 같은 주기를 쓴다. */
+const PARTICIPANT_POLL_INTERVAL_MS = 15_000
 
 type ReadyController = {
   status: 'ready'
@@ -63,6 +65,26 @@ type LiveMeetingController =
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error && error.message ? error.message : fallback
+}
+
+/** 폴링 결과가 직전과 같은지 본다. 목록 순서가 곧 화면 표시 순서라 순서까지 함께 비교한다. */
+function isSameParticipantList(
+  current: readonly LiveMeetingParticipant[],
+  next: readonly LiveMeetingParticipant[],
+) {
+  return (
+    current.length === next.length &&
+    current.every((participant, index) => {
+      const candidate = next[index]
+      return (
+        participant.id === candidate.id &&
+        participant.name === candidate.name &&
+        participant.profileImageUrl === candidate.profileImageUrl &&
+        participant.isCurrentUser === candidate.isCurrentUser &&
+        participant.isHost === candidate.isHost
+      )
+    })
+  )
 }
 
 export function useLiveMeetingController(
@@ -110,8 +132,10 @@ export function useLiveMeetingController(
   // 끊긴 채널은 진행자·참여자 모두에게 연결 복구 중과 같은 상황이다. 회의가 끝난 뒤에는 알리지 않는다.
   const isChannelDegraded =
     !endedByServer && (channelStatus === 'error' || channelStatus === 'closed')
+  /** 입장 응답이 도착해 이 회의의 화면이 실제로 뜬 상태. */
+  const isJoinedMeeting = meeting?.meetingId === meetingId
   const runtime = useMeetingRuntime({
-    enabled: meeting?.meetingId === meetingId,
+    enabled: isJoinedMeeting,
     meetingId,
     restoreConnection: meetingConnectionGateway.restoreConnection,
     channelDegraded: isChannelDegraded,
@@ -151,7 +175,7 @@ export function useLiveMeetingController(
   )
   const liveTranscription = useLiveTranscription({
     // 종료된 회의에는 다시 붙지 않는다. enabled가 false면 재연결 타이머도 서지 않는다.
-    enabled: hasValidMeetingId && meeting?.meetingId === meetingId && !endedByServer,
+    enabled: hasValidMeetingId && isJoinedMeeting && !endedByServer,
     meetingId: apiMeetingId,
     role,
     wsUrl,
@@ -176,7 +200,7 @@ export function useLiveMeetingController(
   }, [apiMeetingId, rememberHint])
 
   useMeetingAiEvents({
-    enabled: hasValidMeetingId && meeting?.meetingId === meetingId && !endedByServer,
+    enabled: hasValidMeetingId && isJoinedMeeting && !endedByServer,
     meetingId: apiMeetingId,
     onEvent: handleAiEvent,
     onConnected: reloadHintRecords,
@@ -327,6 +351,39 @@ export function useLiveMeetingController(
     meetingId,
     rememberHint,
   ])
+
+  /**
+   * 참여자는 회의 도중에도 들어오고 나간다. 서버에 입·퇴장 이벤트가 없어 주기적으로 다시 읽는다.
+   * 입장 직후 조회는 위 effect가 이미 했으므로 여기서는 첫 주기부터 시작한다.
+   * 종료된 회의는 더 볼 것이 없으므로 멈춘다.
+   */
+  useEffect(() => {
+    if (!hasValidMeetingId || !isJoinedMeeting || endedByServer) return
+
+    let isSubscribed = true
+    // 응답이 주기보다 오래 걸리면 요청이 겹친다. 늦게 온 옛 응답이 최신 목록을 덮지 않게 순번을 센다.
+    let latestRequestSequence = 0
+
+    const timerId = window.setInterval(() => {
+      const requestSequence = ++latestRequestSequence
+
+      void meetingParticipantApi
+        .listParticipants(apiMeetingId, currentUserId)
+        .then((list) => {
+          if (!isSubscribed || requestSequence !== latestRequestSequence) return
+          // 대부분의 주기는 결과가 같다. 그대로 담으면 15초마다 화면 전체가 다시 그려진다.
+          setParticipants((current) => (isSameParticipantList(current, list) ? current : list))
+        })
+        .catch(() => {
+          // 보조 정보다. 실패해도 회의 진행을 막지 않고 다음 주기에 다시 시도한다.
+        })
+    }, PARTICIPANT_POLL_INTERVAL_MS)
+
+    return () => {
+      isSubscribed = false
+      window.clearInterval(timerId)
+    }
+  }, [apiMeetingId, currentUserId, endedByServer, hasValidMeetingId, isJoinedMeeting])
 
   const loadHint = useCallback(
     async (transcriptId: string, useCache: boolean) => {
