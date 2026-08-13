@@ -8,6 +8,7 @@ import type {
   MeetingEndResponse,
   MeetingJoinResponse,
   MeetingListItemResponse,
+  MeetingPauseStateResponse,
   MeetingTitleUpdateResponse,
   OverallMeetingSummaryResult,
   PersonalMeetingSummaryResult,
@@ -36,6 +37,19 @@ export const meetingService = {
     requestApiResult(
       axiosInstance.post<ApiResponse<MeetingJoinResponse>>(`/meetings/${meetingId}/join`),
       '회의에 입장하지 못했습니다.',
+    ),
+
+  // 일시정지·재개는 진행자만 호출할 수 있다. 서버가 참여자에게 전사 WebSocket으로 같은 값을 알린다.
+  pauseMeeting: (meetingId: number): Promise<MeetingPauseStateResponse> =>
+    requestApiResult(
+      axiosInstance.post<ApiResponse<MeetingPauseStateResponse>>(`/meetings/${meetingId}/pause`),
+      '회의를 일시정지하지 못했습니다.',
+    ),
+
+  resumeMeeting: (meetingId: number): Promise<MeetingPauseStateResponse> =>
+    requestApiResult(
+      axiosInstance.post<ApiResponse<MeetingPauseStateResponse>>(`/meetings/${meetingId}/resume`),
+      '회의를 다시 시작하지 못했습니다.',
     ),
 
   endMeeting: (meetingId: number): Promise<MeetingEndResponse> =>

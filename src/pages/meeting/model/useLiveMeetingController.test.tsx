@@ -95,6 +95,20 @@ describe('useLiveMeetingController async boundaries', () => {
       joinedAt: '2026-08-05T00:00:00.000Z',
       startedAt: '2026-08-05T00:00:00.000Z',
       wsUrl: 'wss://api.example.com/ws/meetings/1/stt',
+      paused: false,
+      activeSeconds: 0,
+    }))
+    vi.spyOn(meetingLifecycleApi, 'pauseMeeting').mockImplementation(async (meetingId) => ({
+      meetingId,
+      status: 'IN_PROGRESS',
+      paused: true,
+      activeSeconds: 0,
+    }))
+    vi.spyOn(meetingLifecycleApi, 'resumeMeeting').mockImplementation(async (meetingId) => ({
+      meetingId,
+      status: 'IN_PROGRESS',
+      paused: false,
+      activeSeconds: 0,
     }))
     vi.spyOn(meetingLifecycleApi, 'endMeeting').mockImplementation(async (meetingId) => ({
       meetingId,
@@ -172,9 +186,9 @@ describe('useLiveMeetingController async boundaries', () => {
   it('stops the speaking state while manually paused', async () => {
     const { result } = await renderReadyController()
 
-    act(() => {
+    await act(async () => {
       if (result.current.status !== 'ready') throw new Error('controller is not ready')
-      result.current.toggleRecording()
+      await result.current.toggleRecording()
     })
 
     if (result.current.status !== 'ready' || result.current.transcript.state.kind !== 'active') {
@@ -206,6 +220,8 @@ describe('useLiveMeetingController async boundaries', () => {
       joinedAt: '2026-08-05T00:00:00.000Z',
       startedAt: '2026-08-05T00:00:00.000Z',
       wsUrl: 'wss://api.example.com/ws/meetings/1/stt',
+      paused: false,
+      activeSeconds: 0,
     })
 
     const { result } = await renderReadyController()
@@ -253,6 +269,8 @@ describe('useLiveMeetingController async boundaries', () => {
         joinedAt: '2026-08-05T00:00:00.000Z',
         startedAt: '2026-08-05T00:00:00.000Z',
         wsUrl: 'wss://api.example.com/ws/meetings/1/stt',
+        paused: false,
+        activeSeconds: 0,
       })
       await Promise.resolve()
     })
@@ -354,6 +372,80 @@ describe('useLiveMeetingController async boundaries', () => {
     expect(result.current.participants).toHaveLength(2)
   })
 
+  // 진행자 타이머는 일시정지를 제외한 누적 시간이라, 서버가 준 값으로 맞춰야 두 화면이 같아진다.
+  it('진행자의 일시정지는 서버 응답의 누적 시간으로 맞춘다', async () => {
+    const pauseMeeting = vi
+      .spyOn(meetingLifecycleApi, 'pauseMeeting')
+      .mockResolvedValue({ meetingId: 1, status: 'IN_PROGRESS', paused: true, activeSeconds: 163 })
+    const { result } = await renderReadyController()
+
+    await act(async () => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      await result.current.toggleRecording()
+    })
+
+    expect(pauseMeeting).toHaveBeenCalledWith(1)
+    if (result.current.status !== 'ready') throw new Error('controller is not ready')
+    expect(result.current.recordingState).toBe('paused')
+    expect(result.current.elapsedSeconds).toBe(163)
+  })
+
+  it('참여자는 일시정지 알림을 받아 시간을 멈춘다', async () => {
+    vi.spyOn(meetingLifecycleApi, 'joinMeeting').mockImplementation(async (meetingId) => ({
+      meetingId,
+      title: '2차 대면회의',
+      status: 'IN_PROGRESS',
+      role: 'MEMBER',
+      joinedAt: '2026-08-05T00:00:00.000Z',
+      startedAt: '2026-08-05T00:00:00.000Z',
+      wsUrl: 'wss://api.example.com/ws/meetings/1/stt',
+      paused: false,
+      activeSeconds: 0,
+    }))
+    vi.useFakeTimers()
+    const { result } = renderHook(() => useLiveMeetingController('1', 7))
+    await flushPendingAsync()
+
+    act(() => {
+      deliverMessage({ kind: 'meetingPauseState', paused: true, activeSeconds: 163 })
+    })
+    await flushPendingAsync()
+
+    if (result.current.status !== 'ready') throw new Error('controller is not ready')
+    expect(result.current.recordingState).toBe('paused')
+    expect(result.current.elapsedSeconds).toBe(163)
+
+    // 멈춘 뒤에는 더 흐르지 않는다.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_000)
+    })
+    if (result.current.status !== 'ready') throw new Error('controller is not ready')
+    expect(result.current.elapsedSeconds).toBe(163)
+  })
+
+  // 늦게 입장해도 진행자와 같은 시간을 봐야 한다.
+  it('입장 응답의 누적 시간과 일시정지 상태로 시작한다', async () => {
+    vi.spyOn(meetingLifecycleApi, 'joinMeeting').mockImplementation(async (meetingId) => ({
+      meetingId,
+      title: '2차 대면회의',
+      status: 'IN_PROGRESS',
+      role: 'MEMBER',
+      joinedAt: '2026-08-05T00:00:00.000Z',
+      startedAt: '2026-08-05T00:00:00.000Z',
+      wsUrl: 'wss://api.example.com/ws/meetings/1/stt',
+      paused: true,
+      activeSeconds: 240,
+    }))
+    const { result } = await renderReadyController()
+
+    await waitFor(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      expect(result.current.elapsedSeconds).toBe(240)
+    })
+    if (result.current.status !== 'ready') throw new Error('controller is not ready')
+    expect(result.current.recordingState).toBe('paused')
+  })
+
   it('서버가 회의 종료를 알리면 경과 시간이 멈춘다', async () => {
     vi.spyOn(meetingLifecycleApi, 'joinMeeting').mockImplementation(async (meetingId) => ({
       meetingId,
@@ -363,6 +455,8 @@ describe('useLiveMeetingController async boundaries', () => {
       joinedAt: '2026-08-05T00:00:00.000Z',
       startedAt: '2026-08-05T00:00:00.000Z',
       wsUrl: 'wss://api.example.com/ws/meetings/1/stt',
+      paused: false,
+      activeSeconds: 0,
     }))
     vi.useFakeTimers()
     const { result } = renderHook(() => useLiveMeetingController('1', 7))
@@ -396,6 +490,8 @@ describe('useLiveMeetingController async boundaries', () => {
       joinedAt: '2026-08-05T00:00:00.000Z',
       startedAt: '2026-08-05T00:00:00.000Z',
       wsUrl: 'wss://api.example.com/ws/meetings/1/stt',
+      paused: false,
+      activeSeconds: 0,
     }))
     const listParticipants = vi.spyOn(meetingParticipantApi, 'listParticipants')
     vi.useFakeTimers()

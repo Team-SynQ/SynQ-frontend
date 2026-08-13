@@ -55,7 +55,8 @@ type ReadyController = {
   aiChat: AiChatContentProps
   aiChatDisplayMode: AiChatDisplayMode
   renameMeeting: (title: string) => Promise<void>
-  toggleRecording: () => void
+  /** 서버에 일시정지·재개를 요청한다. 실패는 호출자가 받아 안내한다. */
+  toggleRecording: () => Promise<void>
   completeMeeting: (context: LiveMeetingProjectContext) => Promise<CompletedMeeting>
   changeAiChatDisplayMode: (mode: AiChatDisplayMode) => void
 }
@@ -97,6 +98,11 @@ export function useLiveMeetingController(
   const [role, setRole] = useState<'host' | 'participant'>('host')
   const [wsUrl, setWsUrl] = useState<string | null>(null)
   const [meetingStartedAt, setMeetingStartedAt] = useState<string | null>(null)
+  /** 입장 응답이 알려 준 서버 기준 시간·일시정지 상태. 아직 입장 전이면 null이다. */
+  const [joinedRuntime, setJoinedRuntime] = useState<{
+    paused: boolean
+    activeSeconds: number
+  } | null>(null)
   const [selectedSegmentId, setSelectedSegmentId] = useState<string | null>(null)
   const [hintState, setHintState] = useState<TranscriptHintState>({ status: 'idle' })
   const [editState, setEditState] = useState<TranscriptEditState>({ status: 'idle' })
@@ -142,6 +148,8 @@ export function useLiveMeetingController(
     meetingId,
     restoreConnection: meetingConnectionGateway.restoreConnection,
     channelDegraded: isChannelDegraded,
+    serverActiveSeconds: joinedRuntime?.activeSeconds ?? null,
+    serverPaused: joinedRuntime?.paused ?? false,
   })
   const apiMeetingId = Number(meetingId)
   const hasValidMeetingId = Number.isSafeInteger(apiMeetingId) && apiMeetingId > 0
@@ -150,6 +158,19 @@ export function useLiveMeetingController(
     if (role === 'host') return
     setEndedByServer(true)
   }, [role])
+
+  /**
+   * 진행자가 회의를 멈추거나 다시 시작했다.
+   * 진행자는 자기 요청의 응답으로 이미 맞췄으므로 무시한다. 종료 알림과 같은 이유다.
+   */
+  const syncPauseState = runtime.syncPauseState
+  const handlePauseStateChange = useCallback(
+    (paused: boolean, activeSeconds: number) => {
+      if (role === 'host') return
+      syncPauseState(paused, activeSeconds)
+    },
+    [role, syncPauseState],
+  )
 
   const rememberHint = useCallback((hint: LiveMeetingTranscriptHint) => {
     hintCacheRef.current.set(hint.transcriptId, hint)
@@ -186,6 +207,7 @@ export function useLiveMeetingController(
     channelStatus,
     onChannelStatusChange: setChannelStatus,
     onMeetingEnded: handleMeetingEnded,
+    onPauseStateChange: handlePauseStateChange,
     editingSegmentId: editState.status === 'editing' ? editState.transcriptId : null,
   })
 
@@ -310,6 +332,10 @@ export function useLiveMeetingController(
         setRole(joinedAsHost ? 'host' : 'participant')
         setWsUrl(joinResponse.wsUrl ?? null)
         setMeetingStartedAt(joinResponse.startedAt ?? null)
+        setJoinedRuntime({
+          paused: joinResponse.paused,
+          activeSeconds: joinResponse.activeSeconds,
+        })
         setSelectedSegmentId(null)
         // 캐시는 이 effect 시작에서 이미 비웠다. 표시용 상태는 setState라 여기서 함께 맞춘다.
         setHintedTranscriptIds(new Set())
@@ -604,6 +630,23 @@ export function useLiveMeetingController(
     setMeetingTitle(updated.title)
   }
 
+  /**
+   * 일시정지·재개는 서버에 먼저 반영하고 응답의 activeSeconds로 맞춘다.
+   * 로컬에서 먼저 바꾸면 요청이 실패했을 때 진행자와 참여자의 시간이 어긋난다.
+   */
+  const toggleRecording = async () => {
+    const requestMeetingId = meetingId
+    const requestSessionSequence = meetingSessionRef.current.sequence
+    const shouldPause = runtime.recordingState === 'recording'
+
+    const response = shouldPause
+      ? await meetingLifecycleApi.pauseMeeting(apiMeetingId)
+      : await meetingLifecycleApi.resumeMeeting(apiMeetingId)
+    if (!isCurrentMeetingSession(requestMeetingId, requestSessionSequence)) return
+
+    runtime.syncPauseState(response.paused, response.activeSeconds)
+  }
+
   const changeAiChatDisplayMode = (mode: AiChatDisplayMode) => {
     setAiChatDisplayMode(mode)
     if (mode !== 'launcher') {
@@ -734,7 +777,7 @@ export function useLiveMeetingController(
     aiChat,
     aiChatDisplayMode,
     renameMeeting,
-    toggleRecording: runtime.toggleRecording,
+    toggleRecording,
     completeMeeting,
     changeAiChatDisplayMode,
   }

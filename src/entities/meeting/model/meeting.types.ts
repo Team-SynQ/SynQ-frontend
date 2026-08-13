@@ -18,7 +18,6 @@ export type MeetingHeaderViewModel = {
   meetingTitle: string
   participantCount: number
   isHost: boolean
-  liveStatus: 'live'
   elapsedSeconds: number
   recordingState: 'recording' | 'paused'
   recordingControlDisabled: boolean

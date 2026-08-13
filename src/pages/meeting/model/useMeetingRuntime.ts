@@ -16,6 +16,14 @@ type UseMeetingRuntimeOptions = {
   restoreConnection: (meetingId: number) => Promise<void>
   /** 전사 전송 채널이 끊겼을 때 true. 연결 복구 중과 같은 규칙으로 다룬다. */
   channelDegraded?: boolean
+  /**
+   * 입장 응답이 알려 준 서버 기준 누적 활성 시간. 아직 모르면 null이다.
+   * 진행자와 참여자가 같은 값을 봐야 하므로 `sessionStorage` 복원보다 우선한다.
+   * 객체가 아니라 원시값으로 받는다 — 매 렌더 새 객체가 들어오면 초기화 effect가 헛돈다.
+   */
+  serverActiveSeconds?: number | null
+  /** 입장 응답이 알려 준 서버 기준 일시정지 상태. */
+  serverPaused?: boolean
 }
 
 const RESTORED_NOTICE_DURATION_MS = 3000
@@ -25,6 +33,8 @@ export function useMeetingRuntime({
   meetingId,
   restoreConnection,
   channelDegraded = false,
+  serverActiveSeconds = null,
+  serverPaused = false,
 }: UseMeetingRuntimeOptions) {
   const [initialRuntime] = useState(() => readMeetingRuntime(meetingId))
   const [activeSeconds, setActiveSeconds] = useState(initialRuntime?.activeSeconds ?? 0)
@@ -61,9 +71,17 @@ export function useMeetingRuntime({
       initializedMeetingIdRef.current = meetingId
       frozenDurationRef.current = null
       setEnding(false)
-      setActiveSeconds(persisted?.activeSeconds ?? 0)
-      setRecordingState(persisted?.recordingState ?? 'recording')
+      // 시간과 일시정지 상태는 서버가 정본이다. 서버 값이 있으면 저장된 값은 쓰지 않는다.
+      setActiveSeconds(serverActiveSeconds ?? persisted?.activeSeconds ?? 0)
+      setRecordingState(
+        serverActiveSeconds === null
+          ? (persisted?.recordingState ?? 'recording')
+          : serverPaused
+            ? 'paused'
+            : 'recording',
+      )
 
+      // 연결 복구 안내는 저장된 값이 있을 때만이다. 새로고침으로 되돌아왔다는 뜻이기 때문이다.
       if (!persisted) {
         setConnectionState('connected')
         setConnectionNotice(null)
@@ -97,7 +115,7 @@ export function useMeetingRuntime({
         restoredNoticeTimerRef.current = null
       }
     }
-  }, [enabled, meetingId])
+  }, [enabled, meetingId, serverActiveSeconds, serverPaused])
 
   // 전사 채널이 끊긴 것도 사용자에게는 연결 불안정과 같은 상황이다.
   const effectiveConnectionState: ConnectionState =
@@ -121,10 +139,15 @@ export function useMeetingRuntime({
     writeMeetingRuntime(meetingId, { activeSeconds, recordingState })
   }, [activeSeconds, enabled, meetingId, recordingState])
 
-  const toggleRecording = useCallback(() => {
-    if (ending || effectiveConnectionState !== 'connected') return
-    setRecordingState((current) => (current === 'recording' ? 'paused' : 'recording'))
-  }, [effectiveConnectionState, ending])
+  /**
+   * 서버가 알려 준 일시정지 상태와 누적 시간을 그대로 반영한다.
+   * 진행자는 일시정지·재개 응답에서, 참여자는 전사 WebSocket 알림에서 받는다.
+   * 로컬에서 먼저 토글하지 않는 이유는 그래야 두 화면이 같은 값을 보기 때문이다.
+   */
+  const syncPauseState = useCallback((paused: boolean, nextActiveSeconds: number) => {
+    setRecordingState(paused ? 'paused' : 'recording')
+    setActiveSeconds(nextActiveSeconds)
+  }, [])
 
   const freezeForEnd = useCallback(() => {
     if (frozenDurationRef.current !== null) return frozenDurationRef.current
@@ -146,6 +169,6 @@ export function useMeetingRuntime({
     connectionState: effectiveConnectionState,
     freezeForEnd,
     recordingState,
-    toggleRecording,
+    syncPauseState,
   }
 }

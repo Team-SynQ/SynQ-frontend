@@ -21,6 +21,18 @@ export type MeetingJoinResponse = {
   /** 회의 시작 시각. 전사 세그먼트의 startMs가 이 시각 기준이다. */
   startedAt: string
   wsUrl: string
+  /** 지금 일시정지 중인지. 늦게 입장해도 이 값으로 진행자와 맞춘다. */
+  paused: boolean
+  /** 일시정지 구간을 제외한 누적 활성 시간(초). 진행자 화면 타이머와 같은 값이다. */
+  activeSeconds: number
+}
+
+/** 일시정지·재개 요청의 응답. WebSocket 알림과 같은 값을 담는다. */
+export type MeetingPauseStateResponse = {
+  meetingId: number
+  status: string
+  paused: boolean
+  activeSeconds: number
 }
 
 export type MeetingEndResponse = {
