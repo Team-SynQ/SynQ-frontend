@@ -116,6 +116,8 @@ export function useLiveMeetingController(
   /** 힌트가 있는 전사. 캐시는 ref라 화면을 다시 그리지 못해 표시용 상태를 따로 둔다. */
   const [hintedTranscriptIds, setHintedTranscriptIds] = useState<ReadonlySet<string>>(new Set())
   const hintRequestSequenceRef = useRef(0)
+  /** 입장 시점 조회와 폴링이 같은 목록을 놓고 경쟁한다. 늦게 온 응답이 최신을 덮지 않도록 함께 센다. */
+  const participantRequestSequenceRef = useRef(0)
   const composerInputRef = useRef<HTMLInputElement>(null)
   const lastExpandedAiChatModeRef = useRef<Exclude<AiChatDisplayMode, 'launcher'>>('docked')
   const meetingSessionRef = useRef({ meetingId, sequence: 0 })
@@ -135,7 +137,8 @@ export function useLiveMeetingController(
   /** 입장 응답이 도착해 이 회의의 화면이 실제로 뜬 상태. */
   const isJoinedMeeting = meeting?.meetingId === meetingId
   const runtime = useMeetingRuntime({
-    enabled: isJoinedMeeting,
+    // 종료된 회의는 경과 시간을 더 셀 것도, 저장할 것도 없다. 참여자가 종료 안내를 확인하는 동안에도 멈춰 있어야 한다.
+    enabled: isJoinedMeeting && !endedByServer,
     meetingId,
     restoreConnection: meetingConnectionGateway.restoreConnection,
     channelDegraded: isChannelDegraded,
@@ -258,12 +261,18 @@ export function useLiveMeetingController(
   const loadParticipants = useCallback(
     async (requestSessionSequence: number, isActive: () => boolean) => {
       const requestMeetingId = meetingId
+      const requestSequence = ++participantRequestSequenceRef.current
       setParticipants([])
 
       try {
         const list = await meetingParticipantApi.listParticipants(apiMeetingId, currentUserId)
-        if (!isActive() || !isCurrentMeetingSession(requestMeetingId, requestSessionSequence))
+        if (
+          !isActive() ||
+          requestSequence !== participantRequestSequenceRef.current ||
+          !isCurrentMeetingSession(requestMeetingId, requestSessionSequence)
+        ) {
           return
+        }
         setParticipants(list)
       } catch {
         // 참여자 목록이 없어도 회의 진행에는 지장이 없다.
@@ -361,16 +370,14 @@ export function useLiveMeetingController(
     if (!hasValidMeetingId || !isJoinedMeeting || endedByServer) return
 
     let isSubscribed = true
-    // 응답이 주기보다 오래 걸리면 요청이 겹친다. 늦게 온 옛 응답이 최신 목록을 덮지 않게 순번을 센다.
-    let latestRequestSequence = 0
 
     const timerId = window.setInterval(() => {
-      const requestSequence = ++latestRequestSequence
+      const requestSequence = ++participantRequestSequenceRef.current
 
       void meetingParticipantApi
         .listParticipants(apiMeetingId, currentUserId)
         .then((list) => {
-          if (!isSubscribed || requestSequence !== latestRequestSequence) return
+          if (!isSubscribed || requestSequence !== participantRequestSequenceRef.current) return
           // 대부분의 주기는 결과가 같다. 그대로 담으면 15초마다 화면 전체가 다시 그려진다.
           setParticipants((current) => (isSameParticipantList(current, list) ? current : list))
         })

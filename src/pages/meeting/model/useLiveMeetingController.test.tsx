@@ -320,6 +320,73 @@ describe('useLiveMeetingController async boundaries', () => {
     ])
   })
 
+  // 입장 시점 조회가 첫 폴링보다 늦게 끝나면 낡은 목록이 최신을 덮을 수 있다.
+  it('늦게 도착한 입장 시점 조회가 폴링 결과를 덮지 않는다', async () => {
+    const slowInitialRequest =
+      deferred<Awaited<ReturnType<typeof meetingParticipantApi.listParticipants>>>()
+    const listParticipants = vi
+      .spyOn(meetingParticipantApi, 'listParticipants')
+      .mockReturnValueOnce(slowInitialRequest.promise)
+      .mockResolvedValue([
+        { id: '7', name: '윤금서', profileImageUrl: null, isCurrentUser: true, isHost: true },
+        { id: '9', name: '이동희', profileImageUrl: null, isCurrentUser: false, isHost: false },
+      ])
+    vi.useFakeTimers()
+    const { result } = renderHook(() => useLiveMeetingController('1', 7))
+
+    await flushPendingAsync()
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15_000)
+    })
+    if (result.current.status !== 'ready') throw new Error('controller is not ready')
+    expect(result.current.participants).toHaveLength(2)
+
+    // 이제서야 입장 시점 조회가 끝난다. 그때의 목록에는 이동희가 없다.
+    await act(async () => {
+      slowInitialRequest.resolve([
+        { id: '7', name: '윤금서', profileImageUrl: null, isCurrentUser: true, isHost: true },
+      ])
+      await Promise.resolve()
+    })
+
+    expect(listParticipants).toHaveBeenCalledTimes(2)
+    if (result.current.status !== 'ready') throw new Error('controller is not ready')
+    expect(result.current.participants).toHaveLength(2)
+  })
+
+  it('서버가 회의 종료를 알리면 경과 시간이 멈춘다', async () => {
+    vi.spyOn(meetingLifecycleApi, 'joinMeeting').mockImplementation(async (meetingId) => ({
+      meetingId,
+      title: '2차 대면회의',
+      status: 'IN_PROGRESS',
+      role: 'MEMBER',
+      joinedAt: '2026-08-05T00:00:00.000Z',
+      startedAt: '2026-08-05T00:00:00.000Z',
+      wsUrl: 'wss://api.example.com/ws/meetings/1/stt',
+    }))
+    vi.useFakeTimers()
+    const { result } = renderHook(() => useLiveMeetingController('1', 7))
+
+    await flushPendingAsync()
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3_000)
+    })
+    if (result.current.status !== 'ready') throw new Error('controller is not ready')
+    const elapsedBeforeEnd = result.current.elapsedSeconds
+    expect(elapsedBeforeEnd).toBeGreaterThan(0)
+
+    act(() => {
+      deliverMessage({ kind: 'meetingEnded' })
+    })
+    await flushPendingAsync()
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_000)
+    })
+
+    if (result.current.status !== 'ready') throw new Error('controller is not ready')
+    expect(result.current.elapsedSeconds).toBe(elapsedBeforeEnd)
+  })
+
   it('회의가 종료되면 참여자 목록 폴링을 멈춘다', async () => {
     vi.spyOn(meetingLifecycleApi, 'joinMeeting').mockImplementation(async (meetingId) => ({
       meetingId,
