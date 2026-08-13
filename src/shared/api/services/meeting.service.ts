@@ -57,15 +57,20 @@ export const meetingService = {
 
   generateAiSummary: (meetingId: number): Promise<AiSummaryJobResult> =>
     requestApiResult(
-      axiosInstance.post<ApiResponse<AiSummaryJobResult>>(`/meetings/${meetingId}/ai-summary/generate`),
+      axiosInstance.post<ApiResponse<AiSummaryJobResult>>(
+        `/meetings/${meetingId}/ai-summary/generate`,
+      ),
       'AI 요약 생성을 요청하지 못했습니다.',
     ),
 
   getAiSummaryStatus: (meetingId: number, jobId: string): Promise<AiSummaryJobResult> =>
     requestApiResult(
-      axiosInstance.get<ApiResponse<AiSummaryJobResult>>(`/meetings/${meetingId}/ai-summary/status`, {
-        params: { jobId },
-      }),
+      axiosInstance.get<ApiResponse<AiSummaryJobResult>>(
+        `/meetings/${meetingId}/ai-summary/status`,
+        {
+          params: { jobId },
+        },
+      ),
       'AI 요약 작업 상태를 불러오지 못했습니다.',
     ),
 
@@ -77,7 +82,9 @@ export const meetingService = {
 
   getPersonalSummary: (meetingId: number): Promise<PersonalMeetingSummaryResult> =>
     requestApiResult(
-      axiosInstance.get<ApiResponse<PersonalMeetingSummaryResult>>(`/meetings/${meetingId}/summary/me`),
+      axiosInstance.get<ApiResponse<PersonalMeetingSummaryResult>>(
+        `/meetings/${meetingId}/summary/me`,
+      ),
       '내 개인 요약을 불러오지 못했습니다.',
     ),
 }
