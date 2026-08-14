@@ -535,6 +535,7 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
     void meetingService
       .getRecordings(apiMeetingId)
       .then((res) => {
+        if (!active) return
         setRecordings(res)
       })
       .catch((err) => {
