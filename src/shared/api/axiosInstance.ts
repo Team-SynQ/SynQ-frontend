@@ -8,6 +8,8 @@ export const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
 })
 
+let isRedirecting = false
+
 axiosInstance.interceptors.request.use((config) => {
   const accessToken = readAccessToken()
 
@@ -18,8 +20,35 @@ axiosInstance.interceptors.request.use((config) => {
   return config
 })
 
-// 서버 실패 응답을 ApiError(status/code/message)로 정규화해 화면으로 넘깁니다.
+// 401 세션 만료 감지 인터셉터
 axiosInstance.interceptors.response.use(
   (response) => response,
-  (error: unknown) => Promise.reject(toApiError(error)),
+  (error: unknown) => {
+    const apiError = toApiError(error)
+
+    if (apiError.status === 401) {
+      const requestUrl = axios.isAxiosError(error) ? error.config?.url : ''
+      const isLoginEndpoint =
+        requestUrl?.includes('/auth/kakao') ||
+        requestUrl?.includes('/auth/google') ||
+        requestUrl?.includes('/auth/naver')
+
+      if (!isLoginEndpoint && !window.location.pathname.startsWith('/login')) {
+        if (!isRedirecting) {
+          isRedirecting = true
+
+          try {
+            localStorage.removeItem('accessToken')
+            localStorage.removeItem('refreshToken')
+          } catch {
+            // ignore
+          }
+
+          window.location.replace('/login')
+        }
+      }
+    }
+
+    return Promise.reject(apiError)
+  },
 )
