@@ -53,8 +53,7 @@ jobs:
           VITE_KAKAO_CLIENT_ID: ${{ secrets.VITE_KAKAO_CLIENT_ID }}
           VITE_NAVER_REDIRECT_URI: ${{ vars.VITE_NAVER_REDIRECT_URI }}
           VITE_NAVER_CLIENT_ID: ${{ secrets.VITE_NAVER_CLIENT_ID }}
-          # 구글은 카카오·네이버와 달리 Redirect URI도 Secrets에 있다.
-          VITE_GOOGLE_REDIRECT_URI: ${{ secrets.VITE_GOOGLE_REDIRECT_URI }}
+          VITE_GOOGLE_REDIRECT_URI: ${{ vars.VITE_GOOGLE_REDIRECT_URI }}
           VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
 
       - name: Configure AWS credentials
