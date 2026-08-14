@@ -4,12 +4,35 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { ProjectCreateModal } from './ProjectCreateModal'
 
+// 옵션은 사용자 프로필에서 온다. 화면 전용 기본 목록이 사라졌으므로 테스트가 직접 주입한다.
+const perspectiveOptionsFixture = [
+  {
+    id: 'planning-operations',
+    label: '기획/운영',
+    description: '일정, 사용자 경험, 의사 결정',
+    selectedDescription: '일정, 범위, 의사결정 영향 중심',
+  },
+  {
+    id: 'data-research',
+    label: '데이터/리서치',
+    description: '고객 반응',
+    selectedDescription: '고객 반응 중심',
+  },
+]
+
 describe('ProjectCreateModal', () => {
   it('accepts project input and enables the next action', async () => {
     const user = userEvent.setup()
     const onNext = vi.fn()
 
-    render(<ProjectCreateModal onClose={vi.fn()} onNext={onNext} open />)
+    render(
+      <ProjectCreateModal
+        onClose={vi.fn()}
+        onNext={onNext}
+        open
+        perspectiveOptions={perspectiveOptionsFixture}
+      />,
+    )
 
     const nameInput = screen.getByPlaceholderText('프로젝트 이름을 입력해 주세요')
     const overviewInput = screen.getByPlaceholderText('프로젝트 개요를 입력해 주세요')
@@ -39,7 +62,14 @@ describe('ProjectCreateModal', () => {
   it('returns to the first step without losing the project draft', async () => {
     const user = userEvent.setup()
 
-    render(<ProjectCreateModal initialValues={{ name: 'SynQ 리뉴얼' }} onClose={vi.fn()} open />)
+    render(
+      <ProjectCreateModal
+        initialValues={{ name: 'SynQ 리뉴얼' }}
+        onClose={vi.fn()}
+        open
+        perspectiveOptions={perspectiveOptionsFixture}
+      />,
+    )
 
     await user.click(screen.getByRole('button', { name: '다음' }))
     await user.click(screen.getByRole('button', { name: '이전' }))
@@ -50,7 +80,9 @@ describe('ProjectCreateModal', () => {
   it('opens the perspective list and selects an option', async () => {
     const user = userEvent.setup()
 
-    render(<ProjectCreateModal onClose={vi.fn()} open />)
+    render(
+      <ProjectCreateModal onClose={vi.fn()} open perspectiveOptions={perspectiveOptionsFixture} />,
+    )
 
     await user.click(screen.getByRole('button', { name: /기획\/운영/ }))
 
@@ -67,7 +99,14 @@ describe('ProjectCreateModal', () => {
     const user = userEvent.setup()
     const onAddPerspective = vi.fn()
 
-    render(<ProjectCreateModal onAddPerspective={onAddPerspective} onClose={vi.fn()} open />)
+    render(
+      <ProjectCreateModal
+        onAddPerspective={onAddPerspective}
+        onClose={vi.fn()}
+        open
+        perspectiveOptions={perspectiveOptionsFixture}
+      />,
+    )
 
     await user.click(screen.getByRole('button', { name: /기획\/운영/ }))
     await user.click(screen.getByRole('button', { name: '관점 추가' }))
@@ -105,7 +144,9 @@ describe('ProjectCreateModal', () => {
   it('requires a detail role only when 기타 is selected', async () => {
     const user = userEvent.setup()
 
-    render(<ProjectCreateModal onClose={vi.fn()} open />)
+    render(
+      <ProjectCreateModal onClose={vi.fn()} open perspectiveOptions={perspectiveOptionsFixture} />,
+    )
 
     await user.click(screen.getByRole('button', { name: /기획\/운영/ }))
     await user.click(screen.getByRole('button', { name: '관점 추가' }))
@@ -130,7 +171,9 @@ describe('ProjectCreateModal', () => {
   it('limits perspective selection to three items', async () => {
     const user = userEvent.setup()
 
-    render(<ProjectCreateModal onClose={vi.fn()} open />)
+    render(
+      <ProjectCreateModal onClose={vi.fn()} open perspectiveOptions={perspectiveOptionsFixture} />,
+    )
 
     await user.click(screen.getByRole('button', { name: /기획\/운영/ }))
     await user.click(screen.getByRole('button', { name: '관점 추가' }))
@@ -145,7 +188,9 @@ describe('ProjectCreateModal', () => {
   it('keeps project input when returning from role and perspective creation', async () => {
     const user = userEvent.setup()
 
-    render(<ProjectCreateModal onClose={vi.fn()} open />)
+    render(
+      <ProjectCreateModal onClose={vi.fn()} open perspectiveOptions={perspectiveOptionsFixture} />,
+    )
 
     await user.type(screen.getByPlaceholderText('프로젝트 이름을 입력해 주세요'), 'SynQ 리뉴얼')
     await user.click(screen.getByRole('button', { name: /기획\/운영/ }))
@@ -159,7 +204,9 @@ describe('ProjectCreateModal', () => {
     const user = userEvent.setup()
     const onClose = vi.fn()
 
-    render(<ProjectCreateModal onClose={onClose} open />)
+    render(
+      <ProjectCreateModal onClose={onClose} open perspectiveOptions={perspectiveOptionsFixture} />,
+    )
 
     await user.click(screen.getByRole('button', { name: '프로젝트 생성 닫기' }))
     await user.keyboard('{Escape}')

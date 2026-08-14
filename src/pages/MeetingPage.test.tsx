@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -572,6 +572,8 @@ describe('MeetingPage controls', () => {
       projectTitle: '서비스 디자인',
     })
 
+    // 연결이 늦어 notify가 아직 없으면 이벤트가 조용히 버려진다. 잡힐 때까지 기다린 뒤 보낸다.
+    await waitFor(() => expect(notify).toBeDefined())
     await act(async () => {
       notify?.({ kind: 'meetingEnded' })
     })
@@ -595,6 +597,8 @@ describe('MeetingPage controls', () => {
     })
     await renderMeetingPage()
 
+    // notify가 잡히기 전에 보내면 이벤트가 버려져 검증이 무의미해진다. 잡힐 때까지 기다린다.
+    await waitFor(() => expect(notify).toBeDefined())
     await act(async () => {
       notify?.({ kind: 'meetingEnded' })
     })
@@ -624,6 +628,7 @@ describe('MeetingPage controls', () => {
     })
     await renderMeetingPage()
 
+    await waitFor(() => expect(changeStatus).toBeDefined())
     await act(async () => {
       changeStatus?.('closed')
     })
@@ -642,6 +647,7 @@ describe('MeetingPage controls', () => {
     const user = userEvent.setup()
     await renderMeetingPage()
 
+    await waitFor(() => expect(emit).toBeDefined())
     await act(async () => {
       emit?.({
         kind: 'autoHint',

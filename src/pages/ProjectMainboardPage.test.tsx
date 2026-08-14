@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { CompletedMeeting, OngoingMeeting } from '../entities/meeting'
 import type { ProjectSummary } from '../entities/project'
+import type { RoleProfile } from '../entities/user'
 import {
   MEETING_HISTORY_PROCESSING_MS,
   MEETING_SUMMARY_PROCESSING_MS,
@@ -35,6 +36,17 @@ function stubProjectMembers(currentUserIsOwner: boolean) {
     maxCount: 10,
   })
 }
+
+/** 생성 모달 옵션은 계정 프로필에서 온다. 생성 플로우 테스트는 기본 프로필 하나를 주입한다. */
+const loadDefaultRoleProfiles = (): Promise<RoleProfile[]> =>
+  Promise.resolve([
+    {
+      id: 1,
+      isDefault: true,
+      role: 'PLANNING_OPERATION',
+      perspectives: ['SCHEDULE', 'SCOPE', 'DECISION'],
+    },
+  ])
 
 function NavigationDestination() {
   const location = useLocation()
@@ -803,7 +815,7 @@ describe('ProjectMainboardPage', () => {
         }),
     )
 
-    renderProjectMainboardPage({ onSubmitProject })
+    renderProjectMainboardPage({ loadRoleProfiles: loadDefaultRoleProfiles, onSubmitProject })
 
     await user.click(
       screen.getByRole('button', {
@@ -883,7 +895,7 @@ describe('ProjectMainboardPage', () => {
       }
     })
 
-    renderProjectMainboardPage({ onSubmitProject })
+    renderProjectMainboardPage({ loadRoleProfiles: loadDefaultRoleProfiles, onSubmitProject })
 
     const createProject = async (name: string) => {
       await user.click(
@@ -964,7 +976,11 @@ describe('ProjectMainboardPage', () => {
       materials: [],
     }))
 
-    renderProjectMainboardPage({ loadProjects, onSubmitProject })
+    renderProjectMainboardPage({
+      loadProjects,
+      loadRoleProfiles: loadDefaultRoleProfiles,
+      onSubmitProject,
+    })
 
     await user.click(
       screen.getByRole('button', {

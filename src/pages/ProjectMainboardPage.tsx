@@ -660,6 +660,32 @@ export function ProjectMainboardPage({
     const submittedProject = await onSubmitProject?.(draft, materials)
     const nextProject = submittedProject ?? (await createProjectWithMaterials(draft, materials))
 
+    // 생성할 때 고른 관점을 이 프로젝트 전용 값으로 저장한다. 프로젝트마다 관점이 독립이어야 한다.
+    const selectedProfile = roleProfiles.find(
+      (profile) => toProjectPerspectiveOption(profile).id === draft.perspectiveId,
+    )
+    if (selectedProfile) {
+      const option = toProjectPerspectiveOption(selectedProfile)
+      try {
+        await saveProjectPerspective(
+          nextProject.apiProjectId,
+          toAccountPerspective(selectedProfile),
+        )
+        setProjectPerspectiveByProject((current) => ({
+          ...current,
+          [nextProject.id]: { label: option.label, description: option.selectedDescription },
+        }))
+      } catch {
+        // 저장에 실패해도 프로젝트 생성은 유지하되, 사용자에게 알려 다시 설정할 수 있게 한다.
+        showProjectReferenceFeedback({
+          title: '관점 저장 실패',
+          description:
+            '선택한 역할·관점을 프로젝트에 저장하지 못했습니다. 프로젝트 설정에서 다시 지정해 주세요.',
+          type: 'error',
+        })
+      }
+    }
+
     setProjects((currentProjects) => [
       nextProject,
       ...currentProjects.filter((project) => project.id !== nextProject.id),
@@ -920,6 +946,14 @@ export function ProjectMainboardPage({
   const perspectiveOptions = roleProfileOptions.length > 0 ? roleProfileOptions : undefined
   const defaultProfile = roleProfiles.find((profile) => profile.isDefault)
   const defaultPerspective = defaultProfile ? toProjectPerspectiveOption(defaultProfile) : undefined
+  // 생성 모달은 기본관점이 먼저 선택되어 있어야 하므로 기본 프로필을 맨 앞에 둔다.
+  const createModalPerspectiveOptions =
+    perspectiveOptions && defaultPerspective
+      ? [
+          defaultPerspective,
+          ...perspectiveOptions.filter((option) => option.id !== defaultPerspective.id),
+        ]
+      : perspectiveOptions
   const selectedProject = projects.find((project) => project.id === activeProjectId)
   // 프로젝트 전용 역할·관점을 우선 쓰고, 없으면 계정 기본 프로필을 보여 준다.
   const appliedPerspective =
@@ -1034,7 +1068,7 @@ export function ProjectMainboardPage({
         onClose={() => setIsCreateModalOpen(false)}
         onCreate={handleProjectCreated}
         open={isCreateModalOpen}
-        perspectiveOptions={perspectiveOptions}
+        perspectiveOptions={createModalPerspectiveOptions}
       />
       {meetingEntryVariant ? (
         <MeetingEntryModal

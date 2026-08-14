@@ -2,6 +2,7 @@ import { API_BASE_URL } from '../apiBaseUrl'
 import { readAccessToken } from '../../lib/authStorage'
 import type {
   KakaoLoginRequest,
+  GoogleLoginRequest,
   RefreshTokenRequest,
   NaverStateResponse,
   NaverLoginRequest,
@@ -16,6 +17,16 @@ export const authService = {
       body: JSON.stringify(data),
     })
     if (!response.ok) throw new Error('카카오 로그인 요청 실패')
+    return response.json()
+  },
+
+  googleLogin: async (data: GoogleLoginRequest): Promise<AuthResponse> => {
+    const response = await fetch(`${API_BASE_URL}/auth/google`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    if (!response.ok) throw new Error('구글 로그인 요청 실패')
     return response.json()
   },
 

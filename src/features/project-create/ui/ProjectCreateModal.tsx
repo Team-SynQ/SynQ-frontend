@@ -1,15 +1,11 @@
-import { useId, useState, type FormEvent } from 'react'
+import { useEffect, useId, useState, type FormEvent } from 'react'
 
 import closeIcon from '../../../shared/assets/icons/close.svg'
 import { useTransientVisibility } from '../../../shared/lib/useTransientVisibility'
 import { Button, InputBox, OverlayDialog, Toast } from '../../../shared/ui'
 
 import { createRoleProfileOption } from '../api/roleProfile.api'
-import {
-  projectFocusOptions,
-  projectPerspectiveOptions,
-  projectRoleOptions,
-} from '../model/projectPerspective.config'
+import { projectFocusOptions, projectRoleOptions } from '../model/projectPerspective.config'
 import type {
   ProjectCreateDraft,
   ProjectMaterialDraft,
@@ -40,7 +36,8 @@ export type ProjectCreateModalProps = {
 export function ProjectCreateModal({
   open,
   initialValues,
-  perspectiveOptions = projectPerspectiveOptions,
+  // 사용자가 프로필에 저장한 관점만 보여 준다. 화면 전용 기본 목록을 쓰면 만든 적 없는 관점이 뜬다.
+  perspectiveOptions = [],
   onAddPerspective = createRoleProfileOption,
   onClose,
   onCreate,
@@ -104,6 +101,27 @@ function ProjectCreateSession({
     perspectiveId: initialValues?.perspectiveId ?? perspectiveOptions[0]?.id ?? '',
     overview: initialValues?.overview ?? '',
   })
+
+  // 모달이 프로필 조회보다 먼저 열리면 옵션이 빈 채 고정된다. 늦게 도착한 프로필을 따라 채운다.
+  // effect 본문에서 직접 setState 하면 lint가 막는다. 마이크로태스크로 미룬다.
+  useEffect(() => {
+    if (perspectiveOptions.length === 0) return
+
+    let isSubscribed = true
+    void Promise.resolve().then(() => {
+      if (!isSubscribed) return
+      setAvailableOptions((current) => (current.length === 0 ? perspectiveOptions : current))
+      setDraft((current) =>
+        current.perspectiveId
+          ? current
+          : { ...current, perspectiveId: perspectiveOptions[0]?.id ?? '' },
+      )
+    })
+
+    return () => {
+      isSubscribed = false
+    }
+  }, [perspectiveOptions])
 
   const handleAddPerspective = async (roleDraft: ProjectRolePerspectiveDraft) => {
     const role = projectRoleOptions.find((option) => option.id === roleDraft.roleId)
