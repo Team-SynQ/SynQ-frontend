@@ -1051,7 +1051,8 @@ function MeetingAllRecordTab({
     onSend: async () => {
       if (!chatModel.draft.trim() || chatModel.isSending) return
       const text = chatModel.draft.trim()
-      const clientRequestId = `req-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+      // 백엔드 @Valid 규격에 맞는 UUID 생성
+      const clientRequestId = crypto.randomUUID()
       const userMsgId = `user-${Date.now()}`
 
       setChatModel((prev) => ({
@@ -1307,7 +1308,7 @@ function MeetingAllRecordTab({
           </div>
         </div>
 
-        {/* 우측 AI Chat 패널 영역: border-l border-gray-200으로 단절 없는 경계선 연결 */}
+        {/* 우측 AI Chat 패널 영역 */}
         {isAiChatOpen && aiChatVariant === 'docked' && (
           <div
             style={{ width: `${chatWidth}px` }}
