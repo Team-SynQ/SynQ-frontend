@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, type Ref } from 'react'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Button, Modal, ChatInput } from '../shared/ui'
 import { ProjectSidebar, type ProjectSidebarUser } from '../widgets/project-sidebar'
 import {
@@ -12,7 +12,7 @@ import { participantService } from '../shared/api/services/participant.service'
 import { hintService } from '../shared/api/services/hint.service'
 import { userApi } from '../entities/user'
 import type { AiChatSendRequest } from '../shared/api/contracts/aiChat.contracts'
-import { listProjectSummaries } from '../entities/project'
+import { listProjectSummaries, projectApi } from '../entities/project'
 import { toTranscriptSegments } from '../entities/meeting/api/transcript.adapter'
 import type {
   OverallMeetingSummaryResult,
@@ -334,7 +334,11 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
   const { meetingRecordId = '' } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
-  const locationState = location.state as { meetingTitle?: string } | null
+  const [searchParams] = useSearchParams()
+  const locationState = location.state as {
+    meetingTitle?: string
+    projectId?: number | string
+  } | null
 
   const [hasError, setHasError] = useState(false)
 
@@ -411,14 +415,43 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
     }
   }, [])
 
+  // 프로젝트별 맞춤 역할/관점 조회 (우선순위: 프로젝트 설정 -> 기본 프로필 fallback)
   useEffect(() => {
     let active = true
 
-    void userApi
-      .getMyRoleProfiles()
-      .then((res: RoleProfileItem[] | RoleProfileResponse) => {
+    const loadRoleAndPerspectives = async () => {
+      const targetProjectId =
+        locationState?.projectId ?? searchParams.get('projectId') ?? sidebarProjects[0]?.id
+
+      if (targetProjectId) {
+        try {
+          const projectRoleRes = await projectApi.getProjectRolePerspective(Number(targetProjectId))
+          if (!active) return
+
+          if (
+            projectRoleRes &&
+            !projectRoleRes.useDefault &&
+            (projectRoleRes.roleCategory || projectRoleRes.detailRole)
+          ) {
+            setUserRoleProfile({
+              role: projectRoleRes.detailRole || projectRoleRes.roleCategory || '',
+              perspectives: projectRoleRes.perspectives || [],
+            })
+            return
+          }
+        } catch (err) {
+          console.warn('프로젝트별 역할·관점 조회 실패, 기본 프로필로 대체:', err)
+        }
+      }
+
+      try {
+        const rawRes: unknown = await userApi.getMyRoleProfiles()
         if (!active) return
-        const profiles = Array.isArray(res) ? res : res?.result || []
+
+        const profiles: RoleProfileItem[] = Array.isArray(rawRes)
+          ? (rawRes as RoleProfileItem[])
+          : ((rawRes as RoleProfileResponse)?.result ?? [])
+
         if (profiles.length === 0) return
 
         const defaultProfile = profiles.find((p: RoleProfileItem) => p.isDefault) || profiles[0]
@@ -426,13 +459,17 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
           role: defaultProfile.detailRole || defaultProfile.role || '',
           perspectives: defaultProfile.perspectives || [],
         })
-      })
-      .catch(() => {})
+      } catch {
+        // 기본 프로필 조회 실패 시 무시
+      }
+    }
+
+    void loadRoleAndPerspectives()
 
     return () => {
       active = false
     }
-  }, [])
+  }, [sidebarProjects, locationState, searchParams])
 
   useEffect(() => {
     if (!hasValidMeetingId) return
