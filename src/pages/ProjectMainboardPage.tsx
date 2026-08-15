@@ -65,7 +65,7 @@ import { ProjectMainboard } from '../widgets/project-mainboard'
 import { ProjectSidebar, type ProjectSidebarUser } from '../widgets/project-sidebar'
 
 type ProjectMainboardPageProps = {
-  /** 회의 기록의 수정·삭제 권한을 가리려면 내 userId가 필요합니다. */
+  /** 회의 기록의 수정·삭제 권한 판별에 필요한 내 userId. */
   user?: ProjectSidebarUser & { userId?: number }
   onCreateProject?: () => void
   onAddProject?: () => void
@@ -141,7 +141,7 @@ const addProjectReferenceMaterials = async (projectId: string, materials: Projec
 const deleteProjectReferenceMaterial = async (projectId: string, materialId: string) => {
   const referenceId = Number(materialId)
 
-  // 서버에 등록되지 않은 화면 전용 항목은 삭제할 대상이 없습니다.
+  // 서버에 등록되지 않은 화면 전용 항목은 삭제할 대상 없음.
   if (!Number.isInteger(referenceId)) return
 
   console.log('[projectReference] 참고자료 삭제 시작', { projectId, referenceId })
@@ -161,7 +161,7 @@ const renameProjectReferenceMaterial = async (
 ) => {
   const referenceId = Number(materialId)
 
-  // 서버에 등록되지 않은 화면 전용 항목은 서버에 수정 요청할 대상이 없습니다.
+  // 서버에 등록되지 않은 화면 전용 항목은 서버에 수정 요청할 대상 없음.
   if (!Number.isInteger(referenceId)) return
 
   console.log('[projectReference] 참고자료 제목 수정 시작', { projectId, referenceId })
@@ -206,7 +206,7 @@ const loadCompletedMeetingHistory = (projectId: string) =>
 const loadOngoingProjectMeeting = (projectId: string) =>
   meetingRecordGateway.findOngoingMeeting(projectId)
 
-/** 남이 연 회의가 언제 끝날지 알 수 없어 주기적으로 확인한다. 회의 목록 조회 하나라 부담이 작다. */
+/** 남이 연 회의가 언제 끝날지 알 수 없어 주기적으로 확인. 회의 목록 조회 하나라 부담 작음. */
 const ONGOING_MEETING_POLL_INTERVAL_MS = 15_000
 const updateCompletedMeetingHistoryTitle = (recordId: string, title: string) =>
   meetingRecordGateway.updateCompletedMeetingTitle(recordId, title)
@@ -273,7 +273,7 @@ export function ProjectMainboardPage({
   const [isProjectsLoading, setIsProjectsLoading] = useState(true)
   const [roleProfiles, setRoleProfiles] = useState<RoleProfile[]>([])
   const [activeProjectId, setActiveProjectId] = useState<string>()
-  /** 프로젝트별로 적용된 역할·관점. null은 프로젝트 전용 값이 없어 기본 프로필을 따른다는 뜻이다. */
+  /** 프로젝트별로 적용된 역할·관점. null은 프로젝트 전용 값이 없어 기본 프로필을 따른다는 뜻. */
   const [projectPerspectiveByProject, setProjectPerspectiveByProject] = useState<
     Record<string, ProjectInformationPerspective | null>
   >({})
@@ -286,12 +286,12 @@ export function ProjectMainboardPage({
   const [ongoingMeetingByProject, setOngoingMeetingByProject] = useState<
     Record<string, OngoingMeeting | null>
   >({})
-  /** 폴링 결과가 달라졌는지 판단하는 기준값. state를 읽으면 갱신 함수 밖에서 비교할 수 없다. */
+  /** 폴링 결과가 달라졌는지 판단하는 기준값. state를 읽으면 갱신 함수 밖에서 비교 불가. */
   const ongoingMeetingStateRef = useRef<
     Record<string, { meetingId: string; paused: boolean } | null>
   >({})
   const [latestCreatedProjectName, setLatestCreatedProjectName] = useState<string>()
-  /** 아직 안 보여 준 참여 요청 결과. 여러 건이면 앞에서부터 하나씩 안내한다. */
+  /** 아직 안 보여 준 참여 요청 결과. 여러 건이면 앞에서부터 하나씩 안내. */
   const [pendingJoinResults, setPendingJoinResults] = useState<ProjectJoinRequestResult[]>([])
   const [meetingEntryVariant, setMeetingEntryVariant] = useState<MeetingEntryModalVariant | null>(
     null,
@@ -355,7 +355,7 @@ export function ProjectMainboardPage({
     requestedProcessingRecordId,
   ])
 
-  // 역할·관점은 프로젝트마다 다르므로, 선택한 프로젝트의 값을 서버에서 읽어 표시에 쓴다.
+  // 역할·관점은 프로젝트마다 다르므로, 선택한 프로젝트의 값을 서버에서 읽어 표시에 사용.
   useEffect(() => {
     if (!activeProjectId || activeProjectId in projectPerspectiveByProject) return
     const apiProjectId = projects.find((project) => project.id === activeProjectId)?.apiProjectId
@@ -373,7 +373,9 @@ export function ProjectMainboardPage({
         }))
       })
       .catch(() => {
-        // 조회에 실패하면 계정 기본 프로필 표시로 폴백한다.
+        // 조회 실패 시 계정 기본 프로필 표시로 폴백. 조회가 끝났음을 남겨야 폴백이 켜짐.
+        if (!isSubscribed) return
+        setProjectPerspectiveByProject((current) => ({ ...current, [activeProjectId]: null }))
       })
 
     return () => {
@@ -390,7 +392,7 @@ export function ProjectMainboardPage({
         setRoleProfiles(profiles)
       })
       .catch(() => {
-        // 관점은 보조 정보라 실패해도 화면 진입을 막지 않습니다.
+        // 관점은 보조 정보라 실패해도 화면 진입을 막지 않음.
       })
 
     return () => {
@@ -507,14 +509,14 @@ export function ProjectMainboardPage({
   ])
 
   /**
-   * 진행 중 회의는 다른 사람이 열고 닫는다. 회의가 끝난 뒤에도 「회의 중」이 남지 않도록 주기적으로 다시 본다.
-   * 프로젝트별로 담아 두면 프로젝트를 바꿨을 때 이전 프로젝트의 회의가 잠깐 보이는 일이 없다.
+   * 진행 중 회의는 다른 사람이 열고 닫음. 회의가 끝난 뒤에도 「회의 중」이 남지 않도록 주기적으로 재확인.
+   * 프로젝트별로 담아 두면 프로젝트를 바꿨을 때 이전 프로젝트의 회의가 잠깐 보이는 일 없음.
    */
   useEffect(() => {
     if (!activeProjectId) return
 
     let isSubscribed = true
-    // 응답이 주기보다 오래 걸리면 요청이 겹친다. 늦게 온 옛 응답이 끝난 회의를 되살리지 않게 순번을 센다.
+    // 응답이 주기보다 오래 걸리면 요청이 겹침. 늦게 온 옛 응답이 끝난 회의를 되살리지 않도록 순번 계수.
     let latestRequestSequence = 0
 
     const refreshOngoingMeeting = () => {
@@ -527,17 +529,17 @@ export function ProjectMainboardPage({
           const previous = ongoingMeetingStateRef.current[activeProjectId] ?? null
           const next = meeting ? { meetingId: meeting.meetingId, paused: meeting.paused } : null
           /**
-           * 대부분의 주기는 결과가 같다. 그대로 담으면 15초마다 화면 전체가 다시 그려진다.
-           * 누적 시간은 비교에 넣지 않는다 — 매 주기 늘어나 항상 갱신하게 되고,
-           * 흐르는 시간은 버튼이 스스로 센다. 서버 값과 다시 맞추는 건 정지·재개 때다.
+           * 대부분의 주기는 결과가 같음. 그대로 담으면 15초마다 화면 전체가 다시 그려짐.
+           * 누적 시간은 비교에서 제외 — 매 주기 늘어나 항상 갱신하게 되고,
+           * 흐르는 시간은 버튼이 스스로 계수. 서버 값과 다시 맞추는 시점은 정지·재개 때.
            */
           if (previous?.meetingId === next?.meetingId && previous?.paused === next?.paused) return
 
           ongoingMeetingStateRef.current[activeProjectId] = next
           setOngoingMeetingByProject((current) => ({ ...current, [activeProjectId]: meeting }))
 
-          // 진행 중이던 회의가 끝났거나 다른 회의로 바뀌었다. 회의 기록은 최초 조회 결과를 캐시하므로,
-          // 비워 주지 않으면 방금 끝난 회의가 목록에 나타나지 않는다.
+          // 진행 중이던 회의가 끝났거나 다른 회의로 바뀐 상태. 회의 기록은 최초 조회 결과를 캐시하므로,
+          // 비워 주지 않으면 방금 끝난 회의가 목록에 나타나지 않음.
           if (!previous || previous.meetingId === next?.meetingId) return
           setCompletedMeetingsByProject((current) => {
             if (!(activeProjectId in current)) return current
@@ -548,7 +550,7 @@ export function ProjectMainboardPage({
           })
         })
         .catch(() => {
-          // 보조 정보다. 실패해도 화면을 막지 않고 다음 주기에 다시 시도한다.
+          // 보조 정보. 실패해도 화면을 막지 않고 다음 주기에 재시도.
         })
     }
 
@@ -574,7 +576,7 @@ export function ProjectMainboardPage({
   const joinOngoingMeeting = () => {
     if (!activeProject || !ongoingMeeting) return
 
-    // `/start`가 튜토리얼 표시 여부를 판단한다. 참가 처리는 회의 화면 진입 시의 join이 담당한다.
+    // `/start`가 튜토리얼 표시 여부를 판단. 참가 처리는 회의 화면 진입 시의 join 담당.
     navigate(`/meetings/${encodeURIComponent(ongoingMeeting.meetingId)}/start`, {
       state: {
         projectId: activeProject.id,
@@ -594,7 +596,7 @@ export function ProjectMainboardPage({
     try {
       const created = await createMeeting(projectId, { consentAgreed: true })
       setMeetingEntryVariant(null)
-      // `/start`가 「다시 보지 않기」를 확인해 튜토리얼을 건너뛸지 정합니다. 여기서 곧장 튜토리얼로 가면 안 됩니다.
+      // `/start`가 「다시 보지 않기」를 확인해 튜토리얼 생략 여부를 결정. 여기서 곧장 튜토리얼로 이동 금지.
       navigate(`/meetings/${created.meetingId}/start`, {
         state: {
           projectId: activeProject.id,
@@ -648,7 +650,7 @@ export function ProjectMainboardPage({
 
   const handleAddRoleProfile = async (draft: ProjectRolePerspectiveDraft) => {
     const created = await addRoleProfile(draft)
-    // 새 프로필이 목록·기본 관점에 바로 반영되도록 서버 상태를 다시 읽습니다.
+    // 새 프로필이 목록·기본 관점에 바로 반영되도록 서버 상태 재조회.
     setRoleProfiles(await loadRoleProfiles())
     return created
   }
@@ -660,7 +662,7 @@ export function ProjectMainboardPage({
     const submittedProject = await onSubmitProject?.(draft, materials)
     const nextProject = submittedProject ?? (await createProjectWithMaterials(draft, materials))
 
-    // 생성할 때 고른 관점을 이 프로젝트 전용 값으로 저장한다. 프로젝트마다 관점이 독립이어야 한다.
+    // 생성할 때 고른 관점을 이 프로젝트 전용 값으로 저장. 프로젝트마다 관점은 독립.
     const selectedProfile = roleProfiles.find(
       (profile) => toProjectPerspectiveOption(profile).id === draft.perspectiveId,
     )
@@ -676,7 +678,7 @@ export function ProjectMainboardPage({
           [nextProject.id]: { label: option.label, description: option.selectedDescription },
         }))
       } catch {
-        // 저장에 실패해도 프로젝트 생성은 유지하되, 사용자에게 알려 다시 설정할 수 있게 한다.
+        // 저장에 실패해도 프로젝트 생성은 유지하되, 사용자에게 알려 다시 설정할 수 있게 함.
         showProjectReferenceFeedback({
           title: '관점 저장 실패',
           description:
@@ -804,7 +806,7 @@ export function ProjectMainboardPage({
     const apiProjectId = projects.find((project) => project.id === activeProjectId)?.apiProjectId
     const submittedProject = await updateProject?.(activeProjectId, draft)
 
-    // 관점은 계정 기본 프로필이 아니라 이 프로젝트 전용 역할·관점으로 저장한다.
+    // 관점은 계정 기본 프로필이 아니라 이 프로젝트 전용 역할·관점으로 저장.
     const nextProfile = roleProfiles.find((profile) => {
       const option = toProjectPerspectiveOption(profile)
       if (draft.perspectiveId) return option.id === draft.perspectiveId
@@ -831,8 +833,8 @@ export function ProjectMainboardPage({
   }
 
   /**
-   * 소유자가 참여 요청을 처리해도 요청자에게 알릴 통로가 없어, 프로젝트 화면에 들어올 때 확인한다.
-   * 서버는 읽음 상태를 관리하지 않으므로 이미 보여 준 것은 걸러 낸다.
+   * 소유자가 참여 요청을 처리해도 요청자에게 알릴 통로가 없어, 프로젝트 화면 진입 시 확인.
+   * 서버는 읽음 상태를 관리하지 않으므로 이미 보여 준 것은 제외.
    */
   const currentUserId = user?.userId
   useEffect(() => {
@@ -846,7 +848,7 @@ export function ProjectMainboardPage({
       const unseen = results.filter((result) => !seen.has(result.requestId))
       if (unseen.length === 0) return
 
-      // 서버가 최신순으로 주므로, 오래된 것부터 안내하도록 뒤집는다.
+      // 서버가 최신순으로 주므로, 오래된 것부터 안내하도록 순서 반전.
       setPendingJoinResults([...unseen].reverse())
     })
 
@@ -862,16 +864,16 @@ export function ProjectMainboardPage({
     if (currentUserId !== undefined) markJoinRequestResultSeen(currentUserId, result.requestId)
     setPendingJoinResults(rest)
 
-    // 승인된 프로젝트로 옮긴다. 목록에 아직 없으면(조회 시점 차이) 그냥 닫는다.
-    // 화면 id가 아니라 서버 id로 맞춘다 — 화면 id의 생성 규칙에 기대지 않기 위해서다.
+    // 승인된 프로젝트로 이동. 목록에 아직 없으면(조회 시점 차이) 그냥 닫음.
+    // 화면 id가 아니라 서버 id로 매칭 — 화면 id의 생성 규칙에 기대지 않기 위함.
     if (result.status !== 'APPROVED') return
     const approvedProject = projects.find((project) => project.apiProjectId === result.projectId)
     if (approvedProject) setActiveProjectId(approvedProject.id)
   }
 
   /**
-   * 나간 프로젝트는 내 목록에서 사라진다. 보고 있던 프로젝트이므로 남은 것 중 하나로 옮기고,
-   * 남은 것이 없으면 프로젝트가 없는 빈 상태가 된다. 나가기 요청 자체는 더보기 메뉴가 이미 보냈다.
+   * 나간 프로젝트는 내 목록에서 사라짐. 보고 있던 프로젝트이므로 남은 것 중 하나로 옮기고,
+   * 남은 것이 없으면 프로젝트가 없는 빈 상태. 나가기 요청 자체는 더보기 메뉴가 이미 전송.
    */
   const handleLeaveProject = () => {
     if (!activeProjectId) return
@@ -883,7 +885,7 @@ export function ProjectMainboardPage({
     setActiveProjectId((currentId) =>
       currentId === activeProjectId ? nextProjects[0]?.id : currentId,
     )
-    // 더보기 메뉴가 아니라 여기서 알린다. 마지막 프로젝트를 나가면 그 메뉴가 화면에서 사라진다.
+    // 더보기 메뉴가 아니라 여기서 안내. 마지막 프로젝트를 나가면 그 메뉴가 화면에서 사라짐.
     showProjectReferenceFeedback({
       title: '프로젝트 나가기 완료',
       description: `‘${leftProject.name}’ 프로젝트에서 나갔습니다.`,
@@ -946,7 +948,7 @@ export function ProjectMainboardPage({
   const perspectiveOptions = roleProfileOptions.length > 0 ? roleProfileOptions : undefined
   const defaultProfile = roleProfiles.find((profile) => profile.isDefault)
   const defaultPerspective = defaultProfile ? toProjectPerspectiveOption(defaultProfile) : undefined
-  // 생성 모달은 기본관점이 먼저 선택되어 있어야 하므로 기본 프로필을 맨 앞에 둔다.
+  // 생성 모달은 기본 관점이 먼저 선택되어 있어야 하므로 기본 프로필을 맨 앞에 배치.
   const createModalPerspectiveOptions =
     perspectiveOptions && defaultPerspective
       ? [
@@ -955,10 +957,13 @@ export function ProjectMainboardPage({
         ]
       : perspectiveOptions
   const selectedProject = projects.find((project) => project.id === activeProjectId)
-  // 프로젝트 전용 역할·관점을 우선 쓰고, 없으면 계정 기본 프로필을 보여 준다.
+  // 프로젝트 전용 역할·관점을 우선 사용, 없으면 계정 기본 프로필 표시.
+  // 단, 프로젝트별 조회가 끝나기 전에는 기본 프로필로 채우지 않음 — 새로고침 때 기본값이 먼저 보였다가 바뀌는 깜빡임 방지.
+  const isProjectPerspectiveLoaded =
+    activeProjectId !== undefined && activeProjectId in projectPerspectiveByProject
   const appliedPerspective =
     (activeProjectId ? projectPerspectiveByProject[activeProjectId] : undefined) ??
-    (defaultPerspective
+    (isProjectPerspectiveLoaded && defaultPerspective
       ? { label: defaultPerspective.label, description: defaultPerspective.selectedDescription }
       : undefined)
   const activeProject =
@@ -1021,6 +1026,13 @@ export function ProjectMainboardPage({
         onAddPerspective={async (roleDraft) => {
           const created = await handleAddRoleProfile(roleDraft)
           return { id: created.id, label: created.label, description: created.selectedDescription }
+        }}
+        onRolePerspectiveSaved={(perspective) => {
+          if (!activeProjectId) return
+          setProjectPerspectiveByProject((current) => ({
+            ...current,
+            [activeProjectId]: perspective,
+          }))
         }}
         perspectiveOptions={perspectiveOptions?.map((option) => ({
           id: option.id,

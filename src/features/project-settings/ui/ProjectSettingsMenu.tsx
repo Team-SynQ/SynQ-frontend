@@ -43,7 +43,7 @@ type SettingsToast = {
 
 type ProjectSettingsMenuProps = {
   project: ProjectSummary
-  /** 프로젝트를 나간 뒤 목록을 갱신하는 것은 상위 화면이 담당합니다. */
+  /** 프로젝트를 나간 뒤 목록 갱신은 상위 화면 담당. */
   onLeaveProject?: () => Promise<void> | void
   perspectiveOptions?: ProjectInformationPerspective[]
   onLoadProject?: () => Promise<ProjectSummary | void> | ProjectSummary | void
@@ -57,7 +57,9 @@ type ProjectSettingsMenuProps = {
   exportMember?: (projectId: number, memberId: number) => Promise<void>
   leaveProjectAsMember?: (projectId: number) => Promise<void>
   saveRolePerspective?: (projectId: number, draft: AccountPerspectiveDraft) => Promise<void>
-  /** 프로젝트 정보 수정에서 새 역할·관점을 추가할 때 서버 프로필로 저장합니다. */
+  /** 역할·관점 저장 완료 시 상위 화면이 표시 값을 갱신하도록 알림. */
+  onRolePerspectiveSaved?: (perspective: ProjectInformationPerspective) => void
+  /** 프로젝트 정보 수정에서 새 역할·관점 추가 시 서버 프로필로 저장. */
   onAddPerspective?: (draft: ProjectRolePerspectiveDraft) => Promise<ProjectInformationPerspective>
 }
 
@@ -76,6 +78,7 @@ export function ProjectSettingsMenu({
   exportMember = removeProjectMember,
   leaveProjectAsMember = leaveProject,
   saveRolePerspective = saveProjectRolePerspective,
+  onRolePerspectiveSaved,
   onAddPerspective,
 }: ProjectSettingsMenuProps) {
   const managementTitleId = useId()
@@ -108,8 +111,8 @@ export function ProjectSettingsMenu({
   const members = memberList?.members ?? []
   const maxMemberCount = memberList?.maxCount ?? PROJECT_MEMBER_LIMIT
   /**
-   * 소유자 여부는 멤버 목록에서만 알 수 있습니다. 프로젝트 목록 응답에는 소유자 정보가 없습니다.
-   * 목록을 받기 전에는 소유자가 아닌 것으로 봅니다 — 소유자 전용 메뉴를 잘못 열어 주지 않기 위해서입니다.
+   * 소유자 여부는 멤버 목록에서만 확인 가능. 프로젝트 목록 응답에는 소유자 정보 없음.
+   * 목록을 받기 전에는 소유자가 아닌 것으로 간주 — 소유자 전용 메뉴를 잘못 열지 않기 위함.
    */
   const isOwner = members.some((member) => member.isCurrentUser && member.isOwner)
 
@@ -136,7 +139,7 @@ export function ProjectSettingsMenu({
     }
   }, [apiProjectId, isPopoverOpen, loadMembers, showToast])
 
-  // 참여 요청은 소유자만 조회할 수 있습니다. 멤버가 부르면 403이 나므로 아예 부르지 않습니다.
+  // 참여 요청은 소유자만 조회 가능. 멤버가 부르면 403이 나므로 호출 생략.
   useEffect(() => {
     if (!isPopoverOpen || !isOwner) return
 
@@ -164,7 +167,7 @@ export function ProjectSettingsMenu({
       await leaveProjectAsMember(apiProjectId)
       setIsLeaveOpen(false)
       setIsPopoverOpen(false)
-      // 나간 프로젝트를 목록에서 지우고 다른 프로젝트로 옮기는 것은 상위 화면이 한다.
+      // 나간 프로젝트를 목록에서 지우고 다른 프로젝트로 옮기는 것은 상위 화면 담당.
       await onLeaveProject?.()
     } catch {
       showToast({
@@ -189,6 +192,8 @@ export function ProjectSettingsMenu({
       return
     }
 
+    // 서버에만 저장하고 끝내면 메인보드 배지는 새로고침 전까지 이전 값 표시.
+    onRolePerspectiveSaved?.({ label: draft.roleLabel, description: draft.focusDescription })
     setIsRolePerspectiveOpen(false)
     showToast({
       title: '역할·관점 저장 완료',
@@ -276,7 +281,7 @@ export function ProjectSettingsMenu({
   const handleApproveRequest = async (request: ProjectJoinRequest) => {
     if (pendingRequestId) return
 
-    // 정원이 찬 것은 서버도 막지만, 누르기 전에 알려 주는 편이 낫습니다.
+    // 정원 초과는 서버도 막지만, 누르기 전에 미리 안내.
     if (members.length >= maxMemberCount) {
       showToast({
         title: '프로젝트 최대 인원 도달',
@@ -290,7 +295,7 @@ export function ProjectSettingsMenu({
     try {
       await approveJoinRequest(apiProjectId, Number(request.id))
       setJoinRequests((current) => current.filter((item) => item.id !== request.id))
-      // 승인된 사람이 멤버 목록에 반영되도록 서버 값을 다시 읽습니다.
+      // 승인된 사람이 멤버 목록에 반영되도록 서버 값 재조회.
       const list = await loadMembers(apiProjectId).catch(() => undefined)
       if (list) setMemberList(list)
       showToast({
@@ -359,7 +364,7 @@ export function ProjectSettingsMenu({
           : current,
       )
 
-    // 서버에 등록되지 않은 화면 전용 항목은 내보낼 대상이 없습니다.
+    // 서버에 등록되지 않은 화면 전용 항목은 내보낼 대상 없음.
     if (!Number.isInteger(memberId)) {
       removeFromList()
       return
