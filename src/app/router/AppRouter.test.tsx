@@ -12,6 +12,35 @@ import { meetingService } from '../../shared/api/services/meeting.service'
 import { transcriptService } from '../../shared/api/services/transcript.service'
 import { userService } from '../../shared/api/services/user.service'
 
+// Node 22+ 및 Vitest 환경 호환용 Storage Mock 생성
+const createStorageMock = () => {
+  let store: Record<string, string> = {}
+  return {
+    getItem: vi.fn((key: string) => store[key] ?? null),
+    setItem: vi.fn((key: string, value: string) => {
+      store[key] = String(value)
+    }),
+    removeItem: vi.fn((key: string) => {
+      delete store[key]
+    }),
+    clear: vi.fn(() => {
+      store = {}
+    }),
+  }
+}
+
+const localStorageMock = createStorageMock()
+const sessionStorageMock = createStorageMock()
+
+Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock,
+  writable: true,
+})
+Object.defineProperty(window, 'sessionStorage', {
+  value: sessionStorageMock,
+  writable: true,
+})
+
 async function renderAppAt(path: string) {
   window.history.pushState({}, '', path)
   const result = render(<App />)
@@ -21,7 +50,10 @@ async function renderAppAt(path: string) {
 }
 
 beforeEach(() => {
+  window.localStorage.clear()
+  window.sessionStorage.clear()
   window.localStorage.setItem('accessToken', 'test-access-token')
+
   vi.spyOn(userApi, 'getMe').mockResolvedValue({
     userId: projectMockActorFixture.userId,
     name: projectMockActorFixture.name,
@@ -65,6 +97,10 @@ afterEach(() => {
 
 describe('AppRouter', () => {
   it('moves landing to onboarding after the existing animation timer', async () => {
+    // 최초 방문(비로그인 및 온보딩 미확인) 상태 보장
+    window.localStorage.removeItem('accessToken')
+    window.localStorage.removeItem('synq_has_seen_onboarding')
+
     vi.useFakeTimers()
     await renderAppAt('/')
 
@@ -80,6 +116,33 @@ describe('AppRouter', () => {
         name: '회의 중, 이해하지 못한 채 넘어간 순간이 있나요?',
       }),
     ).toBeInTheDocument()
+  })
+
+  it('moves landing to projects when the user is already logged in', async () => {
+    // beforeEach에서 설정된 accessToken 유지 (로그인 상태)
+    vi.useFakeTimers()
+    await renderAppAt('/')
+
+    act(() => {
+      vi.advanceTimersByTime(2500)
+    })
+
+    expect(window.location.pathname).toBe('/projects')
+  })
+
+  it('moves landing to login when the user has already seen onboarding', async () => {
+    // 비로그인 상태이지만 이미 온보딩을 확인한 이력이 있는 상태
+    window.localStorage.removeItem('accessToken')
+    window.localStorage.setItem('synq_has_seen_onboarding', 'true')
+
+    vi.useFakeTimers()
+    await renderAppAt('/')
+
+    act(() => {
+      vi.advanceTimersByTime(2500)
+    })
+
+    expect(window.location.pathname).toBe('/login')
   })
 
   it('opens onboarding directly and moves to login when skipped', async () => {
