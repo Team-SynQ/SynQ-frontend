@@ -1,4 +1,3 @@
-
 export const DesktopOnlyBlocker = () => {
   return (
     // lg(1024px) 미만 화면(모바일·태블릿)에서만 전체 화면으로 안내 오버레이 노출
