@@ -33,6 +33,7 @@ import {
   type CurrentUser,
 } from '../../entities/user'
 import { readAccessToken } from '../../shared/lib/authStorage'
+import { DesktopOnlyBlocker } from '../../shared/ui/DesktopOnlyBlocker'
 import { LandingRoute, OnboardingRoute } from './EntryFlowRoutes'
 import {
   ProjectJoinPerspectiveSetupRoute,
@@ -58,6 +59,19 @@ function useAuthenticatedContext() {
 
 function useAuthenticatedUser() {
   return useAuthenticatedContext().user
+}
+
+/**
+ * 모든 화면에 공통 적용되는 최상위 루트 레이아웃입니다.
+ * 모바일 및 태블릿 화면 크기(1024px 미만) 접속 시 안내 화면을 표시합니다.
+ */
+function RootLayout() {
+  return (
+    <>
+      <DesktopOnlyBlocker />
+      <Outlet />
+    </>
+  )
 }
 
 /**
@@ -140,7 +154,7 @@ function MeetingRoute() {
  * 정의는 JSX 그대로 유지합니다.
  */
 const appRoutes = createRoutesFromElements(
-  <>
+  <Route element={<RootLayout />}>
     <Route element={<LandingRoute />} path="/" />
     <Route element={<OnboardingRoute />} path="/onboarding" />
     <Route element={<LoginPage />} path="/login" />
@@ -173,7 +187,7 @@ const appRoutes = createRoutesFromElements(
       <Route element={<MeetingDetailRoute />} path="/meetings/:meetingRecordId/detail" />
     </Route>
     <Route element={<Navigate replace to="/" />} path="*" />
-  </>,
+  </Route>,
 )
 
 export function AppRouter() {
