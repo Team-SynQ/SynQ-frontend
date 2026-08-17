@@ -1,5 +1,6 @@
 import { Button } from '../../../shared/ui'
 import { cn } from '../../../shared/lib/cn'
+import { useStickyScrollToBottom } from '../../../shared/lib/useStickyScrollToBottom'
 import type { AiChatMessage } from '../model/aiChat.types'
 import { AiChatMarkdown } from './AiChatMarkdown'
 
@@ -20,6 +21,14 @@ export function AiChatMessageList({
   loadError = null,
   onRetryLoad,
 }: AiChatMessageListProps) {
+  const lastMessage = messages[messages.length - 1]
+  /**
+   * 대화가 길어졌다는 신호. 답변 대기 안내도 목록 아래에 붙어 높이를 바꾼다.
+   */
+  const { scrollRef, onScroll } = useStickyScrollToBottom<HTMLDivElement>(
+    `${messages.length}:${lastMessage?.id ?? ''}:${lastMessage?.content.length ?? 0}:${isAwaitingAnswer}`,
+  )
+
   return (
     <div
       aria-label="AI Chat 메시지"
@@ -29,6 +38,8 @@ export function AiChatMessageList({
         'flex min-h-0 min-w-0 flex-col gap-m overflow-y-auto border-x border-line-default bg-surface-muted',
         variant === 'floating' ? 'px-m py-[28px]' : 'p-m',
       )}
+      onScroll={onScroll}
+      ref={scrollRef}
       role="log"
       tabIndex={0}
     >

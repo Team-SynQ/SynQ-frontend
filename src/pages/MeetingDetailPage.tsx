@@ -21,6 +21,7 @@ import type {
 } from '../shared/api/contracts/meeting.contracts'
 import { MeetingSettingsMenu, type MeetingMember } from '../features/meeting-settings'
 import { cn } from '../shared/lib/cn'
+import { useStickyScrollToBottom } from '../shared/lib/useStickyScrollToBottom'
 
 // 역할 프로필 응답 타입 정의 (ESLint any 타입 사용 방지)
 interface RoleProfileItem {
@@ -119,6 +120,11 @@ export type AiChatMessageListProps = {
 }
 
 export function AiChatMessageList({ messages, variant }: AiChatMessageListProps) {
+  const lastMessage = messages[messages.length - 1]
+  const { scrollRef, onScroll } = useStickyScrollToBottom<HTMLDivElement>(
+    `${messages.length}:${lastMessage?.id ?? ''}:${lastMessage?.content.length ?? 0}`,
+  )
+
   return (
     <div
       aria-label="AI Chat 메시지"
@@ -128,6 +134,8 @@ export function AiChatMessageList({ messages, variant }: AiChatMessageListProps)
         'flex min-h-0 flex-1 flex-col gap-m overflow-y-auto bg-[#F8F9FA]',
         variant === 'floating' ? 'px-m py-[28px]' : 'p-m',
       )}
+      onScroll={onScroll}
+      ref={scrollRef}
       role="log"
       tabIndex={0}
     >
