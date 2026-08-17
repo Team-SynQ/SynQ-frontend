@@ -23,9 +23,9 @@ type ProjectMainboardProps = {
   onRenameMeeting?: (recordId: string, nextTitle: string) => Promise<void>
   onDeleteMeeting?: (recordId: string) => Promise<void>
   meetings?: CompletedMeeting[]
-  /** 회의 기록을 수정·삭제할 수 있는지 가리는 기준. 그 회의를 진행한 사람만 가능합니다. */
+  /** 회의 기록 수정·삭제 가능 여부의 기준. 그 회의를 진행한 사람만 가능. */
   currentUserId?: number | null
-  /** 프로젝트 목록을 아직 불러오는 중이면 빈 상태 대신 아무것도 그리지 않습니다. */
+  /** 프로젝트 목록 로딩 중이면 빈 상태 대신 아무것도 그리지 않음. */
   projectsLoading?: boolean
   meetingHistoryLoading?: boolean
   meetingHistoryPresentation?: MeetingHistoryPresentation
@@ -41,8 +41,10 @@ type ProjectMainboardProps = {
   onUpdateProject?: (draft: ProjectInformationDraft) => Promise<void> | void
   perspectiveOptions?: ProjectInformationPerspective[]
   onAddPerspective?: (draft: ProjectRolePerspectiveDraft) => Promise<ProjectInformationPerspective>
+  /** 설정 메뉴에서 이 프로젝트의 역할·관점을 저장했을 때. 표시 값 갱신은 상위 화면 담당. */
+  onRolePerspectiveSaved?: (perspective: ProjectInformationPerspective) => void
   onDeleteProject?: () => Promise<void> | void
-  /** 일반 멤버가 프로젝트를 나갔을 때. 목록 갱신은 상위 화면이 합니다. */
+  /** 일반 멤버가 프로젝트를 나갔을 때. 목록 갱신은 상위 화면 담당. */
   onLeaveProject?: () => Promise<void> | void
 }
 
@@ -71,6 +73,7 @@ export function ProjectMainboard({
   onUpdateProject,
   perspectiveOptions,
   onAddPerspective,
+  onRolePerspectiveSaved,
   onDeleteProject,
   onLeaveProject,
 }: ProjectMainboardProps) {
@@ -85,6 +88,7 @@ export function ProjectMainboard({
         <ProjectCreatedDashboard
           currentUserId={currentUserId}
           onAddPerspective={onAddPerspective}
+          onRolePerspectiveSaved={onRolePerspectiveSaved}
           perspectiveOptions={perspectiveOptions}
           meetingHistoryLoading={meetingHistoryLoading}
           onAddMaterials={onAddMaterials}

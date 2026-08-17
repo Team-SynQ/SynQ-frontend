@@ -8,6 +8,7 @@ import {
 import plusIcon from '../../../shared/assets/icons/plus.svg'
 import sidebarIcon from '../../../shared/assets/icons/sidebar.svg'
 import { authService } from '../../../shared/api/services/auth.service'
+import { clearAuthTokens } from '../../../shared/lib/authStorage'
 import { cn } from '../../../shared/lib/cn'
 import { Button, Logo, Panel, ProjectMenuItem } from '../../../shared/ui'
 
@@ -53,8 +54,7 @@ export function ProjectSidebar({
     } catch (error) {
       console.error('로그아웃 API 호출 실패:', error)
     } finally {
-      localStorage.removeItem('accessToken')
-      localStorage.removeItem('refreshToken')
+      clearAuthTokens()
       setIsLogoutModalOpen(false)
       navigate('/login')
     }
@@ -63,7 +63,7 @@ export function ProjectSidebar({
   return (
     <>
       <Panel
-        className="h-screen shrink-0"
+        className="sticky top-0 h-screen shrink-0"
         footer={
           user && !isCollapsed ? (
             <AccountSettingsMenu

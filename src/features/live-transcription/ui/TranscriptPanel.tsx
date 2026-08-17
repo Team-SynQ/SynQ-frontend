@@ -1,6 +1,11 @@
 import refreshIcon from '../../../shared/assets/icons/refresh.svg'
+import { useStickyScrollToBottom } from '../../../shared/lib/useStickyScrollToBottom'
 import { Button } from '../../../shared/ui'
-import type { TranscriptPanelActions, TranscriptPanelState } from '../model/transcript.types'
+import type {
+  TranscriptPanelActions,
+  TranscriptPanelState,
+  TranscriptSegment,
+} from '../model/transcript.types'
 import { SpeakingIndicator } from './SpeakingIndicator'
 import { TranscriptEmptyState } from './TranscriptEmptyState'
 import { TranscriptItem } from './TranscriptItem'
@@ -10,7 +15,21 @@ export type TranscriptPanelProps = {
   actions: TranscriptPanelActions
 }
 
+const EMPTY_SEGMENTS: TranscriptSegment[] = []
+
 export function TranscriptPanel({ state, actions }: TranscriptPanelProps) {
+  const segments = state.kind === 'active' ? state.segments : EMPTY_SEGMENTS
+  const isSpeaking = state.kind === 'active' && state.isSpeaking
+  const lastSegment = segments[segments.length - 1]
+  /**
+   * 목록이 길어졌다는 신호. 중간 인식은 같은 id로 글자만 늘어나므로 길이도 함께 본다.
+   * 발화 표시가 붙고 빠지는 것도 높이를 바꾼다.
+   * 전사 수정·힌트 펼침은 넣지 않는다. 사용자가 그 자리에서 보고 있는 중이라 움직이면 안 된다.
+   */
+  const { scrollRef, onScroll } = useStickyScrollToBottom<HTMLDivElement>(
+    `${segments.length}:${lastSegment?.id ?? ''}:${lastSegment?.text.length ?? 0}:${isSpeaking}`,
+  )
+
   return (
     <section
       aria-labelledby="meeting-transcript-title"
@@ -31,7 +50,11 @@ export function TranscriptPanel({ state, actions }: TranscriptPanelProps) {
         </Button>
       </header>
 
-      <div className="min-h-0 overflow-y-auto border-x border-b border-line-default px-l py-m">
+      <div
+        className="min-h-0 overflow-y-auto border-x border-b border-line-default px-l py-m"
+        onScroll={onScroll}
+        ref={scrollRef}
+      >
         {state.kind === 'waiting' ? (
           <TranscriptEmptyState />
         ) : (

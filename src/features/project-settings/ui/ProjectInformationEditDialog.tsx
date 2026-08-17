@@ -24,7 +24,7 @@ type Props = {
   perspectiveOptions?: ProjectInformationPerspective[]
   onClose: () => void
   onSave: (draft: ProjectInformationDraft) => Promise<void> | void
-  /** 새 역할·관점을 서버에 프로필로 저장하고 드롭다운 옵션으로 돌려줍니다. 없으면 화면에서만 유지합니다. */
+  /** 새 역할·관점을 서버 프로필로 저장하고 드롭다운 옵션으로 반환. 없으면 화면에서만 유지. */
   onAddPerspective?: (draft: ProjectRolePerspectiveDraft) => Promise<ProjectInformationPerspective>
 }
 
@@ -70,6 +70,8 @@ function ProjectInformationEditForm({
   })
   const [perspectives, setPerspectives] = useState(() => {
     const current = { label: project.perspectiveLabel, description: project.perspectiveDescription }
+    // 프로젝트별 관점 조회가 끝나기 전에 열리면 라벨이 비어 있음. 빈 항목은 목록에 넣지 않음.
+    if (!current.label) return perspectiveOptions
     return [
       current,
       ...perspectiveOptions.filter(
@@ -80,7 +82,7 @@ function ProjectInformationEditForm({
   const canSave = draft.name.trim().length > 0 && !isSubmitting
 
   const handleAddPerspective = async (roleDraft: ProjectRolePerspectiveDraft) => {
-    // 서버에 프로필로 저장해야 다음에 열어도 목록에 남고, 저장 시 실제 프로필로 적용된다.
+    // 서버 프로필로 저장해야 다음에 열어도 목록에 남고, 저장 시 실제 프로필로 적용됨.
     if (onAddPerspective) {
       try {
         const created = await onAddPerspective(roleDraft)
@@ -93,7 +95,7 @@ function ProjectInformationEditForm({
         }))
         setIsAddingPerspective(false)
       } catch {
-        // 저장 실패 시 입력 폼을 유지해 다시 시도할 수 있게 한다.
+        // 저장 실패 시 입력 폼을 유지해 재시도 가능하게 함.
       }
       return
     }
@@ -125,7 +127,7 @@ function ProjectInformationEditForm({
       await onSave({ ...draft, name: draft.name.trim(), overview: draft.overview.trim() })
       onClose()
     } catch {
-      // The parent shows the Figma error toast and keeps this form open for retry.
+      // 오류 토스트 표시와 폼 유지(재시도)는 상위 화면 담당.
     } finally {
       setIsSubmitting(false)
     }

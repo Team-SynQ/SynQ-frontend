@@ -590,8 +590,19 @@ export function useLiveMeetingController(
 
     const requestMeetingId = meetingId
     const requestSessionSequence = meetingSessionRef.current.sequence
+    /**
+     * 보낸 즉시 대화창에 올린다. 답변을 기다리는 동안 질문이 입력창에 남아 있으면
+     * 보냈는지 알 수 없다. 서버 응답에도 같은 질문이 담겨 오므로 그때 이 임시 말풍선을 걷어낸다.
+     */
+    const pendingMessageId = `user-pending-${crypto.randomUUID()}`
+
     setIsSending(true)
     setSendError(null)
+    setMessages((current) => [
+      ...current,
+      { id: pendingMessageId, role: 'user', content: question },
+    ])
+    setDraft('')
     try {
       const response = await meetingAiChatApi.sendQuestion(
         apiMeetingId,
@@ -599,14 +610,20 @@ export function useLiveMeetingController(
         pinnedContext?.transcriptId ?? null,
       )
       if (!isCurrentMeetingSession(requestMeetingId, requestSessionSequence)) return
-      setMessages((current) => [...current, ...response.messages])
+      setMessages((current) => [
+        ...current.filter((message) => message.id !== pendingMessageId),
+        ...response.messages,
+      ])
       // 서버가 답변마다 후속 질문을 준다. 주지 않으면 기존 추천을 유지한다.
       if (response.suggestions) setSuggestions(response.suggestions)
       // 생성 중이면 답변이 아직 없다. 수신 경로는 AI 이벤트 연동에서 붙인다.
       setIsAnswerPending(response.isAnswerPending)
-      setDraft('')
     } catch {
       if (!isCurrentMeetingSession(requestMeetingId, requestSessionSequence)) return
+      // 실패하면 임시 말풍선을 걷어내고 문장을 입력창에 돌려준다. 다시 치게 하지 않는다.
+      setMessages((current) => current.filter((message) => message.id !== pendingMessageId))
+      // 기다리는 동안 추천 질문을 고를 수 있다. 그 문구를 덮지 않도록 빈 입력창일 때만 되돌린다.
+      setDraft((current) => (current.length === 0 ? question : current))
       setIsAnswerPending(false)
       setSendError('AI 답변을 불러오지 못했습니다. 다시 시도해 주세요.')
     } finally {

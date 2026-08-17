@@ -45,7 +45,7 @@ type ProjectCreatedDashboardProps = {
   onRenameMeeting?: (recordId: string, nextTitle: string) => Promise<void>
   onDeleteMeeting?: (recordId: string) => Promise<void>
   meetings?: CompletedMeeting[]
-  /** 회의 기록을 수정·삭제할 수 있는지 가리는 기준. 그 회의를 진행한 사람만 가능합니다. */
+  /** 회의 기록 수정·삭제 가능 여부의 기준. 그 회의를 진행한 사람만 가능. */
   currentUserId?: number | null
   meetingHistoryLoading?: boolean
   meetingHistoryPresentation?: MeetingHistoryPresentation
@@ -55,15 +55,16 @@ type ProjectCreatedDashboardProps = {
   onRetryMeetingSummary?: (recordId: string) => void
   onOpenMeetingDetail?: (recordId: string) => void
   onStartMeeting?: () => void
-  /** 이 프로젝트에서 진행 중인 회의. 있으면 새 회의를 시작할 수 없다. */
+  /** 이 프로젝트에서 진행 중인 회의. 있으면 새 회의 시작 불가. */
   ongoingMeeting?: OngoingMeeting | null
   onJoinOngoingMeeting?: () => void
   onLoadProject?: () => Promise<ProjectSummary | void> | ProjectSummary | void
   onUpdateProject?: (draft: ProjectInformationDraft) => Promise<void> | void
   perspectiveOptions?: ProjectInformationPerspective[]
   onAddPerspective?: (draft: ProjectRolePerspectiveDraft) => Promise<ProjectInformationPerspective>
+  onRolePerspectiveSaved?: (perspective: ProjectInformationPerspective) => void
   onDeleteProject?: () => Promise<void> | void
-  /** 일반 멤버가 프로젝트를 나갔을 때. 목록 갱신은 상위 화면이 합니다. */
+  /** 일반 멤버가 프로젝트를 나갔을 때. 목록 갱신은 상위 화면 담당. */
   onLeaveProject?: () => Promise<void> | void
 }
 
@@ -96,6 +97,7 @@ export function ProjectCreatedDashboard({
   onUpdateProject,
   perspectiveOptions,
   onAddPerspective,
+  onRolePerspectiveSaved,
   onDeleteProject,
   onLeaveProject,
 }: ProjectCreatedDashboardProps) {
@@ -122,8 +124,9 @@ export function ProjectCreatedDashboard({
           onDeleteProject={onDeleteProject}
           onLeaveProject={onLeaveProject}
           onLoadProject={onLoadProject}
+          onRolePerspectiveSaved={onRolePerspectiveSaved}
           onUpdateProject={onUpdateProject}
-          // 계정 프로필이 아직 없으면 빈 목록을 준다. 화면 전용 기본 목록을 섞으면 만든 적 없는 관점이 보인다.
+          // 계정 프로필이 아직 없으면 빈 목록 전달. 화면 전용 기본 목록을 섞으면 만든 적 없는 관점이 노출됨.
           perspectiveOptions={perspectiveOptions ?? []}
           project={project}
         />
@@ -135,7 +138,7 @@ export function ProjectCreatedDashboard({
           {ongoingMeeting ? (
             <OngoingMeetingButton
               activeSeconds={ongoingMeeting.activeSeconds}
-              // 서버 값이 바뀌면 다시 마운트해 기준 시각을 새로 잡는다.
+              // 서버 값이 바뀌면 다시 마운트해 기준 시각을 새로 설정.
               key={`${ongoingMeeting.meetingId}:${ongoingMeeting.paused}:${ongoingMeeting.activeSeconds}`}
               onJoin={onJoinOngoingMeeting ?? (() => {})}
               paused={ongoingMeeting.paused}
@@ -228,7 +231,7 @@ function ProjectReferenceMaterials({
 
   const handleAddMaterials = async (nextDraft: ProjectMaterialDraft) => {
     // 기존 자료 수를 모르는 상태에서는 개수 검사가 부정확하고, 뒤늦게 도착한 조회 결과가
-    // 방금 추가한 자료를 덮어쓸 수 있습니다.
+    // 방금 추가한 자료를 덮어쓸 수 있음.
     if (isMaterialsLoading) return
 
     const nextMaterialCount = nextDraft.files.length + nextDraft.links.length
@@ -359,7 +362,7 @@ function ProjectReferenceMaterialItem({
     try {
       await action()
     } catch {
-      // Mutation feedback is handled by the callback owner.
+      // 변경 결과 피드백은 콜백 소유자(상위 화면) 담당.
     } finally {
       setIsSubmitting(false)
       setActiveDialog(undefined)
