@@ -65,6 +65,22 @@
   --shadow-ai-chat-floating: 0 0 12.5px rgb(0 0 0 / 0.15);
   --shadow-ai-chat-launcher: 0 0 25px rgb(0 0 0 / 0.15);
   --shadow-tutorial-preview: 0 0 30.617px rgb(0 0 0 / 0.1);
+
+  --animate-speaking-waveform: speaking-waveform 1.1s ease-in-out infinite;
+
+  /**
+   * 발화 인식 중 파형. 막대마다 animation-delay를 다르게 줘서 물결처럼 보이게 합니다.
+   * height만 바꾸므로 정지 상태(motion-reduce)에서는 각 막대의 기준 높이가 그대로 남습니다.
+   */
+  @keyframes speaking-waveform {
+    0%,
+    100% {
+      height: 6px;
+    }
+    50% {
+      height: 24px;
+    }
+  }
 }
 
 :root {
