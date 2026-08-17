@@ -537,6 +537,44 @@ describe('useLiveMeetingController async boundaries', () => {
     if (result.current.status !== 'ready') throw new Error('controller is not ready')
     expect(result.current.aiChat.model.draft).toBe('이 문장이 일정에 미치는 영향은?')
     expect(result.current.aiChat.model.pinnedContext?.transcriptId).toBe(FIRST_SEGMENT_ID)
+    // 실패했으면 먼저 띄웠던 말풍선도 걷어낸다. 보낸 것처럼 남아 있으면 안 된다.
+    expect(
+      result.current.aiChat.model.messages.filter(
+        (message) => message.content === '이 문장이 일정에 미치는 영향은?',
+      ),
+    ).toEqual([])
+  })
+
+  // 입력창은 전송 중 비활성이지만 추천 질문 버튼은 눌린다. 실패 복구가 그 선택을 덮으면 안 된다.
+  it('전송 실패 복구가 대기 중에 고른 추천 질문을 덮지 않는다', async () => {
+    const sendRequest = deferred<MeetingAiChatSendResult>()
+    vi.spyOn(meetingAiChatApi, 'sendQuestion').mockReturnValue(sendRequest.promise)
+    const { result } = await renderReadyController()
+
+    act(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      result.current.aiChat.actions.onDraftChange('원래 질문')
+    })
+    act(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      result.current.aiChat.actions.onSend()
+    })
+    act(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      result.current.aiChat.actions.onSelectSuggestion('suggestion-0')
+    })
+
+    await act(async () => {
+      sendRequest.reject(new Error('AI_SEND_FAILED'))
+      await Promise.resolve()
+    })
+
+    await waitFor(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      expect(result.current.aiChat.model.sendError).not.toBeNull()
+    })
+    if (result.current.status !== 'ready') throw new Error('controller is not ready')
+    expect(result.current.aiChat.model.draft).toBe('지난 회의에서 정한 범위는?')
   })
 
   it('ignores edit and AI responses from the previous meeting session', async () => {
@@ -706,6 +744,48 @@ describe('useLiveMeetingController async boundaries', () => {
       expect(result.current.aiChat.model.isSending).toBe(false)
       expect(result.current.aiChat.model.isAwaitingAnswer).toBe(true)
     })
+  })
+
+  // 답변을 기다리는 동안 질문이 입력창에만 남아 있으면 보냈는지 알 수 없다.
+  it('질문을 보내면 답변을 기다리는 동안 내 말풍선을 먼저 띄우고 입력창을 비운다', async () => {
+    const question = '일정에 미치는 영향은?'
+    const sendRequest = deferred<MeetingAiChatSendResult>()
+    vi.spyOn(meetingAiChatApi, 'sendQuestion').mockReturnValue(sendRequest.promise)
+    const { result } = await renderReadyController()
+
+    act(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      result.current.aiChat.actions.onDraftChange(question)
+    })
+    act(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      result.current.aiChat.actions.onSend()
+    })
+
+    if (result.current.status !== 'ready') throw new Error('controller is not ready')
+    const pending = result.current.aiChat.model.messages
+    expect(pending[pending.length - 1]?.role).toBe('user')
+    expect(pending[pending.length - 1]?.content).toBe(question)
+    expect(result.current.aiChat.model.draft).toBe('')
+    expect(result.current.aiChat.model.isAwaitingAnswer).toBe(true)
+
+    await act(async () => {
+      sendRequest.resolve({
+        messages: [
+          { id: 'user-9', role: 'user', content: question, context: null },
+          { id: 'assistant-9', role: 'assistant', content: '영향이 있습니다.', context: null },
+        ],
+        suggestions: null,
+        isAnswerPending: false,
+      })
+      await Promise.resolve()
+    })
+
+    // 임시 말풍선이 서버 응답으로 교체돼 같은 질문이 두 번 보이지 않는다.
+    if (result.current.status !== 'ready') throw new Error('controller is not ready')
+    const settled = result.current.aiChat.model.messages
+    expect(settled.filter((message) => message.content === question)).toHaveLength(1)
+    expect(settled[settled.length - 1]?.id).toBe('assistant-9')
   })
 
   it('AI Chat 조회에 실패하면 사유를 남기고 재시도할 수 있다', async () => {
