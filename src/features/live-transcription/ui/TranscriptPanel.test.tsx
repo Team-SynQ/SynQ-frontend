@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -257,6 +257,70 @@ describe('TranscriptPanel', () => {
       '14px',
       '10px',
     ])
+  })
+
+  it('follows new transcripts only while the reader is already at the bottom', () => {
+    const nextSegment = { ...segment, id: 'segment-2', sequenceIndex: 2, text: '뒤이어 붙는 전사' }
+    const { rerender } = render(
+      <TranscriptPanel actions={createActions()} state={createActiveState()} />,
+    )
+
+    // jsdom은 레이아웃을 계산하지 않아 스크롤 수치가 모두 0이다. 실제 크기를 흉내 낸다.
+    const scrollContainer = screen.getByRole('log').parentElement as HTMLElement
+    let scrollTop = 0
+    Object.defineProperty(scrollContainer, 'scrollHeight', { configurable: true, value: 1000 })
+    Object.defineProperty(scrollContainer, 'clientHeight', { configurable: true, value: 300 })
+    Object.defineProperty(scrollContainer, 'scrollTop', {
+      configurable: true,
+      get: () => scrollTop,
+      set: (value: number) => {
+        scrollTop = value
+      },
+    })
+
+    rerender(
+      <TranscriptPanel
+        actions={createActions()}
+        state={createActiveState({ segments: [segment, nextSegment] })}
+      />,
+    )
+
+    expect(scrollContainer.scrollTop).toBe(1000)
+
+    // 사용자가 위쪽을 읽으러 올라가면 그 뒤로는 따라 내려가지 않는다.
+    scrollTop = 100
+    fireEvent.scroll(scrollContainer)
+
+    rerender(
+      <TranscriptPanel
+        actions={createActions()}
+        state={createActiveState({
+          segments: [segment, nextSegment, { ...nextSegment, id: 'segment-3', text: '더 온 전사' }],
+        })}
+      />,
+    )
+
+    expect(scrollContainer.scrollTop).toBe(100)
+
+    // 다시 바닥 근처로 내려오면 따라가기가 되살아난다.
+    scrollTop = 960
+    fireEvent.scroll(scrollContainer)
+
+    rerender(
+      <TranscriptPanel
+        actions={createActions()}
+        state={createActiveState({
+          segments: [
+            segment,
+            nextSegment,
+            { ...nextSegment, id: 'segment-3', text: '더 온 전사' },
+            { ...nextSegment, id: 'segment-4', text: '마지막 전사' },
+          ],
+        })}
+      />,
+    )
+
+    expect(scrollContainer.scrollTop).toBe(1000)
   })
 
   it('marks a successfully edited transcript', () => {

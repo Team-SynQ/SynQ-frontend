@@ -1,6 +1,12 @@
+import { useEffect, useRef } from 'react'
+
 import refreshIcon from '../../../shared/assets/icons/refresh.svg'
 import { Button } from '../../../shared/ui'
-import type { TranscriptPanelActions, TranscriptPanelState } from '../model/transcript.types'
+import type {
+  TranscriptPanelActions,
+  TranscriptPanelState,
+  TranscriptSegment,
+} from '../model/transcript.types'
 import { SpeakingIndicator } from './SpeakingIndicator'
 import { TranscriptEmptyState } from './TranscriptEmptyState'
 import { TranscriptItem } from './TranscriptItem'
@@ -10,7 +16,44 @@ export type TranscriptPanelProps = {
   actions: TranscriptPanelActions
 }
 
+const EMPTY_SEGMENTS: TranscriptSegment[] = []
+
+/**
+ * 이 거리 안쪽이면 「맨 아래를 보고 있다」로 본다.
+ * 여백·반올림 때문에 바닥에 붙여도 정확히 0이 되지 않는다.
+ */
+const BOTTOM_PROXIMITY_PX = 80
+
 export function TranscriptPanel({ state, actions }: TranscriptPanelProps) {
+  const scrollRef = useRef<HTMLDivElement>(null)
+  /** 사용자가 맨 아래를 보고 있는지. 위쪽을 읽는 중이면 새 전사가 와도 따라 내려가지 않는다. */
+  const isPinnedToBottomRef = useRef(true)
+
+  const segments = state.kind === 'active' ? state.segments : EMPTY_SEGMENTS
+  const isSpeaking = state.kind === 'active' && state.isSpeaking
+  const lastSegment = segments[segments.length - 1]
+  /**
+   * 목록이 길어졌다는 신호. 중간 인식은 같은 id로 글자만 늘어나므로 길이도 함께 본다.
+   * 전사 수정·힌트 펼침은 넣지 않는다. 사용자가 그 자리에서 보고 있는 중이라 움직이면 안 된다.
+   */
+  const growthSignal = `${segments.length}:${lastSegment?.id ?? ''}:${lastSegment?.text.length ?? 0}`
+
+  // 렌더 중에는 ref를 읽지 않는다. 위치 판단은 스크롤 이벤트에서만 한다.
+  const handleScroll = () => {
+    const container = scrollRef.current
+    if (!container) return
+
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight
+    isPinnedToBottomRef.current = distanceFromBottom <= BOTTOM_PROXIMITY_PX
+  }
+
+  useEffect(() => {
+    const container = scrollRef.current
+    if (!container || !isPinnedToBottomRef.current) return
+
+    container.scrollTop = container.scrollHeight
+  }, [growthSignal, isSpeaking])
+
   return (
     <section
       aria-labelledby="meeting-transcript-title"
@@ -31,7 +74,11 @@ export function TranscriptPanel({ state, actions }: TranscriptPanelProps) {
         </Button>
       </header>
 
-      <div className="min-h-0 overflow-y-auto border-x border-b border-line-default px-l py-m">
+      <div
+        className="min-h-0 overflow-y-auto border-x border-b border-line-default px-l py-m"
+        onScroll={handleScroll}
+        ref={scrollRef}
+      >
         {state.kind === 'waiting' ? (
           <TranscriptEmptyState />
         ) : (
