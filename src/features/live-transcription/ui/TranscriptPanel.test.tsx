@@ -232,6 +232,33 @@ describe('TranscriptPanel', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('전사 내용을 수정하지 못했습니다.')
   })
 
+  it('animates the waveform while speech is being recognized and stops it under reduced motion', () => {
+    const { rerender } = render(
+      <TranscriptPanel actions={createActions()} state={createActiveState()} />,
+    )
+
+    expect(screen.queryByText('발화 인식 중')).not.toBeInTheDocument()
+
+    rerender(
+      <TranscriptPanel actions={createActions()} state={createActiveState({ isSpeaking: true })} />,
+    )
+
+    const indicator = screen.getByText('발화 인식 중').parentElement
+    const bars = indicator?.querySelectorAll('span[style]') ?? []
+
+    expect(bars).toHaveLength(4)
+    for (const bar of bars) {
+      expect(bar).toHaveClass('animate-speaking-waveform', 'motion-reduce:animate-none')
+    }
+    // 정지 상태에서 파형 모양이 남도록 막대마다 기준 높이가 다르다.
+    expect(Array.from(bars, (bar) => (bar as HTMLElement).style.height)).toEqual([
+      '10px',
+      '18px',
+      '14px',
+      '10px',
+    ])
+  })
+
   it('marks a successfully edited transcript', () => {
     render(
       <TranscriptPanel
