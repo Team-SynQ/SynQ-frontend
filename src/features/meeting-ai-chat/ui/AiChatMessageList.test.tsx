@@ -51,4 +51,52 @@ describe('AiChatMessageList 로딩 상태', () => {
 
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
+
+  // 대화가 길면 새 말풍선이 보이는 영역 아래에 생겨 직접 내려야 보인다.
+  it('새 말풍선이 붙으면 대화창이 바닥으로 따라간다', () => {
+    const { rerender } = render(<AiChatMessageList messages={messages} variant="docked" />)
+    const list = screen.getByRole('log')
+
+    // jsdom은 레이아웃을 계산하지 않아 스크롤 수치가 모두 0이다. 실제 크기를 흉내 낸다.
+    const state = { scrollTop: 0 }
+    Object.defineProperty(list, 'scrollHeight', { configurable: true, value: 1000 })
+    Object.defineProperty(list, 'clientHeight', { configurable: true, value: 300 })
+    Object.defineProperty(list, 'scrollTop', {
+      configurable: true,
+      get: () => state.scrollTop,
+      set: (value: number) => {
+        state.scrollTop = value
+      },
+    })
+
+    rerender(
+      <AiChatMessageList
+        messages={[...messages, { id: 'user-1', role: 'user', content: '일정은 언제인가요?' }]}
+        variant="docked"
+      />,
+    )
+
+    expect(list.scrollTop).toBe(1000)
+  })
+
+  // 전송 직후에는 답변 대기 안내만 붙는다. 그것도 목록 높이를 바꾼다.
+  it('답변 대기 안내가 붙어도 바닥으로 따라간다', () => {
+    const { rerender } = render(<AiChatMessageList messages={messages} variant="docked" />)
+    const list = screen.getByRole('log')
+
+    const state = { scrollTop: 0 }
+    Object.defineProperty(list, 'scrollHeight', { configurable: true, value: 1000 })
+    Object.defineProperty(list, 'clientHeight', { configurable: true, value: 300 })
+    Object.defineProperty(list, 'scrollTop', {
+      configurable: true,
+      get: () => state.scrollTop,
+      set: (value: number) => {
+        state.scrollTop = value
+      },
+    })
+
+    rerender(<AiChatMessageList isAwaitingAnswer messages={messages} variant="docked" />)
+
+    expect(list.scrollTop).toBe(1000)
+  })
 })
