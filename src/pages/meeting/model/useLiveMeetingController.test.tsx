@@ -545,6 +545,38 @@ describe('useLiveMeetingController async boundaries', () => {
     ).toEqual([])
   })
 
+  // 입력창은 전송 중 비활성이지만 추천 질문 버튼은 눌린다. 실패 복구가 그 선택을 덮으면 안 된다.
+  it('전송 실패 복구가 대기 중에 고른 추천 질문을 덮지 않는다', async () => {
+    const sendRequest = deferred<MeetingAiChatSendResult>()
+    vi.spyOn(meetingAiChatApi, 'sendQuestion').mockReturnValue(sendRequest.promise)
+    const { result } = await renderReadyController()
+
+    act(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      result.current.aiChat.actions.onDraftChange('원래 질문')
+    })
+    act(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      result.current.aiChat.actions.onSend()
+    })
+    act(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      result.current.aiChat.actions.onSelectSuggestion('suggestion-0')
+    })
+
+    await act(async () => {
+      sendRequest.reject(new Error('AI_SEND_FAILED'))
+      await Promise.resolve()
+    })
+
+    await waitFor(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      expect(result.current.aiChat.model.sendError).not.toBeNull()
+    })
+    if (result.current.status !== 'ready') throw new Error('controller is not ready')
+    expect(result.current.aiChat.model.draft).toBe('지난 회의에서 정한 범위는?')
+  })
+
   it('ignores edit and AI responses from the previous meeting session', async () => {
     const updateRequest = deferred<UpdateTranscriptSegmentResult>()
     const sendRequest = deferred<MeetingAiChatSendResult>()

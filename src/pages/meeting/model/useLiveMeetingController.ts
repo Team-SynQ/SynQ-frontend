@@ -622,7 +622,8 @@ export function useLiveMeetingController(
       if (!isCurrentMeetingSession(requestMeetingId, requestSessionSequence)) return
       // 실패하면 임시 말풍선을 걷어내고 문장을 입력창에 돌려준다. 다시 치게 하지 않는다.
       setMessages((current) => current.filter((message) => message.id !== pendingMessageId))
-      setDraft(question)
+      // 기다리는 동안 추천 질문을 고를 수 있다. 그 문구를 덮지 않도록 빈 입력창일 때만 되돌린다.
+      setDraft((current) => (current.length === 0 ? question : current))
       setIsAnswerPending(false)
       setSendError('AI 답변을 불러오지 못했습니다. 다시 시도해 주세요.')
     } finally {
