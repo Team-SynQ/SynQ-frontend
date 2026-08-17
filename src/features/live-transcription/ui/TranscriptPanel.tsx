@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useLayoutEffect, useRef } from 'react'
 
 import refreshIcon from '../../../shared/assets/icons/refresh.svg'
 import { Button } from '../../../shared/ui'
@@ -47,7 +47,8 @@ export function TranscriptPanel({ state, actions }: TranscriptPanelProps) {
     isPinnedToBottomRef.current = distanceFromBottom <= BOTTOM_PROXIMITY_PX
   }
 
-  useEffect(() => {
+  // 그리기 전에 맞춘다. useEffect로 미루면 새 전사가 잠깐 보인 뒤 스크롤이 튀어 매번 깜빡인다.
+  useLayoutEffect(() => {
     const container = scrollRef.current
     if (!container || !isPinnedToBottomRef.current) return
 
