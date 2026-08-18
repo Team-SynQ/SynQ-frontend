@@ -523,6 +523,8 @@ export function useLiveMeetingController(
     const segment = displaySegments.find((candidate) => candidate.id === segmentId)
     if (!segment || segment.isInterim) return
 
+    // hover에서 바로 눌렀다면 선택 상태가 아니다. 편집 중인 전사가 어느 것인지 배경으로도 보여 준다.
+    setSelectedSegmentId(segmentId)
     setEditState({
       status: 'editing',
       transcriptId: segmentId,
@@ -551,15 +553,13 @@ export function useLiveMeetingController(
         savingState.draftText,
       )
       if (!isCurrentMeetingSession(requestMeetingId, requestSessionSequence)) return
+      // 문장이 바뀌었으니 기존 힌트는 이 내용에 대한 것이 아니다. 캐시를 버리고 새로 만든다.
       forgetHint(savingState.transcriptId)
-      hintRequestSequenceRef.current += 1
-      setHintState((current) =>
-        current.status !== 'idle' && current.transcriptId === savingState.transcriptId
-          ? { status: 'idle' }
-          : current,
-      )
       liveTranscription.applyEdit(savingState.transcriptId, savingState.draftText)
       setEditState({ status: 'idle' })
+      // 힌트 카드는 선택된 전사에만 열린다. 생성 중에는 카드가 대기 상태를 보여 준다.
+      setSelectedSegmentId(savingState.transcriptId)
+      void loadHint(savingState.transcriptId, false)
     } catch (error) {
       if (!isCurrentMeetingSession(requestMeetingId, requestSessionSequence)) return
       setEditState({
@@ -573,6 +573,13 @@ export function useLiveMeetingController(
   const askAi = (segmentId: string) => {
     const segment = displaySegments.find((candidate) => candidate.id === segmentId)
     if (!segment || segment.isInterim) return
+
+    // hover에서 바로 눌렀다면 선택 상태가 아니다. 힌트 카드는 선택된 전사에만 열린다.
+    setSelectedSegmentId(segmentId)
+    // 이미 이 전사의 힌트를 보고 있으면 다시 요청하지 않는다.
+    if (hintState.status === 'idle' || hintState.transcriptId !== segmentId) {
+      void loadHint(segmentId, true)
+    }
 
     setPinnedContext({ transcriptId: segment.id, text: segment.text })
     setDraft('')
