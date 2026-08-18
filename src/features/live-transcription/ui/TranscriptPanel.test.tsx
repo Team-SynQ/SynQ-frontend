@@ -323,6 +323,65 @@ describe('TranscriptPanel', () => {
     expect(scrollContainer.scrollTop).toBe(1000)
   })
 
+  // 힌트가 생성된 전사는 선택하지 않아도 마우스만 올리면 바로 쓸 수 있어야 한다.
+  it('reveals actions on hover only for transcripts that already have a hint', () => {
+    const { rerender } = render(
+      <TranscriptPanel
+        actions={createActions()}
+        state={createActiveState({ selectedSegmentId: null })}
+      />,
+    )
+
+    // 힌트가 없으면 선택하기 전에는 액션 자체가 없다.
+    expect(screen.queryByRole('button', { name: '전사 수정' })).not.toBeInTheDocument()
+
+    rerender(
+      <TranscriptPanel
+        actions={createActions()}
+        state={createActiveState({
+          selectedSegmentId: null,
+          segments: [{ ...segment, hasHint: true }],
+        })}
+      />,
+    )
+
+    // 힌트가 있으면 DOM에는 있고, hover·포커스일 때만 보인다.
+    const editButton = screen.getByRole('button', { name: '전사 수정' })
+    expect(editButton.parentElement).toHaveClass(
+      'hidden',
+      'group-hover:flex',
+      'group-focus-within:flex',
+    )
+    expect(editButton.closest('div.group')).not.toBeNull()
+  })
+
+  // 다른 전사를 수정하는 중에 hover로 편집을 넘겨 버리면 작성 중인 초안이 사라진다.
+  it('hides hover actions while another transcript is being edited', () => {
+    render(
+      <TranscriptPanel
+        actions={createActions()}
+        state={createActiveState({
+          selectedSegmentId: null,
+          segments: [
+            { ...segment, hasHint: true },
+            { ...segment, id: 'segment-2', text: '수정 중인 전사' },
+          ],
+          editState: {
+            status: 'editing',
+            transcriptId: 'segment-2',
+            originalText: '수정 중인 전사',
+            draftText: '작성 중인 초안',
+            errorMessage: null,
+            isSaving: false,
+          },
+        })}
+      />,
+    )
+
+    expect(screen.queryByRole('button', { name: '전사 수정' })).not.toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: '전사 내용' })).toHaveValue('작성 중인 초안')
+  })
+
   it('marks a successfully edited transcript', () => {
     render(
       <TranscriptPanel
