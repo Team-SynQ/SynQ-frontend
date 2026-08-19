@@ -43,11 +43,21 @@ export function TranscriptItem({
   const segmentHintState =
     hintState.status !== 'idle' && hintState.transcriptId === segment.id ? hintState : null
 
+  /**
+   * 다른 전사를 수정하는 중이면 이 전사의 액션을 감춘다.
+   * 액션이 hover로도 열리므로, 열어 두면 작성 중인 초안을 버리고 다른 전사 편집으로 넘어갈 수 있다.
+   */
+  const isEditingAnySegment = editState.status === 'editing'
+  /** 힌트가 있는 전사는 선택하지 않아도 마우스를 올리거나 포커스가 들어오면 액션을 보여 준다. */
+  const revealsActionsOnHover = !isSelected && Boolean(segment.hasHint)
+  const showsActions =
+    !isEditingAnySegment && !segment.isInterim && (isSelected || revealsActionsOnHover)
+
   return (
     <article aria-label={segment.text} className="flex w-full flex-col gap-xs" role="listitem">
       <div
         className={cn(
-          'flex w-full flex-col rounded-m p-s',
+          'group flex w-full flex-col rounded-m p-s',
           isSelected ? 'bg-surface-muted' : 'bg-transparent',
         )}
       >
@@ -61,8 +71,14 @@ export function TranscriptItem({
               <span className="typo-caption text-brand-primary">SynQ 힌트</span>
             ) : null}
           </div>
-          {isSelected && !isEditing && !segment.isInterim ? (
-            <div className="flex items-center gap-s">
+          {showsActions ? (
+            <div
+              className={cn(
+                'items-center gap-s',
+                // 포커스로도 열어야 키보드로 쓸 수 있다. 전사 본문 버튼에 탭이 닿으면 함께 뜬다.
+                isSelected ? 'flex' : 'hidden group-focus-within:flex group-hover:flex',
+              )}
+            >
               <Button
                 aria-label="전사 수정"
                 className="size-[32px] px-0!"

@@ -880,6 +880,40 @@ describe('useLiveMeetingController async boundaries', () => {
     expect(createSegmentHint).not.toHaveBeenCalled()
   })
 
+  // hover에서 바로 누를 수 있어 선택 상태가 아닐 수 있다. 힌트 카드는 선택된 전사에만 열린다.
+  it('AI에게 질문하기를 누르면 전사를 선택하고 캐시된 힌트를 연다', async () => {
+    const stored: TranscriptHintResponse = {
+      transcriptId: FIRST_SEGMENT_ID,
+      meaning: '기록된 의미',
+      personalImpact: '기록된 영향',
+      teamQuestion: '기록된 질문',
+    }
+    vi.spyOn(meetingHintApi, 'listHintRecords').mockResolvedValue([stored])
+    const createSegmentHint = vi.spyOn(meetingHintApi, 'createSegmentHint')
+    const { result } = await renderReadyController()
+
+    act(() => {
+      if (result.current.status !== 'ready') throw new Error('controller is not ready')
+      result.current.transcript.actions.onAskAi?.(FIRST_SEGMENT_ID)
+    })
+
+    await waitFor(() => {
+      if (result.current.status !== 'ready' || result.current.transcript.state.kind !== 'active') {
+        throw new Error('transcript is not active')
+      }
+      expect(result.current.transcript.state.selectedSegmentId).toBe(FIRST_SEGMENT_ID)
+      expect(result.current.transcript.state.hintState).toEqual({
+        status: 'ready',
+        transcriptId: FIRST_SEGMENT_ID,
+        hint: stored,
+      })
+    })
+    // 캐시에 있으므로 생성 요청은 나가지 않는다.
+    expect(createSegmentHint).not.toHaveBeenCalled()
+    if (result.current.status !== 'ready') throw new Error('controller is not ready')
+    expect(result.current.aiChat.model.pinnedContext?.transcriptId).toBe(FIRST_SEGMENT_ID)
+  })
+
   it('힌트 기록 조회가 실패해도 화면은 뜨고 선택 시 생성 요청을 보낸다', async () => {
     vi.spyOn(meetingHintApi, 'listHintRecords').mockRejectedValue(new Error('HINT_RECORDS_FAILED'))
     const createSegmentHint = vi.spyOn(meetingHintApi, 'createSegmentHint').mockResolvedValue({
@@ -1018,7 +1052,14 @@ describe('useLiveMeetingController async boundaries', () => {
         throw new Error('transcript is not active')
       }
       expect(result.current.transcript.state.segments[0]?.text).toBe('수정된 전사 문장')
-      expect(result.current.transcript.state.hintState?.status).toBe('idle')
+      // 저장하면 바뀐 문장으로 힌트를 다시 만들어 곧바로 연다. 닫아 두지 않는다.
+      expect(result.current.transcript.state.hintState).toEqual({
+        status: 'ready',
+        transcriptId: FIRST_SEGMENT_ID,
+        hint: updatedHint,
+      })
+      // hover에서 바로 수정했을 수 있어, 힌트를 열려면 선택 상태여야 한다.
+      expect(result.current.transcript.state.selectedSegmentId).toBe(FIRST_SEGMENT_ID)
     })
     expect(transcriptService.updateSegment).toHaveBeenCalledWith(1, 1, '수정된 전사 문장')
 
