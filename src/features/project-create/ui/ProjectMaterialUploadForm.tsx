@@ -262,7 +262,7 @@ export function ProjectMaterialUploadForm({
             <Segment className="mx-auto w-[198px]">
               <SegmentItem
                 aria-pressed={source === 'file'}
-                className="min-w-0 flex-1"
+                className="min-w-0! flex-1"
                 onClick={() => setSource('file')}
                 visualState={source === 'file' ? 'active' : 'default'}
               >
@@ -270,7 +270,7 @@ export function ProjectMaterialUploadForm({
               </SegmentItem>
               <SegmentItem
                 aria-pressed={source === 'link'}
-                className="min-w-0 flex-1"
+                className="min-w-0! flex-1"
                 onClick={() => setSource('link')}
                 visualState={source === 'link' ? 'active' : 'default'}
               >

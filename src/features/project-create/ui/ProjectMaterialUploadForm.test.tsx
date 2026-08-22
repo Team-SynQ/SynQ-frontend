@@ -39,6 +39,13 @@ describe('ProjectMaterialUploadForm', () => {
     expect(onCreate).toHaveBeenCalledWith({ files: [file], links: [] })
   })
 
+  it('keeps the file and link tabs inside the segmented control background', () => {
+    render(<ProjectMaterialUploadForm {...defaultProps} />)
+
+    expect(screen.getByRole('button', { name: '파일' })).toHaveClass('min-w-0!', 'flex-1')
+    expect(screen.getByRole('button', { name: '링크' })).toHaveClass('min-w-0!', 'flex-1')
+  })
+
   it('uses the Figma 10MB limit in the reference-add variant', async () => {
     const user = userEvent.setup()
     const file = new File(['content'], 'large.pdf', { type: 'application/pdf' })
