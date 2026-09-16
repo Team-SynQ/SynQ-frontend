@@ -1,0 +1,1476 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>SynQ</title>
+    <meta
+      name="description"
+      content="프로젝트 자료와 지난 회의 맥락을 학습한 AI가 회의 중 실시간으로 의미·내 영향·팀 질문을 연결하는 협업 AI, SynQ."
+    />
+    <link rel="icon" type="image/png" href="assets/landing-symbol.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap"
+    />
+    <style>
+      :root {
+        --primary-100: #ebf6ff;
+        --primary-200: #cae8ff;
+        --primary-300: #9ed5ff;
+        --primary-400: #57b6ff;
+        --primary-500: #0090ff;
+        --primary-600: #1975de;
+        --primary-700: #1458b7;
+        --primary-800: #003a7d;
+        --primary-900: #103167;
+        --gray-100: #fdfdfd;
+        --gray-200: #f6f6f8;
+        --gray-300: #dbdbdd;
+        --gray-400: #c2c2c4;
+        --gray-500: #9e9ea0;
+        --gray-600: #767678;
+        --gray-700: #424244;
+        --gray-800: #242426;
+        --gray-900: #1a1a1c;
+
+        --bg: #ffffff;
+        --bg-muted: var(--gray-200);
+        --bg-tint: var(--primary-100);
+        --surface: #ffffff;
+        --line: var(--gray-300);
+        --line-soft: #ebebee;
+        --fg: var(--gray-900);
+        --fg-2: var(--gray-700);
+        --fg-3: var(--gray-600);
+        --brand: var(--primary-500);
+        --brand-hover: var(--primary-600);
+        --brand-deep: var(--primary-800);
+        --brand-ink: var(--primary-900);
+        --shadow-floating: 0 4px 24px rgb(0 0 0 / 0.08);
+        --shadow-frame: 0 24px 80px rgb(16 49 103 / 0.14), 0 2px 8px rgb(16 49 103 / 0.06);
+        --live: #d82d2d;
+
+        --font:
+          'Pretendard Variable', Pretendard, 'Noto Sans KR', system-ui, -apple-system,
+          BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        --max: 1120px;
+        --gutter: 24px;
+      }
+      @media (max-width: 640px) {
+        :root {
+          --gutter: 16px;
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: var(--font);
+        font-size: 16px;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+        overflow-x: hidden;
+      }
+      img {
+        max-width: 100%;
+        height: auto;
+        display: block;
+      }
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+      h1,
+      h2,
+      h3,
+      p,
+      li {
+        word-break: keep-all;
+        overflow-wrap: anywhere;
+      }
+      h1,
+      h2,
+      h3 {
+        text-wrap: balance;
+        letter-spacing: -0.02em;
+      }
+      :focus-visible {
+        outline: 2px solid var(--brand);
+        outline-offset: 3px;
+        border-radius: 6px;
+      }
+
+      .wrap {
+        max-width: var(--max);
+        margin-inline: auto;
+        padding-inline: var(--gutter);
+      }
+
+      /* ---------- Flowing background ---------- */
+      #waves {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 0;
+        pointer-events: none;
+      }
+      .nav,
+      main,
+      footer {
+        position: relative;
+        z-index: 1;
+      }
+      footer {
+        background: var(--bg);
+      }
+
+      /* ---------- Scroll reveal ---------- */
+      .rv {
+        opacity: 1;
+        transform: none;
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .rv {
+          transition:
+            opacity 0.7s cubic-bezier(0.2, 0.7, 0.2, 1),
+            transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+          transition-delay: var(--d, 0ms);
+        }
+        .rv.pre {
+          opacity: 0;
+          transform: translateY(26px);
+        }
+        .rv.pre.from-left {
+          transform: translateX(-28px);
+        }
+        .rv.pre.from-right {
+          transform: translateX(28px);
+        }
+        .rv.pre.zoom {
+          transform: scale(0.96) translateY(16px);
+        }
+        .sec-head.rv > * {
+          transition:
+            opacity 0.7s cubic-bezier(0.2, 0.7, 0.2, 1),
+            transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+        }
+        .sec-head.rv > :nth-child(2) {
+          transition-delay: 100ms;
+        }
+        .sec-head.rv > :nth-child(3) {
+          transition-delay: 200ms;
+        }
+        .sec-head.rv.pre > * {
+          opacity: 0;
+          transform: translateY(14px);
+        }
+        .hero-inner > * {
+          animation: rise 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+        }
+        .hero-inner > :nth-child(2) {
+          animation-delay: 0.08s;
+        }
+        .hero-inner > :nth-child(3) {
+          animation-delay: 0.16s;
+        }
+        .hero-inner > :nth-child(4) {
+          animation-delay: 0.24s;
+        }
+        .hero-inner > :nth-child(5) {
+          animation-delay: 0.3s;
+        }
+        .frame-wrap {
+          animation: rise 1s 0.35s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+        }
+        @keyframes rise {
+          from {
+            opacity: 0;
+            transform: translateY(22px);
+          }
+          to {
+            opacity: 1;
+            transform: none;
+          }
+        }
+      }
+
+      /* ---------- Nav ---------- */
+      .nav {
+        position: sticky;
+        top: env(safe-area-inset-top, 0px);
+        z-index: 20;
+        background: rgb(255 255 255 / 0.82);
+        backdrop-filter: saturate(160%) blur(12px);
+        -webkit-backdrop-filter: saturate(160%) blur(12px);
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .nav .wrap {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 64px;
+        gap: 16px;
+      }
+      .nav .logo img {
+        height: 24px;
+        width: auto;
+      }
+      .nav-links {
+        display: flex;
+        gap: 28px;
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--fg-3);
+      }
+      .nav-links a:hover {
+        color: var(--fg);
+      }
+      @media (max-width: 760px) {
+        .nav-links {
+          display: none;
+        }
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        height: 44px;
+        padding: 0 20px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 15px;
+        white-space: nowrap;
+        transition:
+          background-color 0.15s ease,
+          transform 0.15s ease,
+          box-shadow 0.15s ease;
+        border: 1px solid transparent;
+      }
+      .btn-primary {
+        background: var(--brand);
+        color: #fff;
+      }
+      .btn-primary:hover {
+        background: var(--brand-hover);
+      }
+      .btn-primary:active {
+        transform: translateY(1px);
+      }
+      .btn-ghost {
+        background: transparent;
+        color: var(--fg-2);
+        border-color: var(--line);
+      }
+      .btn-ghost:hover {
+        background: var(--bg-muted);
+      }
+      .btn-lg {
+        height: 52px;
+        padding: 0 26px;
+        font-size: 16px;
+        border-radius: 12px;
+      }
+      .btn svg {
+        width: 16px;
+        height: 16px;
+      }
+      .nav .btn {
+        height: 38px;
+        padding: 0 16px;
+        font-size: 14px;
+      }
+
+      /* ---------- Hero ---------- */
+      .hero {
+        position: relative;
+        padding-block: 72px 0;
+        overflow: hidden;
+      }
+      .hero::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        background: radial-gradient(
+          60% 50% at 50% 0%,
+          var(--primary-100) 0%,
+          rgb(235 246 255 / 0) 70%
+        );
+      }
+      .hero-grid {
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
+        background-image:
+          linear-gradient(to right, rgb(0 144 255 / 0.06) 1px, transparent 1px),
+          linear-gradient(to bottom, rgb(0 144 255 / 0.06) 1px, transparent 1px);
+        background-size: 48px 48px;
+        mask-image: radial-gradient(70% 60% at 50% 10%, #000 0%, transparent 100%);
+        -webkit-mask-image: radial-gradient(70% 60% at 50% 10%, #000 0%, transparent 100%);
+      }
+      .hero-inner {
+        text-align: center;
+        max-width: 820px;
+        margin-inline: auto;
+      }
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px 6px 8px;
+        border-radius: 999px;
+        background: #fff;
+        border: 1px solid var(--primary-200);
+        color: var(--brand-deep);
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        box-shadow: 0 1px 2px rgb(0 58 125 / 0.04);
+      }
+      .eyebrow .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--brand);
+        box-shadow: 0 0 0 4px rgb(0 144 255 / 0.15);
+      }
+      .hero h1 {
+        margin-top: 22px;
+        font-size: clamp(34px, 5.4vw, 60px);
+        line-height: 1.18;
+        font-weight: 800;
+        letter-spacing: -0.035em;
+        color: var(--fg);
+      }
+      .hero h1 em {
+        font-style: normal;
+        color: var(--brand);
+      }
+      .hero p.lead {
+        margin: 22px auto 0;
+        max-width: 600px;
+        font-size: clamp(16px, 1.6vw, 19px);
+        line-height: 1.65;
+        color: var(--fg-3);
+        font-weight: 500;
+        text-wrap: pretty;
+      }
+      .hero-cta {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        margin-top: 34px;
+        flex-wrap: wrap;
+      }
+      .hero-note {
+        margin-top: 14px;
+        font-size: 13px;
+        color: var(--gray-500);
+      }
+
+      /* Product frame */
+      .frame-wrap {
+        margin-top: 64px;
+        position: relative;
+      }
+      .frame-wrap::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 40%;
+        background: linear-gradient(to bottom, rgb(255 255 255 / 0), #fff);
+        pointer-events: none;
+      }
+      .frame {
+        border-radius: 16px;
+        border: 1px solid var(--line);
+        background: #fff;
+        box-shadow: var(--shadow-frame);
+        overflow: hidden;
+      }
+      .frame-bar {
+        height: 40px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 16px;
+        background: var(--gray-200);
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .frame-bar i {
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        background: var(--gray-300);
+        display: block;
+      }
+      .frame-bar .url {
+        margin-left: 10px;
+        flex: 1;
+        max-width: 340px;
+        height: 24px;
+        border-radius: 6px;
+        background: #fff;
+        border: 1px solid var(--line-soft);
+        font-size: 12px;
+        color: var(--gray-500);
+        display: flex;
+        align-items: center;
+        padding: 0 10px;
+        gap: 6px;
+      }
+      .frame img {
+        width: 100%;
+      }
+
+      /* Floating hint chips on hero */
+      .hint-float {
+        position: absolute;
+        z-index: 2;
+        background: #fff;
+        border: 1px solid var(--line-soft);
+        border-radius: 12px;
+        box-shadow: var(--shadow-floating);
+        padding: 12px 14px;
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        width: 280px;
+        font-size: 13px;
+        line-height: 1.5;
+        color: var(--fg-2);
+      }
+      .hint-float b {
+        flex: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 26px;
+        padding: 0 10px;
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--fg);
+      }
+      .hint-float.a {
+        left: -48px;
+        top: 20%;
+      }
+      .hint-float.b {
+        right: -48px;
+        top: 44%;
+      }
+      .hint-float.c {
+        left: -32px;
+        top: 62%;
+        width: 250px;
+      }
+      @media (max-width: 1240px) {
+        .hint-float {
+          display: none;
+        }
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .hint-float {
+          animation: floaty 6s ease-in-out infinite;
+        }
+        .hint-float.b {
+          animation-delay: -2s;
+        }
+        .hint-float.c {
+          animation-delay: -4s;
+        }
+        @keyframes floaty {
+          0%,
+          100% {
+            transform: translateY(0);
+          }
+          50% {
+            transform: translateY(-8px);
+          }
+        }
+      }
+
+      /* ---------- Sections ---------- */
+      section {
+        padding-block: 96px;
+      }
+      @media (max-width: 640px) {
+        section {
+          padding-block: 64px;
+        }
+      }
+      .sec-head {
+        max-width: 680px;
+      }
+      .sec-head.center {
+        margin-inline: auto;
+        text-align: center;
+      }
+      .kicker {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--brand);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .sec-head h2 {
+        margin-top: 12px;
+        font-size: clamp(26px, 3.4vw, 38px);
+        line-height: 1.25;
+        font-weight: 800;
+      }
+      .sec-head p {
+        margin-top: 14px;
+        color: var(--fg-3);
+        font-size: 17px;
+        text-wrap: pretty;
+      }
+
+      /* Problem: one sentence, three readings */
+      .problem {
+        background: var(--gray-900);
+        color: #fff;
+      }
+      .problem .kicker {
+        color: var(--primary-400);
+      }
+      .problem .sec-head p {
+        color: var(--gray-400);
+      }
+      .quote {
+        margin-top: 44px;
+        padding: 22px 26px;
+        border-radius: 14px;
+        background: rgb(255 255 255 / 0.06);
+        border: 1px solid rgb(255 255 255 / 0.1);
+        font-size: clamp(16px, 1.8vw, 20px);
+        line-height: 1.6;
+        color: #fff;
+        display: flex;
+        gap: 18px;
+        align-items: flex-start;
+      }
+      .quote .t {
+        flex: none;
+        font-variant-numeric: tabular-nums;
+        color: var(--gray-500);
+        font-size: 13px;
+        padding-top: 5px;
+      }
+      .readings {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+      }
+      @media (max-width: 820px) {
+        .readings {
+          grid-template-columns: 1fr;
+        }
+      }
+      .reading {
+        padding: 22px;
+        border-radius: 14px;
+        background: rgb(255 255 255 / 0.04);
+        border: 1px solid rgb(255 255 255 / 0.08);
+      }
+      .reading .role {
+        display: inline-flex;
+        align-items: center;
+        height: 26px;
+        padding: 0 10px;
+        border-radius: 8px;
+        background: var(--primary-500);
+        color: #fff;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .reading .role.d {
+        background: #7c5cff;
+      }
+      .reading .role.v {
+        background: #14b8a6;
+      }
+      .reading h3 {
+        margin-top: 14px;
+        font-size: 18px;
+        font-weight: 700;
+        color: #fff;
+      }
+      .reading p {
+        margin-top: 8px;
+        color: var(--gray-400);
+        font-size: 15px;
+      }
+      .problem-foot {
+        margin-top: 36px;
+        color: var(--gray-400);
+        font-size: 16px;
+        max-width: 680px;
+        text-wrap: pretty;
+      }
+      .problem-foot strong {
+        color: #fff;
+        font-weight: 700;
+      }
+
+      /* Features: alternating */
+      .feature {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 56px;
+        align-items: center;
+      }
+      .feature + .feature {
+        margin-top: 112px;
+      }
+      .feature.flip .f-media {
+        order: -1;
+      }
+      @media (max-width: 900px) {
+        .feature {
+          grid-template-columns: 1fr;
+          gap: 28px;
+        }
+        .feature + .feature {
+          margin-top: 72px;
+        }
+        .feature.flip .f-media {
+          order: 0;
+        }
+      }
+      .f-num {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--brand);
+        letter-spacing: 0.08em;
+      }
+      .feature h3 {
+        margin-top: 10px;
+        font-size: clamp(24px, 2.8vw, 32px);
+        line-height: 1.28;
+        font-weight: 800;
+      }
+      .feature p {
+        margin-top: 14px;
+        color: var(--fg-3);
+        font-size: 16px;
+        text-wrap: pretty;
+        max-width: 480px;
+      }
+      .f-list {
+        margin: 22px 0 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 10px;
+      }
+      .f-list li {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        font-size: 15px;
+        color: var(--fg-2);
+      }
+      .f-list li::before {
+        content: '';
+        flex: none;
+        width: 18px;
+        height: 18px;
+        margin-top: 3px;
+        border-radius: 50%;
+        background: var(--primary-100)
+          url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230090ff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5L20 7'/%3E%3C/svg%3E")
+          center/10px no-repeat;
+      }
+      .f-media {
+        border-radius: 16px;
+        padding: 22px;
+        background: var(--bg-tint);
+        border: 1px solid var(--primary-200);
+      }
+      .f-media .shot {
+        border-radius: 10px;
+        overflow: hidden;
+        border: 1px solid var(--line-soft);
+        background: #fff;
+        box-shadow: 0 12px 40px rgb(16 49 103 / 0.12);
+      }
+      .f-media .shot img {
+        width: 100%;
+      }
+      .f-media.crop .shot {
+        aspect-ratio: 4 / 3;
+        max-width: 100%;
+      }
+      .f-media.crop .shot img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: left bottom;
+        transform: scale(1.5);
+        transform-origin: left bottom;
+      }
+      .f-media.crop-right .shot img {
+        object-position: right top;
+        transform: scale(1.35);
+        transform-origin: right top;
+      }
+
+      /* Hint mini card (feature 1) */
+      .hint-card {
+        margin-top: 22px;
+        border: 1px solid var(--line-soft);
+        border-radius: 12px;
+        background: var(--gray-100);
+        padding: 14px 16px;
+        max-width: 480px;
+      }
+      .hint-card .hc-title {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--fg);
+        margin-bottom: 10px;
+        display: flex;
+        justify-content: space-between;
+      }
+      .hint-card .row {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        font-size: 14px;
+        color: var(--fg-2);
+        padding: 6px 0;
+      }
+      .hint-card .row b {
+        flex: none;
+        width: 64px;
+        height: 30px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        background: #fff;
+        border: 1px solid var(--line);
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--fg);
+      }
+
+      /* Flow */
+      .flow {
+        background: var(--gray-200);
+      }
+      .steps {
+        margin-top: 48px;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+      }
+      @media (max-width: 900px) {
+        .steps {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+      @media (max-width: 520px) {
+        .steps {
+          grid-template-columns: 1fr;
+        }
+      }
+      .step {
+        background: #fff;
+        border: 1px solid var(--line-soft);
+        border-radius: 14px;
+        padding: 22px;
+        position: relative;
+      }
+      .step .n {
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        background: var(--primary-100);
+        color: var(--brand-deep);
+        font-weight: 800;
+        font-size: 14px;
+        font-variant-numeric: tabular-nums;
+      }
+      .step h3 {
+        margin-top: 16px;
+        font-size: 17px;
+        font-weight: 700;
+      }
+      .step p {
+        margin-top: 8px;
+        font-size: 14px;
+        color: var(--fg-3);
+      }
+
+      /* Roles & perspectives */
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 18px;
+      }
+      .chip {
+        height: 34px;
+        padding: 0 14px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        background: #fff;
+        border: 1px solid var(--line);
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--fg-2);
+      }
+      .chip.on {
+        background: var(--primary-100);
+        border-color: var(--primary-300);
+        color: var(--brand-deep);
+        font-weight: 600;
+      }
+      .two {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 48px;
+        margin-top: 44px;
+        align-items: start;
+      }
+      @media (max-width: 820px) {
+        .two {
+          grid-template-columns: 1fr;
+          gap: 32px;
+        }
+      }
+      .two h3 {
+        font-size: 18px;
+        font-weight: 700;
+      }
+      .two .sub {
+        margin-top: 6px;
+        font-size: 14px;
+        color: var(--fg-3);
+      }
+
+      /* Final CTA */
+      .cta {
+        padding-block: 40px 96px;
+      }
+      .cta-box {
+        position: relative;
+        overflow: hidden;
+        border-radius: 24px;
+        text-align: center;
+        padding: 72px var(--gutter);
+        background: linear-gradient(
+          160deg,
+          var(--primary-900) 0%,
+          var(--primary-800) 45%,
+          var(--primary-600) 100%
+        );
+        color: #fff;
+      }
+      .cta-box::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(to right, rgb(255 255 255 / 0.07) 1px, transparent 1px),
+          linear-gradient(to bottom, rgb(255 255 255 / 0.07) 1px, transparent 1px);
+        background-size: 40px 40px;
+        mask-image: radial-gradient(60% 80% at 50% 50%, #000, transparent);
+        -webkit-mask-image: radial-gradient(60% 80% at 50% 50%, #000, transparent);
+      }
+      .cta-box > * {
+        position: relative;
+      }
+      .cta-box img {
+        height: 56px;
+        width: auto;
+        margin: 0 auto 22px;
+        filter: brightness(0) invert(1);
+        opacity: 0.95;
+      }
+      .cta-box h2 {
+        font-size: clamp(26px, 3.6vw, 40px);
+        font-weight: 800;
+        line-height: 1.25;
+      }
+      .cta-box p {
+        margin: 14px auto 0;
+        max-width: 520px;
+        color: var(--primary-200);
+        font-size: 16px;
+        text-wrap: pretty;
+      }
+      .cta-box .btn-primary {
+        margin-top: 30px;
+        background: #fff;
+        color: var(--brand-deep);
+      }
+      .cta-box .btn-primary:hover {
+        background: var(--primary-100);
+      }
+      .cta-box .social {
+        margin-top: 22px;
+        display: flex;
+        justify-content: center;
+        gap: 16px;
+        font-size: 13px;
+        color: var(--primary-300);
+      }
+
+      footer {
+        border-top: 1px solid var(--line-soft);
+        padding-block: 28px;
+        font-size: 13px;
+        color: var(--gray-500);
+      }
+      footer .wrap {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+      footer img {
+        height: 18px;
+        width: auto;
+        opacity: 0.9;
+      }
+      footer nav {
+        display: flex;
+        gap: 18px;
+      }
+      footer nav a:hover {
+        color: var(--fg);
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="waves" aria-hidden="true"></canvas>
+
+    <header class="nav">
+      <div class="wrap">
+        <a class="logo" href="#top" aria-label="SynQ 홈"
+          ><img src="assets/landing-wordmark.png" alt="SynQ"
+        /></a>
+        <nav class="nav-links" aria-label="페이지 내 이동">
+          <a href="#problem">왜 SynQ인가</a>
+          <a href="#features">핵심 기능</a>
+          <a href="#flow">사용 흐름</a>
+          <a href="#roles">역할과 관점</a>
+        </nav>
+        <a class="btn btn-primary" href="https://synqai.co.kr">씽큐 시작하기</a>
+      </div>
+    </header>
+
+    <main id="top">
+      <!-- Hero -->
+      <section class="hero">
+        <div class="hero-grid" aria-hidden="true"></div>
+        <div class="wrap">
+          <div class="hero-inner">
+            <span class="eyebrow"
+              ><span class="dot" aria-hidden="true"></span>회의 중에 함께 듣고, 함께 이해하는
+              AI</span
+            >
+            <h1>같이 들었지만<br /><em>다르게 이해하는 순간</em>을 없앱니다</h1>
+            <p class="lead">
+              SynQ는 프로젝트 자료와 지난 회의 맥락을 학습한 AI가 회의 중 실시간으로 발언의
+              <strong>의미</strong>, <strong>내 역할에 미치는 영향</strong>,
+              <strong>팀과 맞춰야 할 질문</strong>을 연결해 주는 협업 AI입니다.
+            </p>
+            <div class="hero-cta">
+              <a class="btn btn-primary btn-lg" href="https://synqai.co.kr">
+                씽큐 시작하기
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.4"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M5 12h14M13 6l6 6-6 6" />
+                </svg>
+              </a>
+              <a class="btn btn-ghost btn-lg" href="#features">핵심 기능 보기</a>
+            </div>
+            <p class="hero-note">
+              카카오 · 네이버 · 구글 계정으로 바로 시작 · 데스크톱 브라우저에 최적화
+            </p>
+          </div>
+
+          <div class="frame-wrap">
+            <div class="hint-float a">
+              <b>의미</b><span>온보딩 개선이 이번 분기 핵심 우선순위라는 뜻입니다.</span>
+            </div>
+            <div class="hint-float b">
+              <b>내 영향</b><span>일정과 리소스 배분에 영향이 있을 수 있습니다.</span>
+            </div>
+            <div class="hint-float c">
+              <b>팀 질문</b><span>온보딩 개선의 완료 기준은 무엇인가요?</span>
+            </div>
+            <div class="frame">
+              <div class="frame-bar" aria-hidden="true">
+                <i></i><i></i><i></i>
+                <div class="url">
+                  <svg
+                    width="11"
+                    height="11"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.4"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <rect x="4" y="10" width="16" height="11" rx="2" />
+                    <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+                  </svg>
+                  synqai.co.kr
+                </div>
+              </div>
+              <img
+                src="assets/onboarding-step1.png"
+                alt="SynQ 실시간 회의 화면 — 왼쪽에 전체 전사와 SynQ 힌트(의미·내 영향·팀 질문), 오른쪽에 AI Chat"
+                width="1373"
+                height="993"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Problem -->
+      <section class="problem" id="problem">
+        <div class="wrap">
+          <div class="sec-head rv">
+            <div class="kicker">Why SynQ</div>
+            <h2>회의는 함께 하지만, 이해는 항상 함께 이루어지지 않습니다</h2>
+            <p>
+              같은 문장을 들어도 각자 먼저 떠올리는 것이 다릅니다. 그 간극은 회의가 끝난 뒤에야
+              드러나고, 다시 맞추는 데 또 다른 회의가 필요해집니다.
+            </p>
+          </div>
+
+          <div class="quote rv" style="--d: 140ms">
+            <span class="t">16:02</span>
+            <span
+              >“일정을 조금 타이트하게 잡아봤는데요. 온보딩 개선을 4월 말까지 베타로 제공하고 5월 초
+              정식 릴리즈를 목표로 하고 있습니다.”</span
+            >
+          </div>
+          <div class="readings">
+            <div class="reading rv" style="--d: 320ms">
+              <span class="role">PM</span>
+              <h3>일정과 범위</h3>
+              <p>
+                베타 4월 말, 정식 5월 초. QA 기간은 확보되는지, 어디까지가 베타 범위인지부터
+                계산합니다.
+              </p>
+            </div>
+            <div class="reading rv" style="--d: 500ms">
+              <span class="role d">디자이너</span>
+              <h3>화면에 미치는 영향</h3>
+              <p>
+                온보딩 3단계 화면이 전부 바뀌는지, 디자인 완료 일정이 개발 착수 전에 맞춰지는지를
+                먼저 떠올립니다.
+              </p>
+            </div>
+            <div class="reading rv" style="--d: 680ms">
+              <span class="role v">개발자</span>
+              <h3>구현 난이도와 리스크</h3>
+              <p>
+                결제 모듈 연동 테스트와 일정이 겹치는지, 예외 케이스 처리에 얼마나 걸릴지를
+                계산합니다.
+              </p>
+            </div>
+          </div>
+          <p class="problem-foot rv" style="--d: 860ms">
+            SynQ는 이 <strong>같이 들었지만 다르게 이해하는 순간</strong>을 회의 중에 바로 좁힙니다.
+            놓친 의미를 즉시 이해하고, 내 역할 기준의 영향을 파악하고, 팀과 맞춰야 할 질문을 놓치지
+            않도록.
+          </p>
+        </div>
+      </section>
+
+      <!-- Features -->
+      <section id="features">
+        <div class="wrap">
+          <div class="sec-head center rv">
+            <div class="kicker">Core features</div>
+            <h2>회의 중, 회의 후, 그리고 그 다음 회의까지</h2>
+            <p>기록보다 이해, 이해보다 실행까지. SynQ는 회의의 세 순간을 하나로 잇습니다.</p>
+          </div>
+
+          <div class="feature" style="margin-top: 72px">
+            <div class="f-text rv from-left">
+              <div class="f-num">01 — 회의 중</div>
+              <h3>실시간 전사 위에, 발언마다 SynQ 힌트</h3>
+              <p>
+                회의를 녹음하면 발언이 실시간으로 전사됩니다. 중요한 발언에는 SynQ가 프로젝트 자료와
+                지난 회의를 근거로 세 가지 힌트를 붙여 줍니다.
+              </p>
+              <div class="hint-card" aria-label="SynQ 힌트 예시">
+                <div class="hc-title"><span>SynQ 힌트</span><span aria-hidden="true">⌄</span></div>
+                <div class="row">
+                  <b>의미</b><span>온보딩 개선이 이번 분기 핵심 우선순위라는 뜻입니다.</span>
+                </div>
+                <div class="row">
+                  <b>내 영향</b><span>일정과 리소스 배분에 영향이 있을 수 있습니다.</span>
+                </div>
+                <div class="row">
+                  <b>팀 질문</b><span>온보딩 개선의 완료 기준은 무엇인가요?</span>
+                </div>
+              </div>
+            </div>
+            <div class="f-media crop rv from-right zoom" style="--d: 120ms">
+              <div class="shot">
+                <img
+                  src="assets/onboarding-step1.png"
+                  alt="실시간 전사와 SynQ 힌트가 표시된 회의 화면"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="feature flip">
+            <div class="f-text rv from-right">
+              <div class="f-num">02 — 회의 중</div>
+              <h3>흐름을 끊지 않고, 궁금한 발언을 골라 바로 질문</h3>
+              <p>
+                이해가 필요한 순간 발언을 선택해 “AI에게 질문하기”를 누르면, 그 발언을 고정한 채
+                나만의 AI Chat에서 바로 물어볼 수 있습니다. 답변은 PRD 같은 프로젝트 자료와 지난
+                회의 기록을 근거로 돌아옵니다.
+              </p>
+              <ul class="f-list">
+                <li class="rv" style="--d: 160ms">
+                  “이 일정의 현실성과 리스크를 분석해 줘” — 답변 끝에 출처(현재 회의 10:04 ·
+                  PRD.pdf)를 함께 표시
+                </li>
+                <li class="rv" style="--d: 250ms">
+                  “지난 회의에서는 이 범위 어디까지 정했어?” — 지난 회의 맥락까지 이어서 답변
+                </li>
+                <li class="rv" style="--d: 340ms">
+                  내 질문과 답변은 나에게만 보이는 개인 AI Chat에 남습니다
+                </li>
+              </ul>
+            </div>
+            <div class="f-media crop crop-right rv from-left zoom" style="--d: 120ms">
+              <div class="shot">
+                <img
+                  src="assets/onboarding-step2.png"
+                  alt="발언을 고정하고 AI Chat에 질문한 화면 — 일정 리스크 분석 답변과 PRD.pdf 출처"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="feature">
+            <div class="f-text rv from-left">
+              <div class="f-num">03 — 회의 후</div>
+              <h3>회의가 끝나면, 내 역할과 관점 기준으로 자동 정리</h3>
+              <p>
+                종료와 동시에 전사본이 저장되고, 참여자마다 다른 정리본이 만들어집니다. PM에게는
+                일정·범위·의사결정 중심으로, 개발자에게는 기술 리스크 중심으로.
+              </p>
+              <ul class="f-list">
+                <li class="rv" style="--d: 160ms">
+                  내 관점 요약 · 나에게 영향 있는 내용 · 내 액션 아이템
+                </li>
+                <li class="rv" style="--d: 250ms">
+                  다시 확인하면 좋은 질문 — 팀과 맞춰야 할 것을 놓치지 않도록
+                </li>
+                <li class="rv" style="--d: 340ms">
+                  개인별 정리 / 전체 정리 / 전체 전사를 오가며 확인, 회의 후에도 AI Chat 이어가기
+                </li>
+              </ul>
+            </div>
+            <div class="f-media rv from-right zoom" style="--d: 120ms">
+              <div class="shot">
+                <img
+                  src="assets/onboarding-step3.png"
+                  alt="회의 기록 화면 — PM 관점 요약, 나에게 영향 있는 내용, 내 액션 아이템, 다시 확인하면 좋은 질문"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Flow -->
+      <section class="flow" id="flow">
+        <div class="wrap">
+          <div class="sec-head center rv">
+            <div class="kicker">How it works</div>
+            <h2>프로젝트 하나로 시작해, 회의가 쌓일수록 똑똑해집니다</h2>
+            <p>
+              SynQ는 회의를 프로젝트 단위로 묶습니다. 자료와 지난 회의가 쌓일수록 다음 회의의 힌트와
+              답변이 정확해집니다.
+            </p>
+          </div>
+          <div class="steps">
+            <div class="step rv" style="--d: 0ms">
+              <div class="n">1</div>
+              <h3>프로젝트 만들기</h3>
+              <p>
+                프로젝트를 만들고 초대 링크로 팀원을 부릅니다. 참여자는 각자 역할과 관점을
+                설정합니다.
+              </p>
+            </div>
+            <div class="step rv" style="--d: 110ms">
+              <div class="n">2</div>
+              <h3>참고 자료 올리기</h3>
+              <p>
+                PRD, 기획서, 디자인 문서 등 프로젝트 자료를 올리면 AI가 회의의 근거로 사용합니다.
+              </p>
+            </div>
+            <div class="step rv" style="--d: 220ms">
+              <div class="n">3</div>
+              <h3>회의 시작</h3>
+              <p>
+                마이크만 켜면 됩니다. 실시간 전사와 SynQ 힌트, 개인 AI Chat이 회의를 따라갑니다.
+              </p>
+            </div>
+            <div class="step rv" style="--d: 330ms">
+              <div class="n">4</div>
+              <h3>기록으로 남기기</h3>
+              <p>종료하면 자동으로 정리됩니다. 이 기록은 다음 회의의 맥락이 되어 다시 쓰입니다.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Roles -->
+      <section id="roles">
+        <div class="wrap">
+          <div class="sec-head rv">
+            <div class="kicker">Role &amp; perspective</div>
+            <h2>같은 회의, 나에게 맞춘 정리</h2>
+            <p>
+              가입할 때 역할과 관심 관점을 고르면, 힌트의 “내 영향”과 회의 후 정리가 그 기준으로
+              맞춰집니다. 프로젝트마다 다르게 설정할 수도 있습니다.
+            </p>
+          </div>
+          <div class="two">
+            <div class="rv from-left">
+              <h3>역할</h3>
+              <div class="sub">내가 회의에서 맡는 일</div>
+              <div class="chips">
+                <span class="chip on">기획 · 운영</span>
+                <span class="chip">디자인 · 콘텐츠</span>
+                <span class="chip">개발 · 기술</span>
+                <span class="chip">마케팅 · 브랜딩</span>
+                <span class="chip">영업 · 고객</span>
+                <span class="chip">데이터 · 리서치</span>
+                <span class="chip">전략 · 경영</span>
+                <span class="chip">기타</span>
+              </div>
+            </div>
+            <div class="rv from-right" style="--d: 120ms">
+              <h3>관심 관점</h3>
+              <div class="sub">회의에서 내가 먼저 챙기는 것</div>
+              <div class="chips">
+                <span class="chip on">일정</span>
+                <span class="chip on">범위</span>
+                <span class="chip on">의사결정</span>
+                <span class="chip">UX</span>
+                <span class="chip">기술 리스크</span>
+                <span class="chip">비용 · 성과</span>
+                <span class="chip">고객 반응</span>
+                <span class="chip">운영 이슈</span>
+                <span class="chip">액션 아이템</span>
+                <span class="chip">팀 질문</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CTA -->
+      <section class="cta">
+        <div class="wrap">
+          <div class="cta-box rv zoom">
+            <img src="assets/landing-symbol.png" alt="" aria-hidden="true" />
+            <h2>다음 회의부터, 같은 이해로 시작하세요</h2>
+            <p>
+              프로젝트를 만들고 자료를 올리는 데 몇 분이면 충분합니다. 지금 바로 SynQ와 함께 회의를
+              시작해 보세요.
+            </p>
+            <a class="btn btn-primary btn-lg" href="https://synqai.co.kr">
+              씽큐 시작하기
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </a>
+            <div class="social">
+              <span>카카오</span><span>네이버</span><span>구글 계정으로 로그인</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <a href="#top" aria-label="SynQ"><img src="assets/landing-wordmark.png" alt="SynQ" /></a>
+        <nav aria-label="정책 문서">
+          <a href="https://synqai.co.kr/terms">이용약관</a>
+          <a href="https://synqai.co.kr/privacy">개인정보처리방침</a>
+          <a href="https://synqai.co.kr">synqai.co.kr</a>
+        </nav>
+        <span>© 2026 SynQ</span>
+      </div>
+    </footer>
+
+    <script>
+      ;(function () {
+        var reduce =
+          window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+        /* ---- Flowing wave background ---- */
+        var cv = document.getElementById('waves')
+        if (cv && cv.getContext) {
+          var ctx = cv.getContext('2d'),
+            W = 0,
+            H = 0,
+            dpr = 1
+          var scrollY = window.pageYOffset || 0,
+            smoothScroll = scrollY
+          function resize() {
+            dpr = Math.min(window.devicePixelRatio || 1, 2)
+            W = window.innerWidth
+            H = window.innerHeight
+            cv.width = W * dpr
+            cv.height = H * dpr
+            cv.style.width = W + 'px'
+            cv.style.height = H + 'px'
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+          }
+          var layers = [
+            { amp: 0.09, freq: 1.1, speed: 0.22, y: 0.62, a: 0.1, c: '0,144,255' },
+            { amp: 0.12, freq: 0.8, speed: -0.17, y: 0.72, a: 0.08, c: '87,182,255' },
+            { amp: 0.07, freq: 1.6, speed: 0.3, y: 0.84, a: 0.07, c: '20,88,183' },
+            { amp: 0.1, freq: 0.6, speed: -0.12, y: 0.95, a: 0.09, c: '0,144,255' },
+          ]
+          function draw(t) {
+            smoothScroll += (scrollY - smoothScroll) * 0.08
+            var s = smoothScroll * 0.0025 // scroll pushes the waves along
+            var lift = Math.min(smoothScroll / 900, 1) // and lifts them up as you go down
+            ctx.clearRect(0, 0, W, H)
+            for (var i = 0; i < layers.length; i++) {
+              var L = layers[i]
+              var phase = t * 0.0006 * L.speed * 4 + s * (i % 2 ? -1 : 1) * (1 + i * 0.3)
+              var base = H * (L.y - lift * 0.28 * (1 - i * 0.15))
+              var amp = H * L.amp
+              ctx.beginPath()
+              ctx.moveTo(0, H)
+              for (var x = 0; x <= W; x += 8) {
+                var nx = x / W
+                var y =
+                  base +
+                  Math.sin(nx * Math.PI * 2 * L.freq + phase) * amp +
+                  Math.sin(nx * Math.PI * 2 * L.freq * 2.3 - phase * 0.7) * amp * 0.28
+                ctx.lineTo(x, y)
+              }
+              ctx.lineTo(W, H)
+              ctx.closePath()
+              var g = ctx.createLinearGradient(0, base - amp, 0, H)
+              g.addColorStop(0, 'rgba(' + L.c + ',' + L.a + ')')
+              g.addColorStop(1, 'rgba(' + L.c + ',0)')
+              ctx.fillStyle = g
+              ctx.fill()
+            }
+          }
+          resize()
+          window.addEventListener('resize', resize)
+          window.addEventListener(
+            'scroll',
+            function () {
+              scrollY = window.pageYOffset || 0
+            },
+            { passive: true },
+          )
+          if (reduce) {
+            draw(0)
+          } else {
+            ;(function loop(t) {
+              draw(t || 0)
+              requestAnimationFrame(loop)
+            })(0)
+          }
+        }
+
+        /* ---- Scroll reveal ---- */
+        if (reduce || !('IntersectionObserver' in window)) return
+        var els = document.querySelectorAll('.rv')
+        var io = new IntersectionObserver(
+          function (entries) {
+            entries.forEach(function (e) {
+              if (e.isIntersecting) {
+                e.target.classList.remove('pre')
+                io.unobserve(e.target)
+              }
+            })
+          },
+          { rootMargin: '0px 0px -10% 0px', threshold: 0.12 },
+        )
+        var vh = window.innerHeight
+        els.forEach(function (el) {
+          if (el.getBoundingClientRect().top > vh * 0.9) {
+            el.classList.add('pre')
+            io.observe(el)
+          }
+        })
+        // safety: never leave something hidden
+        setTimeout(function () {
+          els.forEach(function (el) {
+            if (el.getBoundingClientRect().top < vh) el.classList.remove('pre')
+          })
+        }, 3000)
+      })()
+    </script>
+  </body>
+</html>
