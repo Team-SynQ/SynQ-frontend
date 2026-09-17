@@ -19,6 +19,7 @@ export type UserApi = {
   deleteRoleProfile(profileId: number): Promise<void>
   uploadProfileImage(file: File): Promise<ProfileImageResponse>
   deleteProfileImage(): Promise<void>
+  deleteAccount(): Promise<void>
 }
 
 export const userApi: UserApi = {
@@ -70,6 +71,9 @@ export const userApi: UserApi = {
   },
   async deleteProfileImage() {
     await axiosInstance.delete('/users/me/profile-image')
+  },
+  async deleteAccount() {
+    await axiosInstance.delete('/users/me')
   },
 }
 
@@ -201,6 +205,22 @@ export async function resetMyProfileImage(): Promise<void> {
     console.log('[user] 기본 이미지로 변경 성공')
   } catch (error) {
     console.error('[user] 기본 이미지로 변경 실패', { error })
+    throw error
+  }
+}
+
+/**
+ * 회원 탈퇴. 서버가 로그인한 사용자를 소프트 삭제하고 개인정보·인증 정보를 비식별화한다.
+ * 활성 프로젝트의 소유자는 탈퇴할 수 없어(409) 호출자가 에러 메시지를 그대로 보여줘야 한다.
+ */
+export async function withdrawMyAccount(): Promise<void> {
+  console.log('[user] 회원 탈퇴 시작')
+
+  try {
+    await userApi.deleteAccount()
+    console.log('[user] 회원 탈퇴 성공')
+  } catch (error) {
+    console.error('[user] 회원 탈퇴 실패', { error })
     throw error
   }
 }

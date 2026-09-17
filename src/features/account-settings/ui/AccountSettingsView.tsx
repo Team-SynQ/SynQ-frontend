@@ -5,6 +5,7 @@ import plusIcon from '../../../shared/assets/icons/plus.svg'
 import { useTransientVisibility } from '../../../shared/lib/useTransientVisibility'
 import { Badge, Button, Toast } from '../../../shared/ui'
 import type { AccountPerspective, AccountPerspectiveDraft } from '../model/accountSettings.types'
+import { AccountDeleteDialog } from './AccountDeleteDialog'
 import {
   AccountPerspectiveActionsMenu,
   AccountPerspectiveDeleteUnavailableDialog,
@@ -21,6 +22,7 @@ export type AccountSettingsViewProps = {
   initialProfileImageUrl?: ProfileImageEditorProps['initialImageUrl']
   providerLabel?: string
   onAddPerspective?: (perspective: AccountPerspectiveDraft) => Promise<void> | void
+  onDeleteAccount?: () => Promise<void> | void
   onDeletePerspective?: (perspectiveId: string) => Promise<void> | void
   onOpenPerspectiveMenu?: (perspectiveId: string) => void
   onSaveName?: (name: string) => Promise<void> | void
@@ -37,6 +39,7 @@ export function AccountSettingsView({
   perspectives,
   providerLabel,
   onAddPerspective,
+  onDeleteAccount,
   onDeletePerspective,
   onOpenPerspectiveMenu,
   onSaveName,
@@ -47,6 +50,7 @@ export function AccountSettingsView({
 }: AccountSettingsViewProps) {
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [nameDialogOpen, setNameDialogOpen] = useState(false)
+  const [deleteAccountDialogOpen, setDeleteAccountDialogOpen] = useState(false)
   const deleteFeedback = useTransientVisibility()
 
   const handleSaveName = async (nextName: string) => {
@@ -83,14 +87,24 @@ export function AccountSettingsView({
                 <strong className="min-w-0 flex-1 truncate typo-title-02 text-fg-primary">
                   {name}
                 </strong>
-                <Button
-                  className="w-[120px] border-line-default"
-                  onClick={() => setNameDialogOpen(true)}
-                  size="small"
-                  variant="fillGray100"
-                >
-                  이름 변경
-                </Button>
+                <div className="flex flex-col items-end gap-xs">
+                  <Button
+                    className="w-[120px] border-line-default"
+                    onClick={() => setNameDialogOpen(true)}
+                    size="small"
+                    variant="fillGray100"
+                  >
+                    이름 변경
+                  </Button>
+                  <Button
+                    className="w-[120px]"
+                    onClick={() => setDeleteAccountDialogOpen(true)}
+                    size="small"
+                    variant="primaryFill"
+                  >
+                    회원 탈퇴
+                  </Button>
+                </div>
               </div>
               <div className="flex items-center gap-s">
                 <span className="truncate typo-body-01 text-fg-primary">{email}</span>
@@ -146,6 +160,13 @@ export function AccountSettingsView({
         onCancel={() => setNameDialogOpen(false)}
         onSubmit={handleSaveName}
         open={nameDialogOpen}
+      />
+      <AccountDeleteDialog
+        onCancel={() => setDeleteAccountDialogOpen(false)}
+        onConfirm={async () => {
+          await onDeleteAccount?.()
+        }}
+        open={deleteAccountDialogOpen}
       />
       {deleteFeedback.isMounted ? (
         <Toast

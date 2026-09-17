@@ -252,10 +252,10 @@ describe('TranscriptPanel', () => {
     }
     // 정지 상태에서 파형 모양이 남도록 막대마다 기준 높이가 다르다.
     expect(Array.from(bars, (bar) => (bar as HTMLElement).style.height)).toEqual([
-      '10px',
-      '18px',
-      '14px',
-      '10px',
+      '15px',
+      '24px',
+      '15px',
+      '6px',
     ])
   })
 

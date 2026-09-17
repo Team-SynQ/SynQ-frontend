@@ -16,7 +16,9 @@ import {
   changeMyRoleProfile,
   loadMyRoleProfiles,
   removeMyRoleProfile,
+  withdrawMyAccount,
 } from '../entities/user'
+import { clearAuthTokens } from '../shared/lib/authStorage'
 import {
   ProjectSidebar,
   useSidebarProjects,
@@ -28,6 +30,7 @@ type AccountSettingsPageProps = {
   loadPerspectives?: () => Promise<AccountPerspective[]>
   addPerspective?: (draft: AccountPerspectiveDraft) => Promise<AccountPerspective>
   updatePerspective?: (perspective: AccountPerspective) => Promise<AccountPerspective>
+  deleteAccount?: () => Promise<void> | void
   deletePerspective?: (perspectiveId: string) => Promise<void> | void
   setDefaultPerspective?: (perspectiveId: string) => Promise<void> | void
 } & Pick<
@@ -62,6 +65,7 @@ export function AccountSettingsPage({
   loadPerspectives = loadAccountPerspectives,
   addPerspective = addAccountPerspective,
   updatePerspective = updateAccountPerspective,
+  deleteAccount = withdrawMyAccount,
   deletePerspective = deleteAccountPerspective,
   setDefaultPerspective = setDefaultAccountPerspective,
   onSaveName,
@@ -134,6 +138,14 @@ export function AccountSettingsPage({
     )
   }
 
+  // 실패(예: 활성 프로젝트 소유자는 탈퇴 불가)하면 그대로 던져서 다이얼로그가 에러를 보여주고
+  // 열린 채로 남게 합니다. 성공하면 로그아웃과 같은 방식으로 인증 정보를 지우고 로그인 화면으로 보냅니다.
+  const handleDeleteAccount = async () => {
+    await deleteAccount()
+    clearAuthTokens()
+    navigate('/login')
+  }
+
   return (
     <main className="flex h-screen min-h-[720px] min-w-[1024px] bg-surface-default">
       <ProjectSidebar
@@ -161,6 +173,7 @@ export function AccountSettingsPage({
           initialProfileImageUrl={initialProfileImageUrl}
           name={accountName}
           onAddPerspective={handleAddPerspective}
+          onDeleteAccount={handleDeleteAccount}
           onDeletePerspective={handleDeletePerspective}
           onSaveName={handleSaveName}
           onSetDefaultPerspective={handleSetDefaultPerspective}
