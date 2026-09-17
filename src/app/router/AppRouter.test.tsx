@@ -12,35 +12,6 @@ import { meetingService } from '../../shared/api/services/meeting.service'
 import { transcriptService } from '../../shared/api/services/transcript.service'
 import { userService } from '../../shared/api/services/user.service'
 
-// Node 22+ 및 Vitest 환경 호환용 Storage Mock 생성
-const createStorageMock = () => {
-  let store: Record<string, string> = {}
-  return {
-    getItem: vi.fn((key: string) => store[key] ?? null),
-    setItem: vi.fn((key: string, value: string) => {
-      store[key] = String(value)
-    }),
-    removeItem: vi.fn((key: string) => {
-      delete store[key]
-    }),
-    clear: vi.fn(() => {
-      store = {}
-    }),
-  }
-}
-
-const localStorageMock = createStorageMock()
-const sessionStorageMock = createStorageMock()
-
-Object.defineProperty(window, 'localStorage', {
-  value: localStorageMock,
-  writable: true,
-})
-Object.defineProperty(window, 'sessionStorage', {
-  value: sessionStorageMock,
-  writable: true,
-})
-
 async function renderAppAt(path: string) {
   window.history.pushState({}, '', path)
   const result = render(<App />)
