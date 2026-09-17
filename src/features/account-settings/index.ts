@@ -1,3 +1,4 @@
+export { AccountDeleteDialog, type AccountDeleteDialogProps } from './ui/AccountDeleteDialog'
 export { AccountNameEditDialog, type AccountNameEditDialogProps } from './ui/AccountNameEditDialog'
 export { AccountSettingsMenu, type AccountSettingsActions } from './ui/AccountSettingsMenu'
 export { AccountSettingsView, type AccountSettingsViewProps } from './ui/AccountSettingsView'
