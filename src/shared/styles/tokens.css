@@ -66,19 +66,27 @@
   --shadow-ai-chat-launcher: 0 0 25px rgb(0 0 0 / 0.15);
   --shadow-tutorial-preview: 0 0 30.617px rgb(0 0 0 / 0.1);
 
-  --animate-speaking-waveform: speaking-waveform 1.1s ease-in-out infinite;
+  --animate-speaking-waveform: speaking-waveform 1s cubic-bezier(0.333, 0, 0.667, 1) infinite;
 
   /**
-   * 발화 인식 중 파형. 막대마다 animation-delay를 다르게 줘서 물결처럼 보이게 합니다.
+   * 발화 인식 중 파형. 디자인 스펙(listening_indicator 로티) 기준으로
+   * 중간 → 최고 → 중간 → 최저 4단계를 25%씩 나눠 순환시킵니다.
+   * 막대마다 이 애니메이션을 -0.25s씩 당겨 걸어(각자 다른 지점에서 시작) 옆으로 흐르는 것처럼 보이게 합니다.
    * height만 바꾸므로 정지 상태(motion-reduce)에서는 각 막대의 기준 높이가 그대로 남습니다.
    */
   @keyframes speaking-waveform {
     0%,
     100% {
-      height: 6px;
+      height: 15px;
+    }
+    25% {
+      height: 24px;
     }
     50% {
-      height: 24px;
+      height: 15px;
+    }
+    75% {
+      height: 6px;
     }
   }
 }
