@@ -1,9 +1,14 @@
-import type { AiChatPinnedContext } from '../../../shared/api/contracts/meeting.contracts'
+import type {
+  AiChatPinnedContext,
+  AiChatSource,
+} from '../../../shared/api/contracts/meeting.contracts'
 
 export type AiChatMessage = {
   id: string
   role: 'assistant' | 'user'
   content: string
+  /** 답변이 근거로 삼은 자료. 답변 아래에 출처로 보여 준다. 질문에는 없다. */
+  sources?: AiChatSource[]
 }
 
 export type AiChatSuggestion = {
