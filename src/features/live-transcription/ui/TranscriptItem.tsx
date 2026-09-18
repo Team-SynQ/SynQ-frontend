@@ -68,7 +68,7 @@ export function TranscriptItem({
             </time>
             {segment.isEdited ? <span className="typo-caption text-gray-500">수정됨</span> : null}
             {segment.hasHint ? (
-              <span className="typo-caption text-brand-primary">SynQ 힌트</span>
+              <span className="typo-caption text-brand-primary">중요발화 HINT 생성</span>
             ) : null}
           </div>
           {showsActions ? (

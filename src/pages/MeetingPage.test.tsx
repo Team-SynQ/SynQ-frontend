@@ -661,7 +661,7 @@ describe('MeetingPage controls', () => {
     })
 
     // 사용자가 눌러보기 전에도 힌트가 생겼다는 것을 알 수 있어야 한다.
-    expect(await screen.findByText('SynQ 힌트')).toBeInTheDocument()
+    expect(await screen.findByText('중요발화 HINT 생성')).toBeInTheDocument()
 
     await user.click(await screen.findByText(/지난주 유저 인터뷰 결과/))
 
