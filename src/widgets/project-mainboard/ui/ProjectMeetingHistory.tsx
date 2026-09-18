@@ -5,18 +5,14 @@ import {
   formatMeetingDate,
   type CompletedMeeting,
 } from '../../../entities/meeting'
-import {
-  MeetingRecordActions,
-  MeetingRecordDeleteToast,
-  meetingParticipantAvatars,
-} from '../../../features/meeting-controls'
+import { MeetingRecordActions, MeetingRecordDeleteToast } from '../../../features/meeting-controls'
 import {
   MeetingProcessingStatusIcon,
   type MeetingHistoryPresentation,
 } from '../../../features/meeting-processing'
 import refreshIcon from '../../../shared/assets/icons/refresh.svg'
 import { useTransientVisibility } from '../../../shared/lib/useTransientVisibility'
-import { Button } from '../../../shared/ui'
+import { Button, UserAvatar } from '../../../shared/ui'
 type ProjectMeetingHistoryProps = {
   meetings: CompletedMeeting[]
   /** 회의 기록의 수정·삭제는 그 회의를 진행한 사람만 할 수 있습니다. */
@@ -100,12 +96,17 @@ export function ProjectMeetingHistory({
 
                 return (
                   <li
-                    className={`${historyRowGrid} h-[72px] odd:bg-surface-muted`}
+                    /**
+                     * hover 배경은 행(li)에 건다. 안쪽 버튼에 걸면 행의 좌우 여백과
+                     * 더보기 버튼 열이 배경 밖으로 빠져 좌우가 잘려 보인다.
+                     * 반투명 색이라 홀수 행의 회색 위에서도 같은 농도로 덮여 구분이 된다.
+                     */
+                    className={`${historyRowGrid} h-[72px] transition-colors odd:bg-surface-muted hover:bg-overlay-dark-08 has-[:focus-visible]:bg-overlay-dark-08`}
                     key={meeting.recordId}
                   >
                     <button
                       aria-label={`${meeting.meetingTitle} 회의 기록 열기`}
-                      className={`${historyContentGrid} min-w-0 rounded-xs text-left hover:bg-surface-muted focus-visible:bg-surface-muted`}
+                      className={`${historyContentGrid} min-w-0 text-left`}
                       onClick={() => onOpenMeetingDetail?.(meeting.recordId)}
                       type="button"
                     >
@@ -136,15 +137,7 @@ export function ProjectMeetingHistory({
                         {formatMeetingDate(meeting.completedAt)}
                       </time>
                       <span className="flex min-w-0 items-center gap-xs">
-                        <img
-                          alt=""
-                          aria-hidden="true"
-                          className="size-[32px] shrink-0 rounded-full object-cover"
-                          src={
-                            meeting.host.profileImageUrl ??
-                            meetingParticipantAvatars[meeting.host.avatarKey]
-                          }
-                        />
+                        <UserAvatar imageUrl={meeting.host.profileImageUrl} />
                         <span className="truncate typo-body-02 text-fg-secondary">
                           {meeting.host.name}
                         </span>
