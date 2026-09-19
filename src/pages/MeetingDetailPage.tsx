@@ -14,6 +14,7 @@ import { userApi } from '../entities/user'
 import type { AiChatSendRequest } from '../shared/api/contracts/aiChat.contracts'
 import { listProjectSummaries, projectApi } from '../entities/project'
 import { toTranscriptSegments } from '../entities/meeting/api/transcript.adapter'
+import { ApiError } from '../shared/api/apiError'
 import type {
   OverallMeetingSummaryResult,
   PersonalMeetingSummaryResult,
@@ -606,9 +607,16 @@ export const MeetingDetailPage = ({ user }: MeetingDetailPageProps) => {
         if (!active) return
         setOverallSummary(res)
       })
-      .catch((err) => {
-        console.error('전체 요약 데이터 조회 실패:', err)
-        if (active) setHasError(true)
+      .catch((error: unknown) => {
+        console.error('전체 요약 데이터 조회 실패:', error)
+        /**
+         * 전사가 하나도 없는 회의는 만들어 둔 요약도 없어 404가 돌아온다.
+         * 기록 자체는 남아 있으므로 페이지 전체를 에러로 덮지 않고,
+         * 요약과 전사가 비어 있는 회의 기록으로 보여 준다.
+         * 권한·서버 오류처럼 다른 실패는 잘못된 내용을 보여 주게 되므로 그대로 알린다.
+         */
+        const isSummaryMissing = error instanceof ApiError && error.status === 404
+        if (active && !isSummaryMissing) setHasError(true)
       })
       .finally(() => {
         if (active) setIsLoadingOverallSummary(false)

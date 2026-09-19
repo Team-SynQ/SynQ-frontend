@@ -108,11 +108,19 @@ export type AiChatPinnedContext = {
   text: string
 }
 
+/** 답변이 참고한 자료 한 건. 회의 전사일 수도, 업로드한 문서일 수도 있다. */
+export type AiChatSource = {
+  id: string
+  label: string
+}
+
 export type MeetingAiChatMessageResponse = {
   id: string
   role: 'assistant' | 'user'
   content: string
   context: AiChatPinnedContext | null
+  /** 답변이 근거로 삼은 자료. 질문 메시지와 근거 없는 답변에는 없다. */
+  sources?: AiChatSource[]
 }
 
 export type MeetingAiChatSuggestionResponse = {

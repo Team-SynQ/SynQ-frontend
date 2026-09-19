@@ -1,8 +1,22 @@
 import type { AiChatMessageDto } from '../../../shared/api/contracts/aiChat.contracts'
 import type {
+  AiChatSource,
   MeetingAiChatMessageResponse,
   MeetingAiChatSuggestionResponse,
 } from '../../../shared/api/contracts/meeting.contracts'
+
+/**
+ * 답변 아래에 "무엇을 보고 답했는지"를 보여 주기 위한 근거 목록.
+ * 서버가 label에 표시 문구를 담아 주므로 화면은 그대로 쓴다.
+ * 라벨이 비어 오는 항목은 보여 줄 게 없으니 버린다.
+ */
+function toAiChatSources(dto: AiChatMessageDto): AiChatSource[] | undefined {
+  const sources = (dto.sources ?? [])
+    .filter((source) => source.label?.trim())
+    .map((source) => ({ id: `${source.type}-${source.id}`, label: source.label.trim() }))
+
+  return sources.length > 0 ? sources : undefined
+}
 
 /**
  * 서버는 질문과 답변을 한 레코드로 주고, 화면은 메시지 목록으로 다룬다.
@@ -33,6 +47,7 @@ export function toAiChatMessages(dto: AiChatMessageDto): MeetingAiChatMessageRes
       role: 'assistant',
       content: answer,
       context,
+      sources: toAiChatSources(dto),
     })
   }
 

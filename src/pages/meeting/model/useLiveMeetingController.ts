@@ -516,6 +516,14 @@ export function useLiveMeetingController(
       return
     }
 
+    /**
+     * 힌트 카드가 열리는 전사를 AI Chat 핀에 함께 걸어 둔다.
+     * 힌트를 읽고 바로 이어서 물어보는 흐름이라, 그때마다 'AI에게 질문하기'를 다시 누르게 하지 않는다.
+     * 입력창 포커스는 옮기지 않는다 — 읽는 중에 커서가 끌려가면 전사를 훑어보기 어렵다.
+     */
+    const segment = displaySegments.find((candidate) => candidate.id === segmentId)
+    if (segment) setPinnedContext({ transcriptId: segment.id, text: segment.text })
+
     void loadHint(segmentId, true)
   }
 
