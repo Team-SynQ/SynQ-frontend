@@ -1,14 +1,15 @@
 import { useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-import LandingPage from '../../pages/LandingPage'
+import MarketingLandingPage from '../../pages/marketing-landing/MarketingLandingPage'
 import OnboardingPage from '../../pages/OnboardingPage'
 import { ONBOARDING_COMPLETED_KEY, readAccessToken } from '../../shared/lib/authStorage'
 
 export function LandingRoute() {
   const navigate = useNavigate()
 
-  const handleLandingEnd = useCallback(() => {
+  // 랜딩의 '씽큐 시작하기'가 앱 진입점이다. 로그인·온보딩 여부에 따라 들어갈 곳이 갈린다.
+  const handleStart = useCallback(() => {
     const hasAccessToken = Boolean(readAccessToken())
     if (hasAccessToken) {
       navigate('/projects', { replace: true })
@@ -24,7 +25,7 @@ export function LandingRoute() {
     navigate('/onboarding', { replace: true })
   }, [navigate])
 
-  return <LandingPage onLandingEnd={handleLandingEnd} />
+  return <MarketingLandingPage onStart={handleStart} />
 }
 
 export function OnboardingRoute() {

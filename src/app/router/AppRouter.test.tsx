@@ -67,19 +67,16 @@ afterEach(() => {
 })
 
 describe('AppRouter', () => {
-  it('moves landing to onboarding after the existing animation timer', async () => {
+  it('moves landing to onboarding when a first-time visitor starts', async () => {
     // 최초 방문(비로그인 및 온보딩 미확인) 상태 보장
     window.localStorage.removeItem('accessToken')
     window.localStorage.removeItem('synq_has_seen_onboarding')
 
-    vi.useFakeTimers()
+    const user = userEvent.setup()
     await renderAppAt('/')
 
-    expect(screen.getByAltText('SynQ 심볼 로고')).toBeInTheDocument()
-
-    act(() => {
-      vi.advanceTimersByTime(2500)
-    })
+    // 랜딩은 '씽큐 시작하기'를 내비게이션·히어로·맨 아래에 두므로 첫 번째를 누른다.
+    await user.click(screen.getAllByRole('button', { name: '씽큐 시작하기' })[0])
 
     expect(window.location.pathname).toBe('/onboarding')
     expect(
@@ -91,12 +88,10 @@ describe('AppRouter', () => {
 
   it('moves landing to projects when the user is already logged in', async () => {
     // beforeEach에서 설정된 accessToken 유지 (로그인 상태)
-    vi.useFakeTimers()
+    const user = userEvent.setup()
     await renderAppAt('/')
 
-    act(() => {
-      vi.advanceTimersByTime(2500)
-    })
+    await user.click(screen.getAllByRole('button', { name: '씽큐 시작하기' })[0])
 
     expect(window.location.pathname).toBe('/projects')
   })
@@ -106,12 +101,10 @@ describe('AppRouter', () => {
     window.localStorage.removeItem('accessToken')
     window.localStorage.setItem('synq_has_seen_onboarding', 'true')
 
-    vi.useFakeTimers()
+    const user = userEvent.setup()
     await renderAppAt('/')
 
-    act(() => {
-      vi.advanceTimersByTime(2500)
-    })
+    await user.click(screen.getAllByRole('button', { name: '씽큐 시작하기' })[0])
 
     expect(window.location.pathname).toBe('/login')
   })
