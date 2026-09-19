@@ -67,6 +67,29 @@
   --shadow-tutorial-preview: 0 0 30.617px rgb(0 0 0 / 0.1);
 
   --animate-speaking-waveform: speaking-waveform 1s cubic-bezier(0.333, 0, 0.667, 1) infinite;
+  --animate-ai-typing-dot: ai-typing-dot 1.2s cubic-bezier(0.45, 0, 0.45, 1) infinite;
+
+  /**
+   * AI 답변 생성 중 표시. 디자인 스펙(typing_indicator_wave 로티) 기준입니다.
+   * 로티는 30fps 36프레임(=1.2s) 동안 점 하나가 기준선 위아래 5.5px를 사인 곡선으로 오갑니다.
+   * 점마다 이 애니메이션을 -0.4s씩 당겨 걸면 로티의 120도 위상차와 같아져 물결처럼 이어집니다.
+   * transform만 바꾸므로 정지 상태(motion-reduce)에서는 세 점이 기준선에 나란히 남습니다.
+   */
+  @keyframes ai-typing-dot {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    25% {
+      transform: translateY(-5.5px);
+    }
+    50% {
+      transform: translateY(0);
+    }
+    75% {
+      transform: translateY(5.5px);
+    }
+  }
 
   /**
    * 발화 인식 중 파형. 디자인 스펙(listening_indicator 로티) 기준으로

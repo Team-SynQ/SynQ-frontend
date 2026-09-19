@@ -3,6 +3,7 @@ import { cn } from '../../../shared/lib/cn'
 import { useStickyScrollToBottom } from '../../../shared/lib/useStickyScrollToBottom'
 import type { AiChatMessage } from '../model/aiChat.types'
 import { AiChatMarkdown } from './AiChatMarkdown'
+import { AiChatTypingIndicator } from './AiChatTypingIndicator'
 
 export type AiChatMessageListProps = {
   messages: AiChatMessage[]
@@ -99,7 +100,9 @@ export function AiChatMessageList({
           )}
           role="status"
         >
-          답변을 생성하고 있습니다…
+          {/* 화면에는 점 애니메이션만 두되, 읽어 주는 문구는 남겨야 무슨 상태인지 알 수 있다. */}
+          <span className="sr-only">답변을 생성하고 있습니다…</span>
+          <AiChatTypingIndicator />
         </p>
       ) : null}
 
