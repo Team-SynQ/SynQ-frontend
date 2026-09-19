@@ -525,7 +525,8 @@ describe('AppRouter', () => {
   it('redirects unknown URLs to the landing route', async () => {
     await renderAppAt('/unknown')
 
-    expect(screen.getByAltText('SynQ 심볼 로고')).toBeInTheDocument()
+    // 랜딩에만 있는 표지로 확인한다. 예전 스플래시 로고는 랜딩이 대신하면서 사라졌다.
+    expect(screen.getByRole('navigation', { name: '페이지 내 이동' })).toBeInTheDocument()
     expect(window.location.pathname).toBe('/')
   })
 })
