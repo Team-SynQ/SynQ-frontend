@@ -9,6 +9,15 @@ export interface KakaoLoginRequest {
   redirectUri?: string
 }
 
+/**
+ * 이메일·비밀번호 로그인. 서버 명세상 개발·테스트용 API이며,
+ * 실제 사용자 가입 경로는 카카오·네이버·구글 소셜 로그인뿐입니다.
+ */
+export interface EmailLoginRequest {
+  email: string
+  password: string
+}
+
 export interface RefreshTokenRequest {
   refreshToken: string
 }
