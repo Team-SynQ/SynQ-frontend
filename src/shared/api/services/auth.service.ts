@@ -3,6 +3,7 @@ import { readAccessToken } from '../../lib/authStorage'
 import type {
   KakaoLoginRequest,
   GoogleLoginRequest,
+  EmailLoginRequest,
   RefreshTokenRequest,
   NaverStateResponse,
   NaverLoginRequest,
@@ -27,6 +28,17 @@ export const authService = {
       body: JSON.stringify(data),
     })
     if (!response.ok) throw new Error('구글 로그인 요청 실패')
+    return response.json()
+  },
+
+  /** 이메일·비밀번호 로그인. 비밀번호가 틀리면 401이 돌아와 여기서 에러로 바뀝니다. */
+  emailLogin: async (data: EmailLoginRequest): Promise<AuthResponse> => {
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    if (!response.ok) throw new Error('이메일 로그인 요청 실패')
     return response.json()
   },
 

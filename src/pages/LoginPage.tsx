@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 
+import { consumePendingInviteToken } from '../features/project-invite'
 import { authService } from '../shared/api/services/auth.service'
+import { saveAuthTokens } from '../shared/lib/authStorage'
 import { createKakaoOAuthState } from '../shared/lib/kakaoOAuthState'
+import { Button, InputBox } from '../shared/ui'
 import { Toast } from '../shared/ui/Toast'
 
 const LoginPage: React.FC = () => {
@@ -10,6 +13,46 @@ const LoginPage: React.FC = () => {
   const [showToast, setShowToast] = useState(false)
   const [toastOpacity, setToastOpacity] = useState(0)
   const [toastCycle] = useState(0)
+
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [isEmailLoginSubmitting, setIsEmailLoginSubmitting] = useState(false)
+  const [emailLoginError, setEmailLoginError] = useState<string | null>(null)
+
+  /**
+   * 대회 심사처럼 소셜 계정을 쓸 수 없는 경우를 위한 이메일 로그인입니다.
+   * 로그인 후 어디로 보낼지는 소셜 로그인 콜백과 같은 기준을 씁니다.
+   */
+  const handleEmailLogin = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (isEmailLoginSubmitting) return
+
+    setIsEmailLoginSubmitting(true)
+    setEmailLoginError(null)
+
+    try {
+      const response = await authService.emailLogin({ email: email.trim(), password })
+      if (!response.isSuccess || !response.result) throw new Error('이메일 로그인 실패')
+
+      const { accessToken, refreshToken, isNewUser, onboardingCompleted } = response.result
+      saveAuthTokens({ accessToken, refreshToken })
+
+      const needsSetup = isNewUser || !onboardingCompleted
+      const pendingInviteToken = needsSetup ? null : consumePendingInviteToken()
+      const targetPath = needsSetup
+        ? '/setup/role'
+        : pendingInviteToken
+          ? `/invite/${pendingInviteToken}`
+          : '/projects'
+
+      navigate(targetPath, { replace: true })
+    } catch (error) {
+      // 서버가 401로 구분해 주지만, 어느 쪽이 틀렸는지는 알려 주지 않는 편이 안전합니다.
+      console.error('이메일 로그인 실패:', error)
+      setEmailLoginError('이메일 또는 비밀번호가 올바르지 않습니다.')
+      setIsEmailLoginSubmitting(false)
+    }
+  }
 
   const handleKakaoLogin = () => {
     const clientId = import.meta.env.VITE_KAKAO_CLIENT_ID
@@ -138,7 +181,7 @@ const LoginPage: React.FC = () => {
 
         <p className="text-gray-400 text-xs md:text-sm mb-10">1분이면 회원가입 가능해요.</p>
 
-        <div className="flex flex-col w-full gap-3 mb-10">
+        <div className="flex flex-col w-full gap-3 mb-6">
           <button
             onClick={handleKakaoLogin}
             className="flex items-center justify-center w-full h-12 bg-[#FEE500] hover:bg-[#FDD800] text-[#191919] font-semibold text-sm rounded-xl transition-colors relative cursor-pointer"
@@ -175,6 +218,50 @@ const LoginPage: React.FC = () => {
             구글로 계속하기
           </button>
         </div>
+
+        <div className="flex w-full items-center gap-3 mb-6">
+          <span className="h-[1px] flex-1 bg-gray-200" />
+          <span className="text-xs text-gray-400">또는</span>
+          <span className="h-[1px] flex-1 bg-gray-200" />
+        </div>
+
+        <form
+          className="flex flex-col w-full gap-3 mb-10"
+          onSubmit={(event) => void handleEmailLogin(event)}
+        >
+          <InputBox
+            autoComplete="email"
+            disabled={isEmailLoginSubmitting}
+            label="이메일"
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="이메일을 입력해 주세요"
+            required
+            size="large"
+            type="email"
+            value={email}
+          />
+          <InputBox
+            autoComplete="current-password"
+            disabled={isEmailLoginSubmitting}
+            errorText={emailLoginError ?? undefined}
+            label="비밀번호"
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder="비밀번호를 입력해 주세요"
+            required
+            size="large"
+            type="password"
+            value={password}
+          />
+          <Button
+            aria-busy={isEmailLoginSubmitting}
+            className="w-full"
+            disabled={isEmailLoginSubmitting || !email.trim() || !password}
+            size="large"
+            type="submit"
+          >
+            {isEmailLoginSubmitting ? '로그인 중...' : '이메일로 로그인'}
+          </Button>
+        </form>
 
         <footer className="flex justify-center items-center w-full gap-4 text-xs text-gray-400">
           <button
