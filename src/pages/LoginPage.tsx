@@ -181,7 +181,51 @@ const LoginPage: React.FC = () => {
 
         <p className="text-gray-400 text-xs md:text-sm mb-10">1분이면 회원가입 가능해요.</p>
 
-        <div className="flex flex-col w-full gap-3 mb-6">
+        <form
+          className="flex flex-col w-full gap-3 mb-6"
+          onSubmit={(event) => void handleEmailLogin(event)}
+        >
+          <InputBox
+            autoComplete="email"
+            disabled={isEmailLoginSubmitting}
+            label="이메일"
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="이메일을 입력해 주세요"
+            required
+            size="large"
+            type="email"
+            value={email}
+          />
+          <InputBox
+            autoComplete="current-password"
+            disabled={isEmailLoginSubmitting}
+            errorText={emailLoginError ?? undefined}
+            label="비밀번호"
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder="비밀번호를 입력해 주세요"
+            required
+            size="large"
+            type="password"
+            value={password}
+          />
+          <Button
+            aria-busy={isEmailLoginSubmitting}
+            className="w-full"
+            disabled={isEmailLoginSubmitting || !email.trim() || !password}
+            size="large"
+            type="submit"
+          >
+            {isEmailLoginSubmitting ? '로그인 중...' : '이메일로 로그인'}
+          </Button>
+        </form>
+
+        <div className="flex w-full items-center gap-3 mb-6">
+          <span className="h-[1px] flex-1 bg-gray-200" />
+          <span className="text-xs text-gray-400">또는</span>
+          <span className="h-[1px] flex-1 bg-gray-200" />
+        </div>
+
+        <div className="flex flex-col w-full gap-3 mb-10">
           <button
             onClick={handleKakaoLogin}
             className="flex items-center justify-center w-full h-12 bg-[#FEE500] hover:bg-[#FDD800] text-[#191919] font-semibold text-sm rounded-xl transition-colors relative cursor-pointer"
@@ -218,50 +262,6 @@ const LoginPage: React.FC = () => {
             구글로 계속하기
           </button>
         </div>
-
-        <div className="flex w-full items-center gap-3 mb-6">
-          <span className="h-[1px] flex-1 bg-gray-200" />
-          <span className="text-xs text-gray-400">또는</span>
-          <span className="h-[1px] flex-1 bg-gray-200" />
-        </div>
-
-        <form
-          className="flex flex-col w-full gap-3 mb-10"
-          onSubmit={(event) => void handleEmailLogin(event)}
-        >
-          <InputBox
-            autoComplete="email"
-            disabled={isEmailLoginSubmitting}
-            label="이메일"
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="이메일을 입력해 주세요"
-            required
-            size="large"
-            type="email"
-            value={email}
-          />
-          <InputBox
-            autoComplete="current-password"
-            disabled={isEmailLoginSubmitting}
-            errorText={emailLoginError ?? undefined}
-            label="비밀번호"
-            onChange={(event) => setPassword(event.target.value)}
-            placeholder="비밀번호를 입력해 주세요"
-            required
-            size="large"
-            type="password"
-            value={password}
-          />
-          <Button
-            aria-busy={isEmailLoginSubmitting}
-            className="w-full"
-            disabled={isEmailLoginSubmitting || !email.trim() || !password}
-            size="large"
-            type="submit"
-          >
-            {isEmailLoginSubmitting ? '로그인 중...' : '이메일로 로그인'}
-          </Button>
-        </form>
 
         <footer className="flex justify-center items-center w-full gap-4 text-xs text-gray-400">
           <button
